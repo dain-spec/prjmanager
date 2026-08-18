@@ -22,19 +22,6 @@
     </div>
 
     <div class="page-head__actions">
-      <button type="button" class="btn btn--primary" data-action="add">
-        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.2v9.6M3.2 8h9.6" /></svg>
-        추가
-      </button>
-
-      <div class="chip-group" role="group" aria-label="현황 필터">
-        <button type="button" class="chip chip--figma"   data-filter="tool"      data-value="Figma">Figma</button>
-        <button type="button" class="chip chip--xd"      data-filter="tool"      data-value="XD">XD</button>
-        <button type="button" class="chip chip--applied" data-filter="component" data-value="applied">적용</button>
-        <button type="button" class="chip chip--missing" data-filter="component" data-value="missing">미적용</button>
-        <button type="button" class="chip chip--partial" data-filter="component" data-value="partial">메뉴별 상이</button>
-      </div>
-
       <button type="button" class="btn btn--ghost btn--icon" id="btn-theme" aria-label="라이트/다크 모드 전환" title="라이트 / 다크 모드 전환">
         <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
           <circle cx="8" cy="8" r="3.1" />
@@ -46,7 +33,8 @@
 
   <main class="content" id="content">
     <!-- ── 요약 통계 ─────────────────────────────────────── -->
-    <section class="stats" aria-label="현황 요약">
+    <!-- 대시보드는 추후 제공 예정. hidden 만 제거하면 다시 노출된다. -->
+    <section class="stats" aria-label="현황 요약" hidden>
       <article class="stat stat--total">
         <p class="stat__label">전체 서비스 수</p>
         <div class="stat__body">
@@ -97,7 +85,8 @@
         <p class="panel__count" id="row-count" aria-live="polite">0건</p>
 
         <div class="panel__toolbar-right">
-          <button type="button" class="btn btn--secondary" id="btn-export">CSV 내보내기</button>
+          <!-- CSV 내보내기는 추후 제공 예정. hidden 만 제거하면 다시 노출된다. -->
+          <button type="button" class="btn btn--secondary" id="btn-export" hidden>CSV 내보내기</button>
           <button type="button" class="btn btn--primary" data-action="add">
             <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.2v9.6M3.2 8h9.6" /></svg>
             추가
@@ -108,9 +97,14 @@
       <div class="table-wrap" tabindex="0">
         <table class="table">
           <colgroup>
-            <col style="width:72px"  /><col style="width:260px" /><col style="width:220px" />
-            <col style="width:140px" /><col style="width:180px" /><col style="width:380px" />
-            <col />                   <col style="width:152px" />
+            <col style="width:72px"  /><!-- No -->
+            <col style="width:220px" /><!-- 서비스명 -->
+            <col style="width:110px" /><!-- 메뉴명 -->
+            <col style="width:120px" /><!-- 파일 유형 -->
+            <col style="width:160px" /><!-- 공통 컴포넌트 적용 -->
+            <col />                    <!-- 파일 경로 (남는 폭 전체) -->
+            <col style="width:380px" /><!-- 비고 -->
+            <col style="width:152px" /><!-- 관리 -->
           </colgroup>
           <thead>
             <tr>

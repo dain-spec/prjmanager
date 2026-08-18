@@ -103,14 +103,6 @@ textarea {
   padding-top: var(--padding-3);
 }
 
-.chip-group {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-3);
-  padding-left: var(--padding-4);
-  margin-left: var(--gap-2);
-  border-left: 1px solid var(--color-border-subtle);
-}
 
 /* ── 버튼 ──────────────────────────────────────────────── */
 
@@ -202,36 +194,6 @@ textarea {
 :where(button, a, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--color-element-primary);
   outline-offset: 2px;
-}
-
-/* ── 필터 칩 ───────────────────────────────────────────── */
-
-.chip {
-  height: var(--size-6);
-  padding-inline: var(--padding-6);
-  border: 1px solid transparent;
-  border-radius: var(--radius-max);
-  background: var(--color-surface-subtle);
-  color: var(--color-text-subtle);
-  font-size: var(--font-body4);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-.chip:hover { border-color: var(--color-border-basic); }
-
-/* 유형별 고유 색 — 활성 여부와 무관하게 항상 색으로 구분된다.
-   배경이 모드와 무관하게 고정된 연한 색이므로, 전경도 모드에 따라 뒤집히지 않는
-   고정 스케일 단계를 쓴다(그렇지 않으면 다크 모드에서 대비가 3:1 아래로 떨어진다). */
-.chip--figma   { background: var(--color-primary-50);   color: var(--color-blue-700); }
-.chip--xd      { background: var(--color-secondary-50); color: var(--color-gray-700); }
-.chip--applied { background: var(--color-positive-100); color: var(--color-green-600); }
-.chip--missing { background: var(--color-negative-100); color: var(--color-red-700); }
-.chip--partial { background: var(--color-pending-50);   color: var(--color-orange-700); }
-
-.chip[aria-pressed="true"] {
-  border-color: currentColor;
-  box-shadow: inset 0 0 0 1px currentColor;
 }
 
 /* ── 요약 통계 ─────────────────────────────────────────── */
@@ -407,7 +369,9 @@ textarea {
   font-weight: var(--font-weight-medium);
   color: var(--color-text-subtle);
   text-align: left;
-  white-space: nowrap;
+  /* 'Figma 이관 필요 여부(XD파일 해당)' 처럼 긴 라벨이 있어 줄바꿈을 허용한다. */
+  word-break: keep-all;
+  vertical-align: bottom;
 }
 
 .th-sort {
@@ -445,13 +409,9 @@ textarea {
   font-size: var(--font-body3);
   color: var(--color-text-basic);
   vertical-align: middle;
-  overflow-wrap: anywhere;
-}
-
-/* 파일 경로·비고는 자유 입력이라 길어질 수 있다. 줄바꿈되면 행이 40px 를
-   넘기므로 한 줄로 자르고, 잘린 전체 내용은 title 속성(마우스 오버)으로 본다. */
-.table tbody .cell--path,
-.table tbody .cell--note {
+  /* 40px 행 높이를 지키려면 어떤 칸도 줄바꿈되어서는 안 된다.
+     ('해당사항 없음' 처럼 짧은 값도 좁은 칸에서는 2줄로 감싸져 행을 늘린다.)
+     잘린 내용은 각 셀의 title 속성(마우스 오버)으로 확인한다. */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -472,7 +432,21 @@ textarea {
   font-weight: var(--font-weight-regular);
 }
 
+/* 파일 경로 — Figma URL 은 매우 길어 한 줄로 자르고 title 로 전체를 보여준다.
+   URL 인 경우 클릭해 바로 열 수 있도록 링크로 렌더한다. */
 .cell--path {
+  font-size: var(--font-body4);
+}
+
+.cell--path a {
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+.cell--path a:hover {
+  text-decoration: underline;
+}
+
+.cell--plain {
   font-size: var(--font-body4);
   color: var(--color-text-subtle);
 }
@@ -501,12 +475,13 @@ textarea {
   vertical-align: middle;
 }
 
-/* 칩과 동일한 이유로 고정 스케일 단계를 사용한다(대비 4.5:1 이상 확보). */
-.badge--figma    { background: var(--color-primary-50);   color: var(--color-blue-700); }
-.badge--xd       { background: var(--color-secondary-50);  color: var(--color-gray-700); }
-.badge--applied  { background: var(--color-positive-100); color: var(--color-green-600); }
-.badge--missing  { background: var(--color-negative-100); color: var(--color-red-700); }
-.badge--partial  { background: var(--color-pending-50);   color: var(--color-orange-700); }
+/* 배경이 모드와 무관하게 고정된 연한 색이므로, 전경도 모드에 따라 뒤집히지 않는
+   고정 스케일 단계를 쓴다. 전부 대비 4.5:1 이상이다. */
+.badge--figma   { background: var(--color-primary-50);   color: var(--color-blue-700); }
+.badge--xd      { background: var(--color-secondary-50);  color: var(--color-gray-700); }
+.badge--applied { background: var(--color-positive-100); color: var(--color-green-600); }
+.badge--missing { background: var(--color-negative-100); color: var(--color-red-700); }
+.badge--partial { background: var(--color-pending-50);   color: var(--color-orange-700); }
 .badge--neutral  { background: var(--color-surface-subtle); color: var(--color-text-subtle); }
 
 .empty {
@@ -561,14 +536,6 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: var(--gap-2);
-}
-
-/* 편집 행에서는 잘라내기(ellipsis)를 풀어 입력값 전체가 보이게 한다. */
-.table tbody tr[data-editing] .cell--path,
-.table tbody tr[data-editing] .cell--note {
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
 }
 
 /* ── 토스트 ────────────────────────────────────────────── */

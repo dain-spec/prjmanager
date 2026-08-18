@@ -30,22 +30,73 @@
     "M9.2 7.2v3.6",
   ];
 
+  /* 시드 데이터는 팀 현황표(프로젝트/유형/주소링크/공통 반영 버전/반영 상태/작업자/
+     Figma 이관 여부/비고)를 이 테이블의 컬럼에 매핑한 것이다. 매핑 규칙:
+       메뉴명            ← 유형(Web/Mobile/C/S). 같은 서비스의 행을 구분하는 값이다.
+       파일 유형         ← 주소링크 종류 (figma.com → Figma, 로컬 경로 → XD)
+       공통 컴포넌트 적용 ← 반영 상태 (완료 → 적용, 진행중 → 미적용, 해당사항 없음 → 해당 없음)
+       비고              ← 원래 비고 + 이 테이블에 칸이 없는 값(공통 반영 버전 /
+                          Figma 이관 필요 / 작업자)을 잃지 않도록 함께 적었다. */
+  const FIGMA = "https://www.figma.com/design";
   const SEED = [
-    { service: "회계관리",   menu: "전체",       tool: "Figma", component: "applied", path: "Figma > WEHAGO > 회계관리",            note: "전체 메뉴 동일 컴포넌트 사용" },
-    { service: "회계관리",   menu: "전표입력",   tool: "Figma", component: "applied", path: "Figma > WEHAGO > 회계관리 > 전표입력", note: "2026-07 최신화" },
-    { service: "인사관리",   menu: "메뉴 1",     tool: "Figma", component: "missing", path: "Figma > WEHAGO > 인사관리",            note: "공통 컴포넌트 교체 예정" },
-    { service: "인사관리",   menu: "메뉴 2",     tool: "XD",    component: "none",    path: "XD > 인사관리_메뉴2.xd",               note: "XD 원본 파일 (컴포넌트 해당 없음)" },
-    { service: "급여관리",   menu: "전체",       tool: "XD",    component: "none",    path: "XD > 급여관리.xd",                     note: "Figma 이관 대기" },
-    { service: "전자세금계산서", menu: "전체",   tool: "Figma", component: "partial", path: "Figma > WEHAGO > 전자세금계산서",      note: "메뉴별 적용 여부 상이" },
-    { service: "자산관리",   menu: "전체",       tool: "Figma", component: "applied", path: "Figma > WEHAGO > 자산관리",            note: "" },
-    { service: "그룹웨어",   menu: "메일",       tool: "Figma", component: "applied", path: "Figma > WEHAGO > 그룹웨어 > 메일",     note: "" },
-    { service: "그룹웨어",   menu: "결재",       tool: "Figma", component: "missing", path: "Figma > WEHAGO > 그룹웨어 > 결재",     note: "레거시 컴포넌트 잔존" },
-    { service: "영업관리",   menu: "전체",       tool: "XD",    component: "none",    path: "XD > 영업관리.xd",                     note: "" },
+    { service: "WEHAGO Web 2.0 공통", menu: "Web", tool: "Figma", component: "none",
+      path: `${FIGMA}/vVNdCTvO5nvN88byoPuYkV/WEHAGO-Web-2.0_DSG?m=auto&node-id=6556-35225&t=NrDWMe3BToXAjWwM-1`,
+      note: "작업자 2Cell" },
+    { service: "WEHAGO Mobile 2.0 공통", menu: "Mobile", tool: "Figma", component: "none",
+      path: `${FIGMA}/2hjgaltgwo1dIYAyMFxwDZ/WEHAGO-Mobile-2.0_DSG?m=auto&node-id=0-1&t=5WN7aFvvOpyG3MKk-1`,
+      note: "작업자 2Cell" },
+    { service: "WEHAGO Main 1.5", menu: "Web", tool: "XD", component: "none",
+      path: "XD : WEHAGO 1.0 메인_개선안(Cloud)",
+      note: "작업자 홍길동" },
+    { service: "WEHAGO Main 2.0", menu: "Web", tool: "Figma", component: "none",
+      path: `${FIGMA}/nQnqiG4WPBVxC4t38nBEW2/WEHAGO-2.0-Web-%EB%A9%94%EC%9D%B8?node-id=723-6341&t=R4SN6APFALqVIQbX-1`,
+      note: "작업자 홍길동" },
+    { service: "WEHAGO AI Edition", menu: "Web", tool: "Figma", component: "none",
+      path: `${FIGMA}/nQnqiG4WPBVxC4t38nBEW2/WEHAGO-2.0-Web-%EB%A9%94%EC%9D%B8?node-id=4028-42604&t=R4SN6APFALqVIQbX-1`,
+      note: "WEHAGO 2.0 Web 메인 피그마 파일에 포함 / 작업자 홍길동" },
+    { service: "WEHAGO T", menu: "Web", tool: "XD", component: "none",
+      path: "XD : \\UXUI Unit\\2025\\WEHAGO T, Tedge\\작업물",
+      note: "작업자 홍길동" },
+    { service: "WEHAGO T AI Edition", menu: "Web", tool: "Figma", component: "missing",
+      path: `${FIGMA}/qmWWQbn78V9VZeya9zmFBJ/WEHAGO-T?node-id=1-32&t=pIe1aQCojb8OETiP-1`,
+      note: "WEHAGO T 피그마 파일에 포함 / 수임처 AI 연말정산, 수임처관리, 수임처관리 리뉴얼 버전(holding) 혼재 / WHDS W v2.0 반영 진행중 / 작업자 2Cell" },
+    { service: "ProActive AI", menu: "Web", tool: "Figma", component: "applied",
+      path: `${FIGMA}/ZKzpwsavMCqZM48Mvb730d/WEHAGO-Web-Proactive-AI?node-id=1178-16981&t=3y7IUc8MEWu3EEAj-1`,
+      note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / 작업자 2Cell" },
+    { service: "ONE AI", menu: "Web", tool: "Figma", component: "applied",
+      path: `${FIGMA}/brhXNqFg9rpqSNI0yK05zM/WEHAGO-Web-ONE-AI?node-id=169-2211&t=jWIchZl5pxcl09qL-1`,
+      note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요 / 작업자 2Cell" },
+    { service: "ONE AI", menu: "Mobile", tool: "Figma", component: "applied",
+      path: `${FIGMA}/jTkk4w5HWRH5zRrelHRKm9/WEHAGO-Mobile-ONE-AI?node-id=1-18&t=tTY327hL8syzZoxz-1`,
+      note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요 / 작업자 2Cell" },
+    { service: "ONE AI CUBE", menu: "Web", tool: "Figma", component: "missing",
+      path: `${FIGMA}/fUfs6M2MqStNtESlVAR3p4/WEHAGO-Web-ONE-AI-CUBE?node-id=390-13900&t=J8CId3uoQkbWrSED-1`,
+      note: "WHDS W v2.0 반영 진행중 / 작업자 2Cell" },
+    { service: "ONE AI Flow", menu: "Web", tool: "Figma", component: "missing",
+      path: `${FIGMA}/DiIjSe99UXUVDl7pgilfZy/ONE-AI-Flow?node-id=1-10&t=hPMX3yI7fEr02kOF-1`,
+      note: "WHDS W v2.0 반영 진행중 / 작업자 2Cell" },
+    { service: "Agent Market", menu: "Web", tool: "Figma", component: "applied",
+      path: `${FIGMA}/e7cVdc0Ev8irKt8axNuzqy/Agent-Market?node-id=1-10&t=eJhSUAwnoVyY5NTX-1`,
+      note: "WHDS W v2.0 / 작업자 2Cell" },
+    { service: "메신저", menu: "Web", tool: "Figma", component: "applied",
+      path: `${FIGMA}/wgWUkgyGkZWG7GxevnLivm/WEHAGO-Web-%EB%A9%94%EC%8B%A0%EC%A0%80-%EC%9B%B9-%EC%84%A4%EC%B9%98%ED%98%95-?node-id=4427-2&t=bKujBqg9BLqYEpyt-1`,
+      note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0 / 작업자 2Cell" },
+    { service: "메신저", menu: "C/S", tool: "Figma", component: "applied",
+      path: `${FIGMA}/wgWUkgyGkZWG7GxevnLivm/WEHAGO-Web-%EB%A9%94%EC%8B%A0%EC%A0%80-%EC%9B%B9-%EC%84%A4%EC%B9%98%ED%98%95-?node-id=4512-2363&t=bKujBqg9BLqYEpyt-1`,
+      note: "WEHAGO Web 메신저 피그마 파일에 포함 / WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0 / 작업자 2Cell" },
+    { service: "화상회의", menu: "Web", tool: "Figma", component: "applied",
+      path: `${FIGMA}/aesogzuumvDi1EneInUZCt/WEHAGO-Web-%ED%99%94%EC%83%81%ED%9A%8C%EC%9D%98-Meet-?node-id=1-5312&t=pflCrCYHVNHPPnWo-1`,
+      note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0 / 작업자 2Cell" },
+    { service: "화상회의", menu: "Mobile", tool: "Figma", component: "applied",
+      path: `${FIGMA}/cNrqG2nLmmAt9klnanGBnl/WEHAGO-Meet-Mobile--%EB%A6%AC%EB%89%B4%EC%96%BC-?node-id=1-3063&t=NUPWIqx5l1LBcb6Z-1`,
+      note: "WHDS 2.0 완료 이전 작업물 / WHDS M v1.0 / 작업자 2Cell" },
   ];
 
   // ── 상태 ────────────────────────────────────────────────
 
   let rows = load();
+  /* 파일 유형 / 공통 컴포넌트 필터. 필터 칩 UI 는 제거된 상태이며
+     visibleRows() 의 필터 로직은 향후 UI 를 다시 붙일 때를 위해 남겨둔다. */
   const filters = { tool: null, component: null };
   let search = "";
   let sort = { key: null, dir: "asc" };
@@ -124,14 +175,13 @@
 
     if (sort.key) {
       const dir = sort.dir === "asc" ? 1 : -1;
+      // 적용 상태는 가나다순이 아니라 '조치가 필요한 순서'로 정렬한다.
       const rank = { applied: 0, partial: 1, missing: 2, none: 3 };
       list = [...list].sort((a, b) => {
-        let cmp;
-        if (sort.key === "component") {
-          cmp = rank[a.component] - rank[b.component];
-        } else {
-          cmp = String(a[sort.key]).localeCompare(String(b[sort.key]), "ko");
-        }
+        const cmp =
+          sort.key === "component"
+            ? rank[a.component] - rank[b.component]
+            : String(a[sort.key] ?? "").localeCompare(String(b[sort.key] ?? ""), "ko");
         return cmp * dir;
       });
     }
@@ -192,7 +242,7 @@
       cell(row.menu || "—", row.menu ? "" : "cell--muted"),
       badgeCell(row.tool === "Figma" ? "figma" : "xd", row.tool),
       componentCell(row.component),
-      cell(row.path || "—", row.path ? "cell--path" : "cell--muted", row.path),
+      pathCell(row.path),
       cell(row.note || "", "cell--note", row.note),
       actionCell([
         // 수정은 행 hover(또는 포커스) 시에만 노출된다.
@@ -211,10 +261,10 @@
     tr.append(
       cell(editingId === NEW_ID ? "신규" : String(no), "cell--no"),
       inputCell("service", "서비스명", { required: true }),
-      inputCell("menu", "메뉴명 (전체일 경우 '전체')"),
-      selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]]),
-      selectCell("component", Object.entries(COMPONENT_LABEL)),
-      inputCell("path", "파일 경로", { className: "cell--path" }),
+      inputCell("menu", "메뉴명"),
+      selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]], "파일 유형"),
+      selectCell("component", Object.entries(COMPONENT_LABEL), "공통 컴포넌트 적용"),
+      inputCell("path", "피그마 주소 또는 XD 경로", { className: "cell--path" }),
       inputCell("note", "비고", { className: "cell--note" }),
       actionCell([
         { label: "저장", action: "save", cls: "btn--primary" },
@@ -222,6 +272,28 @@
       ]),
     );
     return tr;
+  }
+
+  /** 파일 경로 — http 로 시작하면 클릭 가능한 링크, 아니면(XD 로컬 경로 등) 일반 텍스트 */
+  function pathCell(value) {
+    if (!value) return cell("—", "cell--muted");
+    if (!/^https?:\/\//.test(value)) return cell(value, "cell--path", value);
+
+    const td = document.createElement("td");
+    td.className = "cell--path";
+    td.title = value;
+    const a = document.createElement("a");
+    a.href = value;
+    a.textContent = value;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    td.append(a);
+    return td;
+  }
+
+  function componentCell(value) {
+    if (value === "none") return cell("해당 없음", "cell--muted");
+    return badgeCell(value, COMPONENT_LABEL[value]);
   }
 
   function cell(text, className, title) {
@@ -241,19 +313,19 @@
     input.name = name;
     input.value = draft[name] ?? "";
     input.placeholder = placeholder;
-    input.maxLength = name === "note" || name === "path" ? 300 : 60;
+    input.maxLength = name === "note" || name === "path" ? 500 : 60;
     if (required) input.required = true;
     input.setAttribute("aria-label", placeholder);
     td.append(input);
     return td;
   }
 
-  function selectCell(name, options) {
+  function selectCell(name, options, label) {
     const td = document.createElement("td");
     const select = document.createElement("select");
     select.className = "input input--cell";
     select.name = name;
-    select.setAttribute("aria-label", name === "tool" ? "파일 유형" : "공통 컴포넌트 적용");
+    select.setAttribute("aria-label", label);
     for (const [value, label] of options) {
       const option = document.createElement("option");
       option.value = value;
@@ -281,11 +353,6 @@
     span.textContent = label;
     td.append(span);
     return td;
-  }
-
-  function componentCell(value) {
-    if (value === "none") return cell("해당 없음", "cell--muted");
-    return badgeCell(value, COMPONENT_LABEL[value]);
   }
 
   function actionCell(buttons, id) {
@@ -487,24 +554,6 @@
     search = event.target.value;
     renderTable();
   });
-
-  for (const chip of document.querySelectorAll(".chip")) {
-    chip.setAttribute("aria-pressed", "false");
-    chip.addEventListener("click", () => {
-      const { filter, value } = chip.dataset;
-      // 같은 칩을 다시 누르면 해제, 같은 그룹의 다른 칩을 누르면 교체
-      filters[filter] = filters[filter] === value ? null : value;
-      syncChips();
-      renderTable();
-    });
-  }
-
-  function syncChips() {
-    for (const chip of document.querySelectorAll(".chip")) {
-      const active = filters[chip.dataset.filter] === chip.dataset.value;
-      chip.setAttribute("aria-pressed", String(active));
-    }
-  }
 
   for (const th of document.querySelectorAll(".th-sort")) {
     th.addEventListener("click", () => {
