@@ -3,7 +3,11 @@
 서비스/메뉴별 제작 도구(Figma · XD)와 공통 컴포넌트 적용 여부를 한 화면에서 관리하는
 사내용 현황 사이트입니다. **웹 1920 × 1080 해상도**를 기준으로 레이아웃을 맞췄습니다.
 
-## 실행
+## 배포된 사이트
+
+<https://dain-spec.github.io/prjmanager/>
+
+## 로컬 실행
 
 ```bash
 node tools/serve.mjs 4173
@@ -19,6 +23,11 @@ node tools/serve.mjs 4173
 ```bash
 python3 tools/build-tokens.py   # wehago.token.json → src/tokens.css
 ```
+
+> **`wehago.token.json` 은 이 repo 에 포함되어 있지 않습니다.** 사내 디자인 시스템
+> 원본이라 공개 repo 에 올리지 않습니다(`.gitignore` 처리). 변환 결과인
+> `src/tokens.css` 는 커밋되어 있으므로 **사이트 실행에는 원본이 필요 없습니다.**
+> 토큰을 갱신할 때만 원본을 프로젝트 루트에 두고 위 스크립트를 실행하세요.
 
 - `primitive/Value` → `--color-blue-500`, `--font-heading1` 등 원시 값
 - `semantic/Value` → `--color-primary-500`, `--gap-6`, `--radius-medium` 등
@@ -69,6 +78,8 @@ index.html            마크업
 src/tokens.css        토큰 → CSS 변수 (자동 생성)
 src/styles.css        레이아웃 · 컴포넌트 스타일
 src/app.js            상태 관리 · 렌더링 · 이벤트
-tools/build-tokens.py 토큰 변환 스크립트
+tools/build-tokens.py 토큰 변환 스크립트 (원본 JSON 필요)
 tools/serve.mjs       로컬 정적 서버
 ```
+
+브라우저가 실제로 로드하는 파일은 `index.html` + `src/` 세 개뿐입니다.

@@ -1,2 +1,7 @@
 .DS_Store
 node_modules/
+
+# 사내 디자인 시스템 원본 — public repo 이므로 커밋하지 않는다.
+# src/tokens.css 는 이미 변환돼 커밋되어 있어 사이트 실행에는 이 파일이 필요 없다.
+# 토큰을 갱신할 때만 로컬에 두고 `python3 tools/build-tokens.py` 를 실행한다.
+wehago.token.json
