@@ -110,7 +110,7 @@
           <colgroup>
             <col style="width:72px"  /><col style="width:260px" /><col style="width:220px" />
             <col style="width:140px" /><col style="width:180px" /><col style="width:380px" />
-            <col />                   <col style="width:132px" />
+            <col />                   <col style="width:152px" />
           </colgroup>
           <thead>
             <tr>
@@ -135,65 +135,6 @@
   </main>
 </div>
 
-<!-- ── 추가 / 수정 다이얼로그 ──────────────────────────── -->
-<dialog class="modal" id="modal">
-  <form class="modal__form" id="form" method="dialog">
-    <header class="modal__head">
-      <h2 class="modal__title" id="modal-title">작업물 추가</h2>
-      <button type="button" class="btn btn--ghost btn--icon" id="btn-close" aria-label="닫기">
-        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg>
-      </button>
-    </header>
-
-    <div class="modal__body">
-      <div class="field">
-        <label class="field__label" for="f-service">서비스명 <span class="req" aria-hidden="true">*</span></label>
-        <input class="input" id="f-service" name="service" required maxlength="60" placeholder="예: 회계관리" />
-      </div>
-
-      <div class="field">
-        <label class="field__label" for="f-menu">메뉴명</label>
-        <input class="input" id="f-menu" name="menu" maxlength="60" placeholder="예: 전표입력 (전체일 경우 '전체')" />
-      </div>
-
-      <div class="field">
-        <span class="field__label" id="f-tool-label">파일 유형</span>
-        <div class="radio-row" role="radiogroup" aria-labelledby="f-tool-label">
-          <label class="radio"><input type="radio" name="tool" value="Figma" checked /><span>Figma</span></label>
-          <label class="radio"><input type="radio" name="tool" value="XD" /><span>XD</span></label>
-        </div>
-      </div>
-
-      <div class="field">
-        <label class="field__label" for="f-component">공통 컴포넌트 적용</label>
-        <select class="input" id="f-component" name="component">
-          <option value="applied">적용</option>
-          <option value="missing">미적용</option>
-          <option value="partial">메뉴별 상이</option>
-          <option value="none">해당 없음</option>
-        </select>
-        <p class="field__help">XD 원본처럼 공통 컴포넌트 개념이 없는 파일은 &lsquo;해당 없음&rsquo;을 선택하세요.</p>
-      </div>
-
-      <div class="field field--wide">
-        <label class="field__label" for="f-path">파일 경로</label>
-        <input class="input" id="f-path" name="path" maxlength="200" placeholder="예: Figma &gt; WEHAGO &gt; 회계관리" />
-      </div>
-
-      <div class="field field--wide">
-        <label class="field__label" for="f-note">비고</label>
-        <textarea class="input input--area" id="f-note" name="note" rows="3" maxlength="300" placeholder="담당자, 최신화 일자, 특이사항 등"></textarea>
-      </div>
-    </div>
-
-    <footer class="modal__foot">
-      <button type="button" class="btn btn--danger-ghost" id="btn-delete" hidden>삭제</button>
-      <span class="modal__spacer"></span>
-      <button type="button" class="btn btn--ghost" id="btn-cancel">취소</button>
-      <button type="submit" class="btn btn--primary" id="btn-save">저장</button>
-    </footer>
-  </form>
-</dialog>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 

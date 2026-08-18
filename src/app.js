@@ -1,10 +1,14 @@
 /* WEHAGO 팀 작업물 현황 — 상태 관리 / 렌더링
+   추가·수정은 별도 다이얼로그 없이 테이블 행 안에서 바로 처리한다.
    데이터는 localStorage 에 저장되므로 새로고침해도 유지된다. */
 (() => {
   "use strict";
 
   const STORAGE_KEY = "wehago-prj-manager/rows/v1";
   const THEME_KEY = "wehago-prj-manager/theme";
+
+  /** 신규 행(아직 저장되지 않은 행)에 쓰는 임시 id */
+  const NEW_ID = "__new__";
 
   /** 공통 컴포넌트 적용 상태 라벨 */
   const COMPONENT_LABEL = {
@@ -16,6 +20,15 @@
 
   /** 적용률 계산 대상 — '해당 없음'은 분모에서 제외한다. */
   const RATE_TARGET = ["applied", "missing", "partial"];
+
+  /** 휴지통 아이콘 path (viewBox 16×16) */
+  const ICON_TRASH = [
+    "M2.5 4.5h11",
+    "M6.5 4.5V3a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1.5",
+    "M4 4.5l.6 8a1 1 0 0 0 1 .9h4.8a1 1 0 0 0 1-.9l.6-8",
+    "M6.8 7.2v3.6",
+    "M9.2 7.2v3.6",
+  ];
 
   const SEED = [
     { service: "회계관리",   menu: "전체",       tool: "Figma", component: "applied", path: "Figma > WEHAGO > 회계관리",            note: "전체 메뉴 동일 컴포넌트 사용" },
@@ -33,10 +46,14 @@
   // ── 상태 ────────────────────────────────────────────────
 
   let rows = load();
-  let editingId = null;
   const filters = { tool: null, component: null };
   let search = "";
   let sort = { key: null, dir: "asc" };
+
+  /** 편집 중인 행 id (신규는 NEW_ID). null 이면 편집 중이 아니다. */
+  let editingId = null;
+  /** 편집 중 입력값. 입력 즉시 여기에 반영되므로 재렌더링에도 값이 남는다. */
+  let draft = null;
 
   const $ = (id) => document.getElementById(id);
   const els = {
@@ -44,10 +61,6 @@
     empty: $("empty"),
     rowCount: $("row-count"),
     search: $("search"),
-    modal: $("modal"),
-    form: $("form"),
-    modalTitle: $("modal-title"),
-    btnDelete: $("btn-delete"),
     toast: $("toast"),
   };
 
@@ -98,6 +111,8 @@
   function visibleRows() {
     const q = search.trim().toLowerCase();
     let list = rows.filter((row) => {
+      // 편집 중인 행은 필터/검색으로 사라지지 않게 항상 남긴다.
+      if (row.id === editingId) return true;
       if (filters.tool && row.tool !== filters.tool) return false;
       if (filters.component && row.component !== filters.component) return false;
       if (!q) return true;
@@ -147,36 +162,106 @@
 
   function renderTable() {
     const list = visibleRows();
+    // 신규 행은 아직 rows 에 없으므로 목록 끝에 붙여 보여준다.
+    const display = editingId === NEW_ID ? [...list, { id: NEW_ID }] : list;
+
     els.tbody.replaceChildren();
 
     let prevService = null;
-    list.forEach((row, index) => {
-      const tr = document.createElement("tr");
-      const continued = row.service === prevService;
+    display.forEach((row, index) => {
+      if (row.id === editingId) {
+        els.tbody.append(editRow(index + 1));
+        prevService = null; // 편집 행 다음 행은 서비스명을 다시 표시한다.
+        return;
+      }
+      const tr = displayRow(row, index + 1, row.service === prevService);
       prevService = row.service;
-
-      tr.append(
-        cell(String(index + 1), "cell--no"),
-        serviceCell(row, continued),
-        cell(row.menu || "—", row.menu ? "" : "cell--muted"),
-        badgeCell(row.tool === "Figma" ? "figma" : "xd", row.tool),
-        componentCell(row.component),
-        cell(row.path || "—", row.path ? "cell--path" : "cell--muted"),
-        cell(row.note || "", "cell--note"),
-        actionCell(row.id),
-      );
       els.tbody.append(tr);
     });
 
-    els.empty.hidden = list.length > 0;
+    els.empty.hidden = display.length > 0;
     els.rowCount.textContent =
       list.length === rows.length ? `${rows.length}건` : `${list.length}건 / 전체 ${rows.length}건`;
   }
 
-  function cell(text, className) {
+  function displayRow(row, no, continued) {
+    const tr = document.createElement("tr");
+    tr.append(
+      cell(String(no), "cell--no"),
+      serviceCell(row, continued),
+      cell(row.menu || "—", row.menu ? "" : "cell--muted"),
+      badgeCell(row.tool === "Figma" ? "figma" : "xd", row.tool),
+      componentCell(row.component),
+      cell(row.path || "—", row.path ? "cell--path" : "cell--muted", row.path),
+      cell(row.note || "", "cell--note", row.note),
+      actionCell([
+        // 수정은 행 hover(또는 포커스) 시에만 노출된다.
+        { label: "수정", action: "edit", cls: "btn--ghost row-action--hover" },
+        { label: "삭제", action: "delete", cls: "btn--ghost btn--icon-small btn--delete", icon: ICON_TRASH },
+      ], row.id),
+    );
+    return tr;
+  }
+
+  /** 편집 행 — 각 칸을 입력 컨트롤로 바꾼다. */
+  function editRow(no) {
+    const tr = document.createElement("tr");
+    tr.dataset.editing = "true";
+
+    tr.append(
+      cell(editingId === NEW_ID ? "신규" : String(no), "cell--no"),
+      inputCell("service", "서비스명", { required: true }),
+      inputCell("menu", "메뉴명 (전체일 경우 '전체')"),
+      selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]]),
+      selectCell("component", Object.entries(COMPONENT_LABEL)),
+      inputCell("path", "파일 경로", { className: "cell--path" }),
+      inputCell("note", "비고", { className: "cell--note" }),
+      actionCell([
+        { label: "저장", action: "save", cls: "btn--primary" },
+        { label: "취소", action: "cancel", cls: "btn--ghost" },
+      ]),
+    );
+    return tr;
+  }
+
+  function cell(text, className, title) {
     const td = document.createElement("td");
     if (className) td.className = className;
+    // 한 줄로 잘리는 칸은 전체 내용을 title 로 남긴다.
+    if (title) td.title = title;
     td.textContent = text;
+    return td;
+  }
+
+  function inputCell(name, placeholder, { required = false, className = "" } = {}) {
+    const td = document.createElement("td");
+    if (className) td.className = className;
+    const input = document.createElement("input");
+    input.className = "input input--cell";
+    input.name = name;
+    input.value = draft[name] ?? "";
+    input.placeholder = placeholder;
+    input.maxLength = name === "note" || name === "path" ? 300 : 60;
+    if (required) input.required = true;
+    input.setAttribute("aria-label", placeholder);
+    td.append(input);
+    return td;
+  }
+
+  function selectCell(name, options) {
+    const td = document.createElement("td");
+    const select = document.createElement("select");
+    select.className = "input input--cell";
+    select.name = name;
+    select.setAttribute("aria-label", name === "tool" ? "파일 유형" : "공통 컴포넌트 적용");
+    for (const [value, label] of options) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      if (draft[name] === value) option.selected = true;
+      select.append(option);
+    }
+    td.append(select);
     return td;
   }
 
@@ -203,16 +288,43 @@
     return badgeCell(value, COMPONENT_LABEL[value]);
   }
 
-  function actionCell(id) {
+  function actionCell(buttons, id) {
     const td = document.createElement("td");
     td.className = "cell--center";
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn btn--ghost btn--small";
-    btn.textContent = "수정";
-    btn.dataset.edit = id;
-    td.append(btn);
+    const wrap = document.createElement("div");
+    wrap.className = "cell-actions";
+    for (const { label, action, cls, icon } of buttons) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `btn btn--small ${cls}`;
+      btn.dataset.action = action;
+      if (id) btn.dataset.id = id;
+      if (icon) {
+        // 아이콘만 있는 버튼은 이름을 읽을 수 없으므로 aria-label 과 툴팁을 준다.
+        btn.append(svgIcon(icon));
+        btn.setAttribute("aria-label", label);
+        btn.title = label;
+      } else {
+        btn.textContent = label;
+      }
+      wrap.append(btn);
+    }
+    td.append(wrap);
     return td;
+  }
+
+  function svgIcon(paths) {
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("class", "icon");
+    svg.setAttribute("viewBox", "0 0 16 16");
+    svg.setAttribute("aria-hidden", "true");
+    for (const d of paths) {
+      const path = document.createElementNS(NS, "path");
+      path.setAttribute("d", d);
+      svg.append(path);
+    }
+    return svg;
   }
 
   function render() {
@@ -220,71 +332,80 @@
     renderTable();
   }
 
-  // ── 모달 ────────────────────────────────────────────────
+  // ── 편집 동작 ───────────────────────────────────────────
 
-  function openModal(id) {
-    editingId = id ?? null;
-    const row = id ? rows.find((r) => r.id === id) : null;
+  function startEdit(id) {
+    const row = rows.find((r) => r.id === id);
+    if (!row) return;
+    editingId = id;
+    draft = { ...row };
+    renderTable();
+    focusFirstField();
+  }
 
-    els.modalTitle.textContent = row ? "작업물 수정" : "작업물 추가";
-    els.btnDelete.hidden = !row;
-    els.form.reset();
+  function startCreate() {
+    editingId = NEW_ID;
+    draft = { service: "", menu: "", tool: "Figma", component: "applied", path: "", note: "" };
+    renderTable();
+    focusFirstField();
+  }
 
-    if (row) {
-      els.form.service.value = row.service;
-      els.form.menu.value = row.menu;
-      els.form.component.value = row.component;
-      els.form.path.value = row.path;
-      els.form.note.value = row.note;
-      for (const radio of els.form.tool) radio.checked = radio.value === row.tool;
+  function focusFirstField() {
+    const input = els.tbody.querySelector('tr[data-editing] input[name="service"]');
+    if (!input) return;
+    input.focus();
+    input.closest("tr").scrollIntoView({ block: "nearest" });
+  }
+
+  function commit() {
+    const service = (draft.service || "").trim();
+    if (!service) {
+      toast("서비스명을 입력해 주세요.");
+      els.tbody.querySelector('tr[data-editing] input[name="service"]')?.focus();
+      return;
     }
-
-    els.modal.showModal();
-    els.form.service.focus();
-  }
-
-  function closeModal() {
-    els.modal.close();
-    editingId = null;
-  }
-
-  function submit(event) {
-    event.preventDefault();
-    const data = new FormData(els.form);
-    const service = String(data.get("service") || "").trim();
-    if (!service) return;
 
     const next = {
       service,
-      menu: String(data.get("menu") || "").trim(),
-      tool: String(data.get("tool") || "Figma"),
-      component: String(data.get("component") || "applied"),
-      path: String(data.get("path") || "").trim(),
-      note: String(data.get("note") || "").trim(),
+      menu: (draft.menu || "").trim(),
+      tool: draft.tool || "Figma",
+      component: draft.component || "applied",
+      path: (draft.path || "").trim(),
+      note: (draft.note || "").trim(),
     };
 
-    if (editingId) {
+    if (editingId === NEW_ID) {
+      rows.push({ id: uid(), ...next });
+      toast(`'${service}' 항목을 추가했습니다.`);
+    } else {
       const i = rows.findIndex((r) => r.id === editingId);
       rows[i] = { ...rows[i], ...next };
       toast(`'${service}' 항목을 수정했습니다.`);
-    } else {
-      rows.push({ id: uid(), ...next });
-      toast(`'${service}' 항목을 추가했습니다.`);
     }
 
+    editingId = null;
+    draft = null;
     save();
     render();
-    closeModal();
   }
 
-  function remove() {
-    const row = rows.find((r) => r.id === editingId);
+  function cancelEdit() {
+    editingId = null;
+    draft = null;
+    renderTable();
+  }
+
+  function remove(id) {
+    const row = rows.find((r) => r.id === id);
     if (!row) return;
     if (!confirm(`'${row.service}' 항목을 삭제할까요?`)) return;
-    rows = rows.filter((r) => r.id !== editingId);
+    rows = rows.filter((r) => r.id !== id);
+    if (editingId === id) {
+      editingId = null;
+      draft = null;
+    }
     save();
     render();
-    closeModal();
     toast("항목을 삭제했습니다.");
   }
 
@@ -293,7 +414,8 @@
   function exportCsv() {
     const head = ["No", "서비스명", "메뉴명", "파일 유형", "공통 컴포넌트 적용", "파일 경로", "비고"];
     const escape = (value) => `"${String(value).replaceAll('"', '""')}"`;
-    const body = visibleRows().map((row, i) =>
+    const list = visibleRows();
+    const body = list.map((row, i) =>
       [i + 1, row.service, row.menu, row.tool, COMPONENT_LABEL[row.component], row.path, row.note]
         .map(escape)
         .join(","),
@@ -308,7 +430,7 @@
     a.download = "wehago-작업물-현황.csv";
     a.click();
     URL.revokeObjectURL(url);
-    toast(`${visibleRows().length}건을 CSV 로 내보냈습니다.`);
+    toast(`${list.length}건을 CSV 로 내보냈습니다.`);
   }
 
   // ── 토스트 ──────────────────────────────────────────────
@@ -325,19 +447,40 @@
 
   // ── 이벤트 바인딩 ───────────────────────────────────────
 
-  // 헤더와 테이블 툴바 두 곳의 추가 버튼이 같은 모달을 연다.
   for (const btn of document.querySelectorAll('[data-action="add"]')) {
-    btn.addEventListener("click", () => openModal(null));
+    btn.addEventListener("click", startCreate);
   }
-  $("btn-cancel").addEventListener("click", closeModal);
-  $("btn-close").addEventListener("click", closeModal);
-  els.btnDelete.addEventListener("click", remove);
-  els.form.addEventListener("submit", submit);
-  $("btn-export").addEventListener("click", exportCsv);
+
+  // 편집 행 입력값을 즉시 draft 에 반영해 재렌더링에도 값이 유지되게 한다.
+  els.tbody.addEventListener("input", (event) => {
+    const field = event.target.closest("[name]");
+    if (field && draft) draft[field.name] = field.value;
+  });
+  els.tbody.addEventListener("change", (event) => {
+    const field = event.target.closest("[name]");
+    if (field && draft) draft[field.name] = field.value;
+  });
 
   els.tbody.addEventListener("click", (event) => {
-    const id = event.target.closest("[data-edit]")?.dataset.edit;
-    if (id) openModal(id);
+    const btn = event.target.closest("[data-action]");
+    if (!btn) return;
+    const { action, id } = btn.dataset;
+    if (action === "edit") startEdit(id);
+    else if (action === "delete") remove(id);
+    else if (action === "save") commit();
+    else if (action === "cancel") cancelEdit();
+  });
+
+  // Enter 로 저장, Esc 로 취소
+  els.tbody.addEventListener("keydown", (event) => {
+    if (!editingId) return;
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commit();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      cancelEdit();
+    }
   });
 
   els.search.addEventListener("input", (event) => {
@@ -373,13 +516,10 @@
     });
   }
 
-  // 테마 — 저장된 선택이 없으면 OS 설정을 따른다.
-  const themeBtn = $("btn-theme");
-  const saved = localStorage.getItem(THEME_KEY);
-  if (saved) document.documentElement.dataset.theme = saved;
-  else document.documentElement.removeAttribute("data-theme");
+  $("btn-export").addEventListener("click", exportCsv);
 
-  themeBtn.addEventListener("click", () => {
+  // 테마 — 저장된 선택이 없으면 OS 설정을 따른다.
+  $("btn-theme").addEventListener("click", () => {
     const isDark =
       document.documentElement.dataset.theme === "dark" ||
       (!document.documentElement.dataset.theme &&
@@ -388,6 +528,10 @@
     document.documentElement.dataset.theme = next;
     localStorage.setItem(THEME_KEY, next);
   });
+
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved) document.documentElement.dataset.theme = saved;
+  else document.documentElement.removeAttribute("data-theme");
 
   render();
 })();

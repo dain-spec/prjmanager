@@ -171,6 +171,23 @@ textarea {
   font-size: var(--font-body4);
 }
 
+/* 40px 행에 들어가는 정사각 아이콘 버튼 (--size-6 = 28px) */
+.btn--icon-small {
+  width: var(--size-6);
+  padding-inline: 0;
+}
+
+/* 삭제 아이콘 — 평상시엔 무채색, hover 시에만 위험 색을 쓴다. */
+.btn--delete {
+  border-color: transparent;
+  color: var(--color-icon-subtle);
+}
+.btn--delete:hover {
+  border-color: var(--color-border-danger);
+  background: var(--color-surface-error-subtler);
+  color: var(--color-text-point);
+}
+
 .icon {
   width: var(--size-3);
   height: var(--size-3);
@@ -419,12 +436,25 @@ textarea {
 .th-sort[data-dir] { color: var(--color-text-primary); }
 
 .table tbody td {
-  padding: var(--padding-6);
+  /* 행 높이 40px 고정 — 디자인 시스템의 --size-9(40px)를 쓴다.
+     box-sizing: border-box 이므로 아래 1px 보더가 40px 안에 포함되고,
+     vertical-align: middle 이 내용을 세로 중앙에 놓는다. */
+  height: var(--size-9);
+  padding: 0 var(--padding-6);
   border-bottom: 1px solid var(--color-border-subtler);
   font-size: var(--font-body3);
   color: var(--color-text-basic);
   vertical-align: middle;
   overflow-wrap: anywhere;
+}
+
+/* 파일 경로·비고는 자유 입력이라 길어질 수 있다. 줄바꿈되면 행이 40px 를
+   넘기므로 한 줄로 자르고, 잘린 전체 내용은 title 속성(마우스 오버)으로 본다. */
+.table tbody .cell--path,
+.table tbody .cell--note {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .table tbody tr:hover td { background: var(--color-action-hover); }
@@ -467,6 +497,8 @@ textarea {
   font-size: var(--font-body5);
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
+  /* baseline 정렬 시 디센더만큼 줄 상자가 늘어나 행 높이를 밀어올린다. */
+  vertical-align: middle;
 }
 
 /* 칩과 동일한 이유로 고정 스케일 단계를 사용한다(대비 4.5:1 이상 확보). */
@@ -485,114 +517,59 @@ textarea {
   color: var(--color-text-subtler);
 }
 
-/* ── 모달 ──────────────────────────────────────────────── */
+/* ── 행 액션 노출 ──────────────────────────────────────── */
 
-.modal {
-  width: min(680px, 92vw);
-  padding: 0;
-  border: 1px solid var(--color-border-outline);
-  border-radius: var(--radius-large);
-  background: var(--color-surface-basic);
-  color: var(--color-text-basic);
-  box-shadow: var(--shadow-level3);
-}
-.modal::backdrop { background: var(--color-background-dim); }
-
-.modal__form {
-  display: flex;
-  flex-direction: column;
+/* 수정 버튼은 행에 hover 했을 때만 보인다.
+   display/visibility 대신 opacity 를 쓰는 이유:
+   - 레이아웃에서 빠지지 않아 나타날 때 옆 버튼이 밀리지 않는다.
+   - 탭 순서에 남아 있어 키보드로도 도달할 수 있고, 포커스가 들어오면
+     :focus-within 이 걸려 실제로 보이게 된다.
+   pointer-events 로 보이지 않는 동안의 오클릭만 막는다. */
+.row-action--hover {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
 }
 
-.modal__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--gap-6);
-  padding: var(--padding-8) var(--padding-9);
-  border-bottom: 1px solid var(--color-border-subtler);
+.table tbody tr:hover .row-action--hover,
+.table tbody tr:focus-within .row-action--hover {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.modal__title {
-  margin: 0;
-  font-size: var(--font-heading5);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-bolder);
+/* ── 인라인 편집 행 ────────────────────────────────────── */
+
+/* :hover 규칙보다 뒤에 와야 편집 중 배경이 밀리지 않는다. */
+.table tbody tr[data-editing] td {
+  background: var(--color-action-select);
+  border-bottom-color: var(--color-element-primary);
 }
 
-.modal__body {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--gap-7) var(--gap-6);
-  padding: var(--padding-9);
-}
-
-.modal__foot {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-4);
-  padding: var(--padding-7) var(--padding-9);
-  border-top: 1px solid var(--color-border-subtler);
-  background: var(--color-surface-subtler);
-}
-
-.modal__spacer { flex: 1; }
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-3);
-  min-width: 0;
-}
-.field--wide { grid-column: 1 / -1; }
-
-.field__label {
+/* 40px 행 안에 들어가는 입력 컨트롤 */
+.input--cell {
+  height: var(--size-6);
+  padding-inline: var(--padding-4);
   font-size: var(--font-body4);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-subtle);
 }
 
-.field__help {
-  margin: 0;
-  font-size: var(--font-body5);
-  color: var(--color-text-subtler);
+.input--cell:invalid {
+  border-color: var(--color-border-danger);
 }
 
-.req { color: var(--color-text-point); }
-
-.input {
-  width: 100%;
-  height: var(--size-8);
-  padding-inline: var(--padding-5);
-  border: 1px solid var(--color-input-border);
-  border-radius: var(--radius-small);
-  background: var(--color-input-field);
-  font-size: var(--font-body3);
-}
-.input::placeholder { color: var(--color-text-subtler); }
-.input:focus { border-color: var(--color-input-border-focus); }
-.input:invalid:not(:placeholder-shown) { border-color: var(--color-border-danger); }
-
-.input--area {
-  height: auto;
-  padding-block: var(--padding-4);
-  resize: vertical;
-}
-
-.radio-row {
+.cell-actions {
   display: flex;
   align-items: center;
-  gap: var(--gap-6);
-  height: var(--size-8);
+  justify-content: center;
+  gap: var(--gap-2);
 }
 
-.radio {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--gap-3);
-  font-size: var(--font-body3);
-  cursor: pointer;
+/* 편집 행에서는 잘라내기(ellipsis)를 풀어 입력값 전체가 보이게 한다. */
+.table tbody tr[data-editing] .cell--path,
+.table tbody tr[data-editing] .cell--note {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
-.radio input { accent-color: var(--color-element-primary); }
 
 /* ── 토스트 ────────────────────────────────────────────── */
 
