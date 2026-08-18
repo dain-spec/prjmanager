@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1920" />
+<title>WEHAGO 서비스 피그마 · XD 파일 현황</title>
+<meta name="description" content="서비스/메뉴별 제작 도구(Figma·XD) 및 공통 컴포넌트 적용 여부를 파악하기 위한 팀 작업물 현황 사이트" />
+<link rel="stylesheet" href="src/tokens.css" />
+<link rel="stylesheet" href="src/styles.css" />
+</head>
+<body>
+<a class="skip-link" href="#content">본문으로 건너뛰기</a>
+
+<div class="app">
+  <!-- ── 헤더 ───────────────────────────────────────────── -->
+  <header class="page-head">
+    <div class="page-head__titles">
+      <h1 class="page-head__title">WEHAGO 서비스 피그마 · XD 파일 현황</h1>
+      <p class="page-head__desc">
+        서비스/메뉴별 제작 도구(Figma&middot;XD) 및 공통 컴포넌트 적용 여부를 파악하기 위한 현황 템플릿입니다.
+      </p>
+    </div>
+
+    <div class="page-head__actions">
+      <button type="button" class="btn btn--primary" data-action="add">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.2v9.6M3.2 8h9.6" /></svg>
+        추가
+      </button>
+
+      <div class="chip-group" role="group" aria-label="현황 필터">
+        <button type="button" class="chip chip--figma"   data-filter="tool"      data-value="Figma">Figma</button>
+        <button type="button" class="chip chip--xd"      data-filter="tool"      data-value="XD">XD</button>
+        <button type="button" class="chip chip--applied" data-filter="component" data-value="applied">적용</button>
+        <button type="button" class="chip chip--missing" data-filter="component" data-value="missing">미적용</button>
+        <button type="button" class="chip chip--partial" data-filter="component" data-value="partial">메뉴별 상이</button>
+      </div>
+
+      <button type="button" class="btn btn--ghost btn--icon" id="btn-theme" aria-label="라이트/다크 모드 전환" title="라이트 / 다크 모드 전환">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="8" cy="8" r="3.1" />
+          <path d="M8 1v1.6M8 13.4V15M1 8h1.6M13.4 8H15M3.05 3.05l1.13 1.13M11.82 11.82l1.13 1.13M12.95 3.05l-1.13 1.13M4.18 11.82l-1.13 1.13" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="content" id="content">
+    <!-- ── 요약 통계 ─────────────────────────────────────── -->
+    <section class="stats" aria-label="현황 요약">
+      <article class="stat stat--total">
+        <p class="stat__label">전체 서비스 수</p>
+        <div class="stat__body">
+          <strong class="stat__value" id="stat-total">0</strong>
+          <span class="stat__aside" id="stat-total-aside">메뉴 0건</span>
+        </div>
+      </article>
+
+      <article class="stat stat--figma">
+        <p class="stat__label">Figma 서비스 수</p>
+        <div class="stat__body">
+          <strong class="stat__value" id="stat-figma">0</strong>
+          <span class="badge badge--neutral" id="stat-figma-pct">0%</span>
+        </div>
+      </article>
+
+      <article class="stat stat--xd">
+        <p class="stat__label">XD 서비스 수</p>
+        <div class="stat__body">
+          <strong class="stat__value" id="stat-xd">0</strong>
+          <span class="badge badge--neutral" id="stat-xd-pct">0%</span>
+        </div>
+      </article>
+
+      <article class="stat stat--rate">
+        <p class="stat__label">공통 컴포넌트 적용률</p>
+        <div class="stat__body">
+          <strong class="stat__value" id="stat-rate">0%</strong>
+          <div class="meter" role="img" aria-labelledby="stat-rate">
+            <div class="meter__fill" id="stat-rate-bar" style="width:0%"></div>
+          </div>
+        </div>
+        <p class="stat__foot" id="stat-rate-foot">적용 0 / 대상 0</p>
+      </article>
+    </section>
+
+    <!-- ── 현황 테이블 ───────────────────────────────────── -->
+    <section class="panel" aria-label="작업물 목록">
+      <div class="panel__toolbar">
+        <div class="search">
+          <svg class="icon search__icon" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="7" cy="7" r="4.6" /><path d="M10.4 10.4 14 14" />
+          </svg>
+          <input type="search" id="search" class="search__input"
+                 placeholder="서비스명, 메뉴명, 파일 경로, 비고 검색" aria-label="목록 검색" />
+        </div>
+
+        <p class="panel__count" id="row-count" aria-live="polite">0건</p>
+
+        <div class="panel__toolbar-right">
+          <button type="button" class="btn btn--secondary" id="btn-export">CSV 내보내기</button>
+          <button type="button" class="btn btn--primary" data-action="add">
+            <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.2v9.6M3.2 8h9.6" /></svg>
+            추가
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap" tabindex="0">
+        <table class="table">
+          <colgroup>
+            <col style="width:72px"  /><col style="width:260px" /><col style="width:220px" />
+            <col style="width:140px" /><col style="width:180px" /><col style="width:380px" />
+            <col />                   <col style="width:132px" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col">No</th>
+              <th scope="col"><button type="button" class="th-sort" data-sort="service">서비스명</button></th>
+              <th scope="col"><button type="button" class="th-sort" data-sort="menu">메뉴명</button></th>
+              <th scope="col"><button type="button" class="th-sort" data-sort="tool">파일 유형</button></th>
+              <th scope="col"><button type="button" class="th-sort" data-sort="component">공통 컴포넌트 적용</button></th>
+              <th scope="col">파일 경로</th>
+              <th scope="col">비고</th>
+              <th scope="col" class="cell--center">관리</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+
+        <p class="empty" id="empty" hidden>
+          조건에 맞는 작업물이 없습니다. 검색어나 필터를 조정해 보세요.
+        </p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ── 추가 / 수정 다이얼로그 ──────────────────────────── -->
+<dialog class="modal" id="modal">
+  <form class="modal__form" id="form" method="dialog">
+    <header class="modal__head">
+      <h2 class="modal__title" id="modal-title">작업물 추가</h2>
+      <button type="button" class="btn btn--ghost btn--icon" id="btn-close" aria-label="닫기">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg>
+      </button>
+    </header>
+
+    <div class="modal__body">
+      <div class="field">
+        <label class="field__label" for="f-service">서비스명 <span class="req" aria-hidden="true">*</span></label>
+        <input class="input" id="f-service" name="service" required maxlength="60" placeholder="예: 회계관리" />
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="f-menu">메뉴명</label>
+        <input class="input" id="f-menu" name="menu" maxlength="60" placeholder="예: 전표입력 (전체일 경우 '전체')" />
+      </div>
+
+      <div class="field">
+        <span class="field__label" id="f-tool-label">파일 유형</span>
+        <div class="radio-row" role="radiogroup" aria-labelledby="f-tool-label">
+          <label class="radio"><input type="radio" name="tool" value="Figma" checked /><span>Figma</span></label>
+          <label class="radio"><input type="radio" name="tool" value="XD" /><span>XD</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="f-component">공통 컴포넌트 적용</label>
+        <select class="input" id="f-component" name="component">
+          <option value="applied">적용</option>
+          <option value="missing">미적용</option>
+          <option value="partial">메뉴별 상이</option>
+          <option value="none">해당 없음</option>
+        </select>
+        <p class="field__help">XD 원본처럼 공통 컴포넌트 개념이 없는 파일은 &lsquo;해당 없음&rsquo;을 선택하세요.</p>
+      </div>
+
+      <div class="field field--wide">
+        <label class="field__label" for="f-path">파일 경로</label>
+        <input class="input" id="f-path" name="path" maxlength="200" placeholder="예: Figma &gt; WEHAGO &gt; 회계관리" />
+      </div>
+
+      <div class="field field--wide">
+        <label class="field__label" for="f-note">비고</label>
+        <textarea class="input input--area" id="f-note" name="note" rows="3" maxlength="300" placeholder="담당자, 최신화 일자, 특이사항 등"></textarea>
+      </div>
+    </div>
+
+    <footer class="modal__foot">
+      <button type="button" class="btn btn--danger-ghost" id="btn-delete" hidden>삭제</button>
+      <span class="modal__spacer"></span>
+      <button type="button" class="btn btn--ghost" id="btn-cancel">취소</button>
+      <button type="submit" class="btn btn--primary" id="btn-save">저장</button>
+    </footer>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="src/app.js"></script>
+</body>
+</html>
