@@ -79,7 +79,7 @@
             <circle cx="7" cy="7" r="4.6" /><path d="M10.4 10.4 14 14" />
           </svg>
           <input type="search" id="search" class="search__input"
-                 placeholder="서비스명, 메뉴명, 파일 경로, 비고 검색" aria-label="목록 검색" />
+                 placeholder="서비스명, 메뉴명, 파일 경로, 담당자, 비고 검색" aria-label="목록 검색" />
         </div>
 
         <p class="panel__count" id="row-count" aria-live="polite">0건</p>
@@ -97,14 +97,15 @@
       <div class="table-wrap" tabindex="0">
         <table class="table">
           <colgroup>
-            <col style="width:72px"  /><!-- No -->
-            <col style="width:220px" /><!-- 서비스명 -->
-            <col style="width:110px" /><!-- 메뉴명 -->
-            <col style="width:120px" /><!-- 파일 유형 -->
-            <col style="width:160px" /><!-- 공통 컴포넌트 적용 -->
+            <col style="width:52px"  /><!-- No -->
+            <col style="width:190px" /><!-- 서비스명 -->
+            <col style="width:84px"  /><!-- 메뉴명 -->
+            <col style="width:96px"  /><!-- 파일 유형 -->
+            <col style="width:144px" /><!-- 공통 컴포넌트 적용 -->
             <col />                    <!-- 파일 경로 (남는 폭 전체) -->
-            <col style="width:380px" /><!-- 비고 -->
-            <col style="width:152px" /><!-- 관리 -->
+            <col style="width:92px"  /><!-- 담당자 -->
+            <col style="width:240px" /><!-- 비고 -->
+            <col style="width:132px" /><!-- 관리 -->
           </colgroup>
           <thead>
             <tr>
@@ -114,6 +115,7 @@
               <th scope="col"><button type="button" class="th-sort" data-sort="tool">파일 유형</button></th>
               <th scope="col"><button type="button" class="th-sort" data-sort="component">공통 컴포넌트 적용</button></th>
               <th scope="col">파일 경로</th>
+              <th scope="col"><button type="button" class="th-sort" data-sort="owner">담당자</button></th>
               <th scope="col">비고</th>
               <th scope="col" class="cell--center">관리</th>
             </tr>

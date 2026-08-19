@@ -4,7 +4,8 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "wehago-prj-manager/rows/v1";
+  /* 담당자 컬럼이 추가되어 스키마가 바뀌었으므로 키를 v2 로 올린다. */
+  const STORAGE_KEY = "wehago-prj-manager/rows/v2";
   const THEME_KEY = "wehago-prj-manager/theme";
 
   /** 신규 행(아직 저장되지 않은 행)에 쓰는 임시 id */
@@ -35,61 +36,62 @@
        메뉴명            ← 유형(Web/Mobile/C/S). 같은 서비스의 행을 구분하는 값이다.
        파일 유형         ← 주소링크 종류 (figma.com → Figma, 로컬 경로 → XD)
        공통 컴포넌트 적용 ← 반영 상태 (완료 → 적용, 진행중 → 미적용, 해당사항 없음 → 해당 없음)
+       담당자            ← 작업자
        비고              ← 원래 비고 + 이 테이블에 칸이 없는 값(공통 반영 버전 /
-                          Figma 이관 필요 / 작업자)을 잃지 않도록 함께 적었다. */
+                          Figma 이관 필요)을 잃지 않도록 함께 적었다. */
   const FIGMA = "https://www.figma.com/design";
   const SEED = [
     { service: "WEHAGO Web 2.0 공통", menu: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/vVNdCTvO5nvN88byoPuYkV/WEHAGO-Web-2.0_DSG?m=auto&node-id=6556-35225&t=NrDWMe3BToXAjWwM-1`,
-      note: "작업자 2Cell" },
+      owner: "2Cell", note: "" },
     { service: "WEHAGO Mobile 2.0 공통", menu: "Mobile", tool: "Figma", component: "none",
       path: `${FIGMA}/2hjgaltgwo1dIYAyMFxwDZ/WEHAGO-Mobile-2.0_DSG?m=auto&node-id=0-1&t=5WN7aFvvOpyG3MKk-1`,
-      note: "작업자 2Cell" },
+      owner: "2Cell", note: "" },
     { service: "WEHAGO Main 1.5", menu: "Web", tool: "XD", component: "none",
       path: "XD : WEHAGO 1.0 메인_개선안(Cloud)",
-      note: "작업자 홍길동" },
+      owner: "홍길동", note: "" },
     { service: "WEHAGO Main 2.0", menu: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/nQnqiG4WPBVxC4t38nBEW2/WEHAGO-2.0-Web-%EB%A9%94%EC%9D%B8?node-id=723-6341&t=R4SN6APFALqVIQbX-1`,
-      note: "작업자 홍길동" },
+      owner: "홍길동", note: "" },
     { service: "WEHAGO AI Edition", menu: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/nQnqiG4WPBVxC4t38nBEW2/WEHAGO-2.0-Web-%EB%A9%94%EC%9D%B8?node-id=4028-42604&t=R4SN6APFALqVIQbX-1`,
-      note: "WEHAGO 2.0 Web 메인 피그마 파일에 포함 / 작업자 홍길동" },
+      owner: "홍길동", note: "WEHAGO 2.0 Web 메인 피그마 파일에 포함" },
     { service: "WEHAGO T", menu: "Web", tool: "XD", component: "none",
       path: "XD : \\UXUI Unit\\2025\\WEHAGO T, Tedge\\작업물",
-      note: "작업자 홍길동" },
+      owner: "홍길동", note: "" },
     { service: "WEHAGO T AI Edition", menu: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/qmWWQbn78V9VZeya9zmFBJ/WEHAGO-T?node-id=1-32&t=pIe1aQCojb8OETiP-1`,
-      note: "WEHAGO T 피그마 파일에 포함 / 수임처 AI 연말정산, 수임처관리, 수임처관리 리뉴얼 버전(holding) 혼재 / WHDS W v2.0 반영 진행중 / 작업자 2Cell" },
+      owner: "2Cell", note: "WEHAGO T 피그마 파일에 포함 / 수임처 AI 연말정산, 수임처관리, 수임처관리 리뉴얼 버전(holding) 혼재 / WHDS W v2.0 반영 진행중" },
     { service: "ProActive AI", menu: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/ZKzpwsavMCqZM48Mvb730d/WEHAGO-Web-Proactive-AI?node-id=1178-16981&t=3y7IUc8MEWu3EEAj-1`,
-      note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / 작업자 2Cell" },
+      owner: "2Cell", note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0" },
     { service: "ONE AI", menu: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/brhXNqFg9rpqSNI0yK05zM/WEHAGO-Web-ONE-AI?node-id=169-2211&t=jWIchZl5pxcl09qL-1`,
-      note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요 / 작업자 2Cell" },
+      owner: "2Cell", note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요" },
     { service: "ONE AI", menu: "Mobile", tool: "Figma", component: "applied",
       path: `${FIGMA}/jTkk4w5HWRH5zRrelHRKm9/WEHAGO-Mobile-ONE-AI?node-id=1-18&t=tTY327hL8syzZoxz-1`,
-      note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요 / 작업자 2Cell" },
+      owner: "2Cell", note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요" },
     { service: "ONE AI CUBE", menu: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/fUfs6M2MqStNtESlVAR3p4/WEHAGO-Web-ONE-AI-CUBE?node-id=390-13900&t=J8CId3uoQkbWrSED-1`,
-      note: "WHDS W v2.0 반영 진행중 / 작업자 2Cell" },
+      owner: "2Cell", note: "WHDS W v2.0 반영 진행중" },
     { service: "ONE AI Flow", menu: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/DiIjSe99UXUVDl7pgilfZy/ONE-AI-Flow?node-id=1-10&t=hPMX3yI7fEr02kOF-1`,
-      note: "WHDS W v2.0 반영 진행중 / 작업자 2Cell" },
+      owner: "2Cell", note: "WHDS W v2.0 반영 진행중" },
     { service: "Agent Market", menu: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/e7cVdc0Ev8irKt8axNuzqy/Agent-Market?node-id=1-10&t=eJhSUAwnoVyY5NTX-1`,
-      note: "WHDS W v2.0 / 작업자 2Cell" },
+      owner: "2Cell", note: "WHDS W v2.0" },
     { service: "메신저", menu: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/wgWUkgyGkZWG7GxevnLivm/WEHAGO-Web-%EB%A9%94%EC%8B%A0%EC%A0%80-%EC%9B%B9-%EC%84%A4%EC%B9%98%ED%98%95-?node-id=4427-2&t=bKujBqg9BLqYEpyt-1`,
-      note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0 / 작업자 2Cell" },
+      owner: "2Cell", note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
     { service: "메신저", menu: "C/S", tool: "Figma", component: "applied",
       path: `${FIGMA}/wgWUkgyGkZWG7GxevnLivm/WEHAGO-Web-%EB%A9%94%EC%8B%A0%EC%A0%80-%EC%9B%B9-%EC%84%A4%EC%B9%98%ED%98%95-?node-id=4512-2363&t=bKujBqg9BLqYEpyt-1`,
-      note: "WEHAGO Web 메신저 피그마 파일에 포함 / WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0 / 작업자 2Cell" },
+      owner: "2Cell", note: "WEHAGO Web 메신저 피그마 파일에 포함 / WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
     { service: "화상회의", menu: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/aesogzuumvDi1EneInUZCt/WEHAGO-Web-%ED%99%94%EC%83%81%ED%9A%8C%EC%9D%98-Meet-?node-id=1-5312&t=pflCrCYHVNHPPnWo-1`,
-      note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0 / 작업자 2Cell" },
+      owner: "2Cell", note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
     { service: "화상회의", menu: "Mobile", tool: "Figma", component: "applied",
       path: `${FIGMA}/cNrqG2nLmmAt9klnanGBnl/WEHAGO-Meet-Mobile--%EB%A6%AC%EB%89%B4%EC%96%BC-?node-id=1-3063&t=NUPWIqx5l1LBcb6Z-1`,
-      note: "WHDS 2.0 완료 이전 작업물 / WHDS M v1.0 / 작업자 2Cell" },
+      owner: "2Cell", note: "WHDS 2.0 완료 이전 작업물 / WHDS M v1.0" },
   ];
 
   // ── 상태 ────────────────────────────────────────────────
@@ -167,7 +169,7 @@
       if (filters.tool && row.tool !== filters.tool) return false;
       if (filters.component && row.component !== filters.component) return false;
       if (!q) return true;
-      return [row.service, row.menu, row.path, row.note, COMPONENT_LABEL[row.component], row.tool]
+      return [row.service, row.menu, row.path, row.owner, row.note, COMPONENT_LABEL[row.component], row.tool]
         .join(" ")
         .toLowerCase()
         .includes(q);
@@ -243,6 +245,7 @@
       badgeCell(row.tool === "Figma" ? "figma" : "xd", row.tool),
       componentCell(row.component),
       pathCell(row.path),
+      cell(row.owner || "—", row.owner ? "" : "cell--muted", row.owner),
       cell(row.note || "", "cell--note", row.note),
       actionCell([
         // 수정은 행 hover(또는 포커스) 시에만 노출된다.
@@ -265,6 +268,7 @@
       selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]], "파일 유형"),
       selectCell("component", Object.entries(COMPONENT_LABEL), "공통 컴포넌트 적용"),
       inputCell("path", "피그마 주소 또는 XD 경로", { className: "cell--path" }),
+      inputCell("owner", "담당자"),
       inputCell("note", "비고", { className: "cell--note" }),
       actionCell([
         { label: "저장", action: "save", cls: "btn--primary" },
@@ -412,7 +416,7 @@
 
   function startCreate() {
     editingId = NEW_ID;
-    draft = { service: "", menu: "", tool: "Figma", component: "applied", path: "", note: "" };
+    draft = { service: "", menu: "", tool: "Figma", component: "applied", path: "", owner: "", note: "" };
     renderTable();
     focusFirstField();
   }
@@ -438,6 +442,7 @@
       tool: draft.tool || "Figma",
       component: draft.component || "applied",
       path: (draft.path || "").trim(),
+      owner: (draft.owner || "").trim(),
       note: (draft.note || "").trim(),
     };
 
@@ -479,11 +484,11 @@
   // ── CSV 내보내기 ────────────────────────────────────────
 
   function exportCsv() {
-    const head = ["No", "서비스명", "메뉴명", "파일 유형", "공통 컴포넌트 적용", "파일 경로", "비고"];
+    const head = ["No", "서비스명", "메뉴명", "파일 유형", "공통 컴포넌트 적용", "파일 경로", "담당자", "비고"];
     const escape = (value) => `"${String(value).replaceAll('"', '""')}"`;
     const list = visibleRows();
     const body = list.map((row, i) =>
-      [i + 1, row.service, row.menu, row.tool, COMPONENT_LABEL[row.component], row.path, row.note]
+      [i + 1, row.service, row.menu, row.tool, COMPONENT_LABEL[row.component], row.path, row.owner, row.note]
         .map(escape)
         .join(","),
     );

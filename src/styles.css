@@ -15,7 +15,7 @@ body {
   background: var(--color-background-subtle);
   color: var(--color-text-basic);
   font-family: var(--font-family);
-  font-size: var(--font-body3);
+  font-size: var(--font-body4);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height);
   letter-spacing: var(--letter-spacing);
@@ -30,15 +30,16 @@ textarea {
   color: inherit;
 }
 
-/* 1920 × 1080 기준 셸 — 좌우 40px 여백에 1840px 컨텐츠 폭 */
+/* 1440 기준 셸 — 좌우 24px 여백. 1440 에서 컨텐츠 폭 1392px 를 확보하고,
+   더 넓은 화면에서는 1600px 까지만 늘어난 뒤 가운데 정렬된다. */
 .app {
-  width: min(1840px, 100% - var(--padding-13) * 2);
+  width: min(1600px, 100% - var(--padding-8) * 2);
   /* 1080 높이 안에서 헤더·요약이 고정되고 표 본문만 스크롤되도록 셸 높이를 고정한다.
      min-height 는 창이 지나치게 낮을 때 페이지 스크롤로 되돌리는 안전장치. */
   height: 100vh;
   min-height: 720px;
   margin-inline: auto;
-  padding-block: var(--padding-11) var(--padding-13);
+  padding-block: var(--padding-7) var(--padding-8);
   display: flex;
   flex-direction: column;
   gap: var(--gap-8);
@@ -53,7 +54,7 @@ textarea {
   border-radius: var(--radius-small);
   background: var(--color-surface-basic);
   color: var(--color-text-primary);
-  font-size: var(--font-body4);
+  font-size: var(--font-body5);
   font-weight: var(--font-weight-medium);
   text-decoration: none;
   box-shadow: var(--shadow-level2);
@@ -67,8 +68,8 @@ textarea {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--gap-8);
-  padding-bottom: var(--padding-7);
+  gap: var(--gap-6);
+  padding-bottom: var(--padding-6);
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
@@ -83,14 +84,14 @@ textarea {
 
 .page-head__title {
   margin: 0;
-  font-size: var(--font-heading1);
+  font-size: var(--font-heading3);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-bolder);
 }
 
 .page-head__desc {
   margin: 0;
-  font-size: var(--font-body2);
+  font-size: var(--font-body3);
   color: var(--color-text-subtle);
 }
 
@@ -116,7 +117,7 @@ textarea {
   border: 1px solid transparent;
   border-radius: var(--radius-small);
   background: var(--color-button-fill);
-  font-size: var(--font-body3);
+  font-size: var(--font-body4);
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
   cursor: pointer;
@@ -160,7 +161,7 @@ textarea {
 .btn--small {
   height: var(--size-6);
   padding-inline: var(--padding-5);
-  font-size: var(--font-body4);
+  font-size: var(--font-body5);
 }
 
 /* 40px 행에 들어가는 정사각 아이콘 버튼 (--size-6 = 28px) */
@@ -224,7 +225,7 @@ textarea {
 
 .stat__label {
   margin: 0;
-  font-size: var(--font-body3);
+  font-size: var(--font-body4);
   color: var(--color-text-subtle);
 }
 
@@ -235,7 +236,7 @@ textarea {
 }
 
 .stat__value {
-  font-size: var(--font-heading2);
+  font-size: var(--font-heading3);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-bolder);
   font-variant-numeric: tabular-nums;
@@ -244,13 +245,13 @@ textarea {
 .stat--total .stat__value { color: var(--color-text-primary); }
 
 .stat__aside {
-  font-size: var(--font-body4);
+  font-size: var(--font-body5);
   color: var(--color-text-subtler);
 }
 
 .stat__foot {
   margin: 0;
-  font-size: var(--font-body5);
+  font-size: var(--font-body6);
   color: var(--color-text-subtler);
 }
 
@@ -295,7 +296,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: var(--gap-6);
-  padding: var(--padding-6) var(--padding-8);
+  padding: var(--padding-5) var(--padding-6);
   border-bottom: 1px solid var(--color-border-subtler);
 }
 
@@ -308,7 +309,7 @@ textarea {
 
 .panel__count {
   margin: 0;
-  font-size: var(--font-body4);
+  font-size: var(--font-body5);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-subtle);
   font-variant-numeric: tabular-nums;
@@ -337,7 +338,7 @@ textarea {
   border: 1px solid var(--color-input-border);
   border-radius: var(--radius-small);
   background: var(--color-input-field);
-  font-size: var(--font-body3);
+  font-size: var(--font-body4);
 }
 .search__input::placeholder { color: var(--color-text-subtler); }
 .search__input:focus { border-color: var(--color-input-border-focus); }
@@ -362,10 +363,10 @@ textarea {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: var(--padding-5) var(--padding-6);
+  padding: var(--padding-4) var(--padding-5);
   background: var(--color-surface-subtler);
   border-bottom: 1px solid var(--color-border-subtle);
-  font-size: var(--font-body4);
+  font-size: var(--font-body5);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-subtle);
   text-align: left;
@@ -404,9 +405,9 @@ textarea {
      box-sizing: border-box 이므로 아래 1px 보더가 40px 안에 포함되고,
      vertical-align: middle 이 내용을 세로 중앙에 놓는다. */
   height: var(--size-9);
-  padding: 0 var(--padding-6);
+  padding: 0 var(--padding-5);
   border-bottom: 1px solid var(--color-border-subtler);
-  font-size: var(--font-body3);
+  font-size: var(--font-body4);
   color: var(--color-text-basic);
   vertical-align: middle;
   /* 40px 행 높이를 지키려면 어떤 칸도 줄바꿈되어서는 안 된다.
@@ -434,8 +435,8 @@ textarea {
 
 /* 파일 경로 — Figma URL 은 매우 길어 한 줄로 자르고 title 로 전체를 보여준다.
    URL 인 경우 클릭해 바로 열 수 있도록 링크로 렌더한다. */
-.cell--path {
-  font-size: var(--font-body4);
+.table tbody .cell--path {
+  font-size: var(--font-body5);
 }
 
 .cell--path a {
@@ -447,12 +448,12 @@ textarea {
 }
 
 .cell--plain {
-  font-size: var(--font-body4);
+  font-size: var(--font-body5);
   color: var(--color-text-subtle);
 }
 
-.cell--note {
-  font-size: var(--font-body4);
+.table tbody .cell--note {
+  font-size: var(--font-body5);
   color: var(--color-text-subtle);
 }
 
@@ -468,7 +469,7 @@ textarea {
   height: var(--size-4);
   padding-inline: var(--padding-4);
   border-radius: var(--radius-max);
-  font-size: var(--font-body5);
+  font-size: var(--font-body6);
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
   /* baseline 정렬 시 디센더만큼 줄 상자가 늘어나 행 높이를 밀어올린다. */
@@ -488,7 +489,7 @@ textarea {
   margin: 0;
   padding: var(--padding-13) var(--padding-8);
   text-align: center;
-  font-size: var(--font-body2);
+  font-size: var(--font-body3);
   color: var(--color-text-subtler);
 }
 
@@ -524,7 +525,7 @@ textarea {
 .input--cell {
   height: var(--size-6);
   padding-inline: var(--padding-4);
-  font-size: var(--font-body4);
+  font-size: var(--font-body5);
 }
 
 .input--cell:invalid {
@@ -550,7 +551,7 @@ textarea {
   border-radius: var(--radius-small);
   background: var(--color-surface-snackbar);
   color: var(--color-text-basic-inverse);
-  font-size: var(--font-body3);
+  font-size: var(--font-body4);
   box-shadow: var(--shadow-level2);
 }
 
