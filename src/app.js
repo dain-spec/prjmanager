@@ -631,12 +631,23 @@
       tr.querySelector(SELECTOR);
     if (!field) return;
     field.focus();
-    // 클릭으로 들어왔을 때 기존 값이 통째로 지워지지 않도록 커서를 끝에 둔다.
-    if (field.setSelectionRange && field.type !== "checkbox" && field.value !== undefined) {
-      const end = field.value.length;
-      field.setSelectionRange(end, end);
-    }
     tr.scrollIntoView({ block: "nearest" });
+
+    if (field.dataset.ownerPick) {
+      // 담당자 칸은 커스텀 팝업이라 바로 펼친다.
+      openOwnerPicker(field);
+    } else if (field.tagName === "SELECT") {
+      /* 클릭으로 들어왔으면 목록을 바로 펼친다. showPicker 는 사용자 제스처
+         안에서만 허용되고 구형 브라우저에는 없으므로 실패는 무시한다. */
+      try {
+        field.showPicker?.();
+      } catch {
+        /* 제스처 밖 호출이거나 미지원 — 포커스만 남는다 */
+      }
+    } else if (field.select) {
+      // 텍스트는 전체 선택 상태로 둔다(스프레드시트처럼 타이핑하면 대체된다).
+      field.select();
+    }
   }
 
   function commit() {
@@ -864,7 +875,17 @@
     if (trigger) openOwnerPicker(trigger);
   });
 
+  /* 팝업을 여는 클릭은 계속 전파되어 document 의 '팝업 밖 클릭' 판정에 걸린다.
+     타이머(setTimeout/rAF)로 미루는 방식은 탭이 비활성이면 실행이 지연돼
+     신뢰할 수 없으므로, 그 한 번의 판정만 건너뛰도록 표시해 둔다. */
+  let pickerJustOpened = false;
+
+  /** 팝업이 따라다닐 기준 셀 */
+  let pickerTrigger = null;
+
   function openOwnerPicker(trigger) {
+    pickerJustOpened = true;
+    pickerTrigger = trigger;
     ownerPicker.replaceChildren();
     for (const group of ownerPickerGroups()) {
       const box = document.createElement("div");
@@ -890,16 +911,28 @@
 
     syncPickerChecks();
     ownerPicker.hidden = false;
-    // 트리거 셀 바로 아래에 붙이고, 화면 밖으로 넘치지 않게 보정한다.
-    const anchorBox = trigger.getBoundingClientRect();
-    const box = ownerPicker.getBoundingClientRect();
-    ownerPicker.style.left = `${Math.min(anchorBox.left, innerWidth - box.width - 8)}px`;
-    ownerPicker.style.top = `${Math.min(anchorBox.bottom + 4, innerHeight - box.height - 8)}px`;
+    placePicker();
     ownerPicker.querySelector("input")?.focus();
+  }
+
+  /** 기준 셀 바로 아래에 붙이고 화면 밖으로 넘치지 않게 보정한다.
+      스크롤 때 닫지 않고 따라가게 하는 이유: focusCell 의 scrollIntoView 가
+      스크롤을 유발해, 닫는 방식이면 방금 열린 팝업이 곧바로 닫혀버린다. */
+  function placePicker() {
+    if (ownerPicker.hidden || !pickerTrigger) return;
+    const anchor = pickerTrigger.getBoundingClientRect();
+    const wrap = tableWrap.getBoundingClientRect();
+    // 기준 셀이 표 밖으로 스크롤돼 나가면 닫는다.
+    if (anchor.bottom < wrap.top || anchor.top > wrap.bottom) return closeOwnerPicker();
+
+    const box = ownerPicker.getBoundingClientRect();
+    ownerPicker.style.left = `${Math.min(anchor.left, innerWidth - box.width - 8)}px`;
+    ownerPicker.style.top = `${Math.min(anchor.bottom + 4, innerHeight - box.height - 8)}px`;
   }
 
   function closeOwnerPicker() {
     ownerPicker.hidden = true;
+    pickerTrigger = null;
   }
 
   ownerPicker.addEventListener("change", (event) => {
@@ -949,13 +982,15 @@
   }
 
   document.addEventListener("click", (event) => {
-    if (ownerPicker.hidden) return;
+    const justOpened = pickerJustOpened;
+    pickerJustOpened = false;
+    if (ownerPicker.hidden || justOpened) return;
     if (event.target.closest("#owner-picker") || event.target.closest("[data-owner-pick]")) return;
     closeOwnerPicker();
   });
 
-  tableWrap.addEventListener("scroll", closeOwnerPicker);
-  addEventListener("resize", closeOwnerPicker);
+  tableWrap.addEventListener("scroll", placePicker);
+  addEventListener("resize", placePicker);
 
   // ── 행 우클릭 메뉴 ────────────────────────────────────
   const rowMenu = $("row-menu");
