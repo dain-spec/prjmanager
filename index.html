@@ -6,7 +6,7 @@
 <title>WEHAGO 서비스 피그마 · XD 파일 현황</title>
 <meta name="description" content="서비스/메뉴별 제작 도구(Figma·XD) 및 WHDS 적용 여부를 파악하기 위한 팀 작업물 현황 사이트" />
 <link rel="stylesheet" href="src/tokens.css?v=b46a84c7" />
-<link rel="stylesheet" href="src/styles.css?v=ffad624b" />
+<link rel="stylesheet" href="src/styles.css?v=c1c61cab" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -145,6 +145,9 @@
      셀 안에 두면 .panel 의 overflow: hidden 에 잘리므로 body 레벨에 둔다. -->
 <button type="button" class="row-insert" id="row-insert" title="아래에 행 추가" aria-label="아래에 행 추가" hidden>+</button>
 
+<!-- 담당자 복수 선택 팝업. 항목은 조직도(OWNER_GROUPS)에서 JS 가 만든다. -->
+<div class="menu menu--picker" id="owner-picker" role="dialog" aria-label="담당자 선택" hidden></div>
+
 <!-- 행 우클릭 메뉴. .panel 은 overflow: hidden 이라 잘리므로 body 레벨에 둔다. -->
 <div class="menu" id="row-menu" role="menu" hidden>
   <button type="button" class="menu__item" role="menuitem" data-menu="insert-below" id="menu-insert">아래에 행 추가</button>
@@ -154,6 +157,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=4742bbcf"></script>
+<script src="src/app.js?v=6fbaae47"></script>
 </body>
 </html>

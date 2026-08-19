@@ -698,6 +698,62 @@ textarea.input--cell {
   background: var(--color-border-subtler);
 }
 
+/* ── 담당자 복수 선택 팝업 ─────────────────────────────── */
+
+/* 40px 셀에는 select multiple 이 들어가지 않아 체크박스 팝업으로 고른다. */
+.menu--picker {
+  min-width: 132px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--padding-3);
+}
+
+.picker__group + .picker__group {
+  margin-top: var(--padding-3);
+}
+
+.picker__label {
+  padding-inline: var(--padding-3);
+  font-size: var(--font-body6);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-subtler);
+}
+
+.picker__item {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-3);
+  padding: var(--padding-2) var(--padding-3);
+  border-radius: var(--radius-xxsmall);
+  font-size: var(--font-body4);
+  color: var(--color-text-basic);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.picker__item:hover {
+  background: var(--color-action-hover);
+}
+
+/* 편집 행의 담당자 칸 — 셀 전체가 팝업을 여는 버튼이 된다. */
+.owner-pick {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.owner-pick[data-empty] {
+  color: var(--color-text-subtler);
+}
+
 /* ── 토스트 ────────────────────────────────────────────── */
 
 .toast {

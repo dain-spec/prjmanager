@@ -22,6 +22,50 @@
     { cell: "2Cell", members: ["강다인", "유은혜", "황원정", "김유빈"] },
   ];
 
+  /** 조직도의 개인 이름 전체 */
+  const OWNER_MEMBERS = OWNER_GROUPS.flatMap((g) => g.members);
+
+  /* 담당자는 '사람 이름' 으로만 저장한다. Cell 은 '그 Cell 전원' 을 뜻하는 입력
+     편의이므로, 고를 때 구성원으로 펼치고(expandOwners) 보여줄 때 다시 접는다
+     (ownerTokens). 저장에 Cell 과 개인이 섞이면 같은 뜻을 두 방식으로 담게 된다. */
+
+  /** Cell 이름이 섞여 있으면 구성원으로 펼친다. */
+  function expandOwners(values) {
+    const out = [];
+    for (const value of values ?? []) {
+      const group = OWNER_GROUPS.find((g) => g.cell === value);
+      if (group) out.push(...group.members);
+      else out.push(value);
+    }
+    return [...new Set(out)];
+  }
+
+  /** 표시용 토큰 — 어떤 Cell 의 구성원이 전부 선택돼 있으면 Cell 이름으로 접는다.
+      순서는 조직도 순서를 따르고, 조직도에 없는 값은 뒤에 붙인다. */
+  function ownerTokens(owners) {
+    const remaining = new Set(owners ?? []);
+    const tokens = [];
+    for (const group of OWNER_GROUPS) {
+      const whole = group.members.length && group.members.every((m) => remaining.has(m));
+      if (whole) {
+        tokens.push(group.cell);
+        for (const m of group.members) remaining.delete(m);
+      } else {
+        for (const m of group.members) {
+          if (remaining.delete(m)) tokens.push(m);
+        }
+      }
+    }
+    return [...tokens, ...remaining];
+  }
+
+  /** 담당자 표시 — 토큰이 여러 개면 '첫 토큰 +N'. 컬럼이 90px 라 다 못 넣는다. */
+  function ownerLabel(owners) {
+    const tokens = ownerTokens(owners);
+    if (!tokens.length) return "—";
+    return tokens.length === 1 ? tokens[0] : `${tokens[0]} +${tokens.length - 1}`;
+  }
+
   /** WHDS 적용 상태 라벨 */
   const COMPONENT_LABEL = {
     applied: "적용",
@@ -45,55 +89,55 @@
   const SEED = [
     { service: "WEHAGO Web 2.0 공통", platform: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/vVNdCTvO5nvN88byoPuYkV/WEHAGO-Web-2.0_DSG?m=auto&node-id=6556-35225&t=NrDWMe3BToXAjWwM-1`,
-      owner: "2Cell", note: "" },
+      owners: ["2Cell"], note: "" },
     { service: "WEHAGO Mobile 2.0 공통", platform: "Mobile", tool: "Figma", component: "none",
       path: `${FIGMA}/2hjgaltgwo1dIYAyMFxwDZ/WEHAGO-Mobile-2.0_DSG?m=auto&node-id=0-1&t=5WN7aFvvOpyG3MKk-1`,
-      owner: "2Cell", note: "" },
+      owners: ["2Cell"], note: "" },
     { service: "WEHAGO Main 1.5", platform: "Web", tool: "XD", component: "none",
       path: "XD : WEHAGO 1.0 메인_개선안(Cloud)",
-      owner: "홍길동", note: "" },
+      owners: ["홍길동"], note: "" },
     { service: "WEHAGO Main 2.0", platform: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/nQnqiG4WPBVxC4t38nBEW2/WEHAGO-2.0-Web-%EB%A9%94%EC%9D%B8?node-id=723-6341&t=R4SN6APFALqVIQbX-1`,
-      owner: "홍길동", note: "" },
+      owners: ["홍길동"], note: "" },
     { service: "WEHAGO AI Edition", platform: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/nQnqiG4WPBVxC4t38nBEW2/WEHAGO-2.0-Web-%EB%A9%94%EC%9D%B8?node-id=4028-42604&t=R4SN6APFALqVIQbX-1`,
-      owner: "홍길동", note: "WEHAGO 2.0 Web 메인 피그마 파일에 포함" },
+      owners: ["홍길동"], note: "WEHAGO 2.0 Web 메인 피그마 파일에 포함" },
     { service: "WEHAGO T", platform: "Web", tool: "XD", component: "none",
       path: "XD : \\UXUI Unit\\2025\\WEHAGO T, Tedge\\작업물",
-      owner: "홍길동", note: "" },
+      owners: ["홍길동"], note: "" },
     { service: "WEHAGO T AI Edition", platform: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/qmWWQbn78V9VZeya9zmFBJ/WEHAGO-T?node-id=1-32&t=pIe1aQCojb8OETiP-1`,
-      owner: "2Cell", note: "WEHAGO T 피그마 파일에 포함 / 수임처 AI 연말정산, 수임처관리, 수임처관리 리뉴얼 버전(holding) 혼재 / WHDS W v2.0 반영 진행중" },
+      owners: ["2Cell"], note: "WEHAGO T 피그마 파일에 포함 / 수임처 AI 연말정산, 수임처관리, 수임처관리 리뉴얼 버전(holding) 혼재 / WHDS W v2.0 반영 진행중" },
     { service: "ProActive AI", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/ZKzpwsavMCqZM48Mvb730d/WEHAGO-Web-Proactive-AI?node-id=1178-16981&t=3y7IUc8MEWu3EEAj-1`,
-      owner: "2Cell", note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0" },
+      owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0" },
     { service: "ONE AI", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/brhXNqFg9rpqSNI0yK05zM/WEHAGO-Web-ONE-AI?node-id=169-2211&t=jWIchZl5pxcl09qL-1`,
-      owner: "2Cell", note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요" },
+      owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요" },
     { service: "ONE AI", platform: "Mobile", tool: "Figma", component: "applied",
       path: `${FIGMA}/jTkk4w5HWRH5zRrelHRKm9/WEHAGO-Mobile-ONE-AI?node-id=1-18&t=tTY327hL8syzZoxz-1`,
-      owner: "2Cell", note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요" },
+      owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요" },
     { service: "ONE AI CUBE", platform: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/fUfs6M2MqStNtESlVAR3p4/WEHAGO-Web-ONE-AI-CUBE?node-id=390-13900&t=J8CId3uoQkbWrSED-1`,
-      owner: "2Cell", note: "WHDS W v2.0 반영 진행중" },
+      owners: ["2Cell"], note: "WHDS W v2.0 반영 진행중" },
     { service: "ONE AI Flow", platform: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/DiIjSe99UXUVDl7pgilfZy/ONE-AI-Flow?node-id=1-10&t=hPMX3yI7fEr02kOF-1`,
-      owner: "2Cell", note: "WHDS W v2.0 반영 진행중" },
+      owners: ["2Cell"], note: "WHDS W v2.0 반영 진행중" },
     { service: "Agent Market", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/e7cVdc0Ev8irKt8axNuzqy/Agent-Market?node-id=1-10&t=eJhSUAwnoVyY5NTX-1`,
-      owner: "2Cell", note: "WHDS W v2.0" },
+      owners: ["2Cell"], note: "WHDS W v2.0" },
     { service: "메신저", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/wgWUkgyGkZWG7GxevnLivm/WEHAGO-Web-%EB%A9%94%EC%8B%A0%EC%A0%80-%EC%9B%B9-%EC%84%A4%EC%B9%98%ED%98%95-?node-id=4427-2&t=bKujBqg9BLqYEpyt-1`,
-      owner: "2Cell", note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
+      owners: ["2Cell"], note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
     { service: "메신저", platform: "C/S", tool: "Figma", component: "applied",
       path: `${FIGMA}/wgWUkgyGkZWG7GxevnLivm/WEHAGO-Web-%EB%A9%94%EC%8B%A0%EC%A0%80-%EC%9B%B9-%EC%84%A4%EC%B9%98%ED%98%95-?node-id=4512-2363&t=bKujBqg9BLqYEpyt-1`,
-      owner: "2Cell", note: "WEHAGO Web 메신저 피그마 파일에 포함 / WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
+      owners: ["2Cell"], note: "WEHAGO Web 메신저 피그마 파일에 포함 / WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
     { service: "화상회의", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/aesogzuumvDi1EneInUZCt/WEHAGO-Web-%ED%99%94%EC%83%81%ED%9A%8C%EC%9D%98-Meet-?node-id=1-5312&t=pflCrCYHVNHPPnWo-1`,
-      owner: "2Cell", note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
+      owners: ["2Cell"], note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
     { service: "화상회의", platform: "Mobile", tool: "Figma", component: "applied",
       path: `${FIGMA}/cNrqG2nLmmAt9klnanGBnl/WEHAGO-Meet-Mobile--%EB%A6%AC%EB%89%B4%EC%96%BC-?node-id=1-3063&t=NUPWIqx5l1LBcb6Z-1`,
-      owner: "2Cell", note: "WHDS 2.0 완료 이전 작업물 / WHDS M v1.0" },
+      owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS M v1.0" },
   ];
 
   // ── 상태 ────────────────────────────────────────────────
@@ -134,16 +178,22 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        // '메뉴명'(자유 입력) → '플랫폼'(드롭다운) 으로 바뀌었다. 저장 키를 올려
-        // 데이터를 버리지 않고, 예전 menu 값을 platform 으로 옮긴다.
+        // 스키마가 바뀔 때 저장 키를 올려 데이터를 버리는 대신 옛 필드를 옮긴다.
+        //   menu(자유 입력) → platform(드롭다운), owner(문자열) → owners(배열)
         if (Array.isArray(parsed) && parsed.length) {
-          return parsed.map(({ menu, ...row }) => ({ ...row, platform: row.platform ?? menu ?? "" }));
+          return parsed.map(({ menu, owner, ...row }) => ({
+            ...row,
+            platform: row.platform ?? menu ?? "",
+            // 담당자가 한 명(문자열)에서 여러 명(배열)으로 바뀌었다.
+            // Cell 이름('2Cell')이 저장돼 있으면 구성원으로 펼친다.
+            owners: expandOwners(row.owners ?? (owner ? [owner] : [])),
+          }));
         }
       }
     } catch {
       /* 저장값이 손상된 경우 시드 데이터로 대체한다. */
     }
-    return SEED.map((row) => ({ id: uid(), ...row }));
+    return SEED.map((row) => ({ id: uid(), ...row, owners: expandOwners(row.owners) }));
   }
 
   function save() {
@@ -184,7 +234,7 @@
       // 화면에는 디코딩된 파일명이 보이는데 row.path 는 퍼센트 인코딩 상태다.
       // 보이는 그대로 검색되도록 디코딩된 라벨도 대상에 넣는다.
       const label = figmaLabel(row.path);
-      return [row.service, row.platform, row.path, label?.name ?? "", row.owner, row.note,
+      return [row.service, row.platform, row.path, label?.name ?? "", (row.owners ?? []).join(" "), row.note,
               COMPONENT_LABEL[row.component], row.tool]
         .join(" ")
         .toLowerCase()
@@ -195,11 +245,13 @@
       const dir = sort.dir === "asc" ? 1 : -1;
       // 적용 상태는 가나다순이 아니라 '조치가 필요한 순서'로 정렬한다.
       const rank = { applied: 0, partial: 1, missing: 2, none: 3 };
+      const sortValue = (row, key) =>
+        key === "owner" ? (row.owners ?? []).join(", ") : String(row[key] ?? "");
       list = [...list].sort((a, b) => {
         const cmp =
           sort.key === "component"
             ? rank[a.component] - rank[b.component]
-            : String(a[sort.key] ?? "").localeCompare(String(b[sort.key] ?? ""), "ko");
+            : sortValue(a, sort.key).localeCompare(sortValue(b, sort.key), "ko");
         return cmp * dir;
       });
     }
@@ -266,7 +318,9 @@
       badgeCell(row.tool === "Figma" ? "figma" : "xd", row.tool, "cell--center"),
       componentCell(row.component),
       pathCell(row.path),
-      cell(row.owner || "—", row.owner ? "cell--center" : "cell--center cell--muted", row.owner),
+      cell(ownerLabel(row.owners),
+        row.owners?.length ? "cell--center" : "cell--center cell--muted",
+        row.owners?.join(", ")),
       // 비고는 줄바꿈되어 전체가 보이므로 title(툴팁)을 달지 않는다.
       cell(row.note || "", "cell--note"),
     );
@@ -288,7 +342,7 @@
       selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]], "파일 유형", "cell--center"),
       selectCell("component", Object.entries(COMPONENT_LABEL), "WHDS 적용", "cell--center"),
       inputCell("path", "피그마 주소 또는 XD 경로", { className: "cell--path" }),
-      selectCell("owner", ownerOptions(), "담당자", "cell--center"),
+      ownerPickCell(),
       textareaCell("note", "비고 (Shift+Enter 로 줄 추가)"),
     );
     return tr;
@@ -447,20 +501,37 @@
       이 컬럼은 예전에 자유 입력('전체', '메뉴 1' 등)이었으므로, 현재 값이 표준
       옵션에 없으면 그 값도 옵션에 넣는다. 그러지 않으면 편집만 해도 값이 조용히
       Web 으로 바뀌어 버린다. */
-  /** 담당자 드롭다운 옵션.
-      이 컬럼은 예전에 자유 입력이라 조직도에 없는 값('2Cell', '홍길동' 등)이
-      남아 있을 수 있다. 현재 값이 목록에 없으면 '기타' 그룹으로 함께 넣어
-      편집만 해도 값이 조용히 바뀌는 것을 막는다. */
-  function ownerOptions() {
-    const known = OWNER_GROUPS.flatMap((g) => [g.cell, ...g.members]);
-    const current = draft?.owner;
-    const groups = [
-      [["", "—"]],
-      OWNER_GROUPS.map((g) => ({ group: g.cell, values: [g.cell, ...g.members] })),
-    ].flat();
-    if (current && !known.includes(current)) {
-      groups.push({ group: "기타", values: [current] });
-    }
+  /** 편집 행의 담당자 칸. 셀 전체가 선택 팝업을 여는 버튼이다. */
+  function ownerPickCell() {
+    const td = document.createElement("td");
+    td.className = "cell--center";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "owner-pick";
+    btn.dataset.ownerPick = "true";
+    btn.setAttribute("aria-label", "담당자 선택");
+    syncOwnerButton(btn);
+    td.append(btn);
+    return td;
+  }
+
+  function syncOwnerButton(btn) {
+    const owners = draft?.owners ?? [];
+    btn.textContent = ownerLabel(owners);
+    btn.title = owners.length ? owners.join(", ") : "담당자 선택";
+    btn.toggleAttribute("data-empty", owners.length === 0);
+  }
+
+  /** 팝업에 보여줄 그룹.
+      조직도에 없는 기존 값('홍길동' 등)은 '기타' 로 함께 보여 지울 수 있게 한다. */
+  function ownerPickerGroups() {
+    const groups = OWNER_GROUPS.map((g) => ({
+      label: g.cell,
+      cell: g.cell,
+      values: [g.cell, ...g.members],
+    }));
+    const extra = (draft?.owners ?? []).filter((v) => !OWNER_MEMBERS.includes(v));
+    if (extra.length) groups.push({ label: "기타", cell: null, values: extra });
     return groups;
   }
 
@@ -544,7 +615,7 @@
     editingId = NEW_ID;
     insertAfterId = afterId ?? null;
     draft = { service: "", platform: PLATFORM_OPTIONS[0], tool: "Figma",
-              component: "applied", path: "", owner: "", note: "" };
+              component: "applied", path: "", owners: [], note: "" };
     renderTable();
     syncToolbar();
     focusCell();
@@ -554,13 +625,14 @@
   function focusCell(columnIndex) {
     const tr = els.tbody.querySelector("tr[data-editing]");
     if (!tr) return;
+    const SELECTOR = "[name], [data-owner-pick]";
     const field =
-      (columnIndex !== undefined && tr.children[columnIndex]?.querySelector("[name]")) ||
-      tr.querySelector("[name]");
+      (columnIndex !== undefined && tr.children[columnIndex]?.querySelector(SELECTOR)) ||
+      tr.querySelector(SELECTOR);
     if (!field) return;
     field.focus();
     // 클릭으로 들어왔을 때 기존 값이 통째로 지워지지 않도록 커서를 끝에 둔다.
-    if (field.setSelectionRange && field.type !== "checkbox") {
+    if (field.setSelectionRange && field.type !== "checkbox" && field.value !== undefined) {
       const end = field.value.length;
       field.setSelectionRange(end, end);
     }
@@ -581,7 +653,7 @@
       tool: draft.tool || "Figma",
       component: draft.component || "applied",
       path: (draft.path || "").trim(),
-      owner: draft.owner || "",
+      owners: expandOwners(draft.owners),
       note: (draft.note || "").trim(),
     };
 
@@ -596,6 +668,7 @@
       toast(`'${service}' 항목을 수정했습니다.`);
     }
 
+    closeOwnerPicker();
     editingId = null;
     draft = null;
     insertAfterId = null;
@@ -605,6 +678,7 @@
   }
 
   function cancelEdit() {
+    closeOwnerPicker();
     editingId = null;
     draft = null;
     insertAfterId = null;
@@ -695,7 +769,7 @@
     const escape = (value) => `"${String(value).replaceAll('"', '""')}"`;
     const list = visibleRows();
     const body = list.map((row, i) =>
-      [i + 1, row.service, row.platform, row.tool, COMPONENT_LABEL[row.component], row.path, row.owner, row.note]
+      [i + 1, row.service, row.platform, row.tool, COMPONENT_LABEL[row.component], row.path, (row.owners ?? []).join(", "), row.note]
         .map(escape)
         .join(","),
     );
@@ -781,6 +855,107 @@
   // 스크롤·리사이즈 후에는 좌표가 어긋나므로 숨긴다.
   tableWrap.addEventListener("scroll", hideInsert);
   addEventListener("resize", hideInsert);
+
+  // ── 담당자 복수 선택 팝업 ─────────────────────────────
+  const ownerPicker = $("owner-picker");
+
+  els.tbody.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-owner-pick]");
+    if (trigger) openOwnerPicker(trigger);
+  });
+
+  function openOwnerPicker(trigger) {
+    ownerPicker.replaceChildren();
+    for (const group of ownerPickerGroups()) {
+      const box = document.createElement("div");
+      box.className = "picker__group";
+      const label = document.createElement("p");
+      label.className = "picker__label";
+      label.textContent = group.label;
+      box.append(label);
+      for (const value of group.values) {
+        const item = document.createElement("label");
+        item.className = "picker__item";
+        const check = document.createElement("input");
+        check.type = "checkbox";
+        check.className = "check";
+        check.value = value;
+        // Cell 항목은 값이 아니라 '전원 토글' 컨트롤이다.
+        if (value === group.cell) check.dataset.cell = group.cell;
+        item.append(check, document.createTextNode(value));
+        box.append(item);
+      }
+      ownerPicker.append(box);
+    }
+
+    syncPickerChecks();
+    ownerPicker.hidden = false;
+    // 트리거 셀 바로 아래에 붙이고, 화면 밖으로 넘치지 않게 보정한다.
+    const anchorBox = trigger.getBoundingClientRect();
+    const box = ownerPicker.getBoundingClientRect();
+    ownerPicker.style.left = `${Math.min(anchorBox.left, innerWidth - box.width - 8)}px`;
+    ownerPicker.style.top = `${Math.min(anchorBox.bottom + 4, innerHeight - box.height - 8)}px`;
+    ownerPicker.querySelector("input")?.focus();
+  }
+
+  function closeOwnerPicker() {
+    ownerPicker.hidden = true;
+  }
+
+  ownerPicker.addEventListener("change", (event) => {
+    const check = event.target.closest("input[type=checkbox]");
+    if (!check || !draft) return;
+
+    const owners = new Set(draft.owners ?? []);
+    const cell = check.dataset.cell;
+    if (cell) {
+      // Cell 체크는 그 Cell 전원을 한 번에 켜고 끈다.
+      const members = OWNER_GROUPS.find((g) => g.cell === cell).members;
+      for (const m of members) {
+        if (check.checked) owners.add(m);
+        else owners.delete(m);
+      }
+    } else if (check.checked) {
+      owners.add(check.value);
+    } else {
+      owners.delete(check.value);
+    }
+
+    // 조직도 순서를 유지하고, 조직도에 없는 값은 뒤에 둔다.
+    const ordered = OWNER_MEMBERS.filter((v) => owners.has(v));
+    const extra = [...owners].filter((v) => !OWNER_MEMBERS.includes(v));
+    draft.owners = [...ordered, ...extra];
+
+    syncPickerChecks();
+    const trigger = els.tbody.querySelector("[data-owner-pick]");
+    if (trigger) syncOwnerButton(trigger);
+  });
+
+  /** 팝업 체크 상태를 draft 에 맞춘다.
+      Cell 체크박스는 전원 선택이면 checked, 일부면 indeterminate 로 표시한다. */
+  function syncPickerChecks() {
+    const owners = new Set(draft?.owners ?? []);
+    for (const check of ownerPicker.querySelectorAll("input[type=checkbox]")) {
+      const cell = check.dataset.cell;
+      if (!cell) {
+        check.checked = owners.has(check.value);
+        continue;
+      }
+      const members = OWNER_GROUPS.find((g) => g.cell === cell).members;
+      const picked = members.filter((m) => owners.has(m)).length;
+      check.checked = picked === members.length;
+      check.indeterminate = picked > 0 && picked < members.length;
+    }
+  }
+
+  document.addEventListener("click", (event) => {
+    if (ownerPicker.hidden) return;
+    if (event.target.closest("#owner-picker") || event.target.closest("[data-owner-pick]")) return;
+    closeOwnerPicker();
+  });
+
+  tableWrap.addEventListener("scroll", closeOwnerPicker);
+  addEventListener("resize", closeOwnerPicker);
 
   // ── 행 우클릭 메뉴 ────────────────────────────────────
   const rowMenu = $("row-menu");
@@ -966,17 +1141,30 @@
   $("btn-cancel").addEventListener("click", cancelEdit);
 
   // Enter 로 저장, Esc 로 취소
-  els.tbody.addEventListener("keydown", (event) => {
+  // Enter 저장 / Esc 취소. 담당자 팝업은 body 레벨에 있어 tbody 로 이벤트가
+  // 올라오지 않으므로 document 에서 듣는다.
+  document.addEventListener("keydown", (event) => {
     if (!editingId) return;
-    if (event.key === "Enter") {
-      // 비고에서 Shift+Enter 는 저장이 아니라 줄바꿈이다(기본 동작을 그대로 둔다).
-      if (event.shiftKey && event.target.name === "note") return;
+
+    /* 한글 입력 중(IME 조합 중)의 Enter 는 조합을 확정하는 키다. 이때 저장으로
+       가로채면 preventDefault 가 조합 확정을 막아 마지막 글자가 날아가고,
+       사용자에게는 'Enter 가 안 먹는다' 로 보인다. 조합 중에는 넘긴다. */
+    if (event.isComposing || event.keyCode === 229) return;
+
+    if (event.key === "Escape") {
       event.preventDefault();
-      commit();
-    } else if (event.key === "Escape") {
-      event.preventDefault();
-      cancelEdit();
+      // 팝업이 열려 있으면 먼저 팝업만 닫고, 편집은 유지한다.
+      if (!ownerPicker.hidden) closeOwnerPicker();
+      else cancelEdit();
+      return;
     }
+
+    if (event.key !== "Enter") return;
+    // 비고에서 Shift+Enter 는 저장이 아니라 줄바꿈이다(기본 동작을 그대로 둔다).
+    if (event.shiftKey && event.target.name === "note") return;
+    // 담당자 팝업의 체크박스에서 Enter 는 저장으로 본다(체크는 Space 로 한다).
+    event.preventDefault();
+    commit();
   });
 
   els.search.addEventListener("input", (event) => {
