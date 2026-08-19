@@ -7,6 +7,18 @@
 
 <https://dain-spec.github.io/prjmanager/>
 
+`main` 에 푸시하면 GitHub Pages 가 자동으로 다시 빌드합니다. **푸시 전에 반드시
+실행하세요:**
+
+```bash
+python3 tools/stamp-assets.py
+```
+
+Pages 는 `cache-control: max-age=600` 을 보내므로 파일 이름이 그대로면 브라우저가
+최대 10분간 이전 버전을 계속 씁니다. 이 스크립트가 `index.html` 의 CSS/JS 링크에
+내용 해시를 붙여(`app.js?v=1a2b3c4d`) 바뀐 파일만 즉시 새로 받게 합니다.
+타임스탬프가 아니라 내용 해시라서 바뀌지 않은 파일은 캐시를 그대로 활용합니다.
+
 ## 로컬 실행
 
 ```bash
@@ -81,6 +93,7 @@ src/tokens.css        토큰 → CSS 변수 (자동 생성)
 src/styles.css        레이아웃 · 컴포넌트 스타일
 src/app.js            상태 관리 · 렌더링 · 이벤트
 tools/build-tokens.py 토큰 변환 스크립트 (원본 JSON 필요)
+tools/stamp-assets.py 배포용 캐시 무효화 (푸시 전 실행)
 tools/serve.mjs       로컬 정적 서버
 ```
 
