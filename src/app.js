@@ -14,6 +14,14 @@
   /** 플랫폼 (Web / Mobile / C/S) */
   const PLATFORM_OPTIONS = ["Web", "Mobile", "C/S"];
 
+  /** 담당자 — 1Unit 조직도. Cell 을 optgroup 으로 묶고, 개인뿐 아니라
+      Cell 자체도 담당자로 고를 수 있게 각 그룹 첫 항목에 Cell 을 넣는다.
+      직급([리더/차장] 등)은 담당자 컬럼 폭에 들어가지 않아 이름만 쓴다. */
+  const OWNER_GROUPS = [
+    { cell: "1Cell", members: ["강혜진", "김세인", "김명지", "박소원"] },
+    { cell: "2Cell", members: ["강다인", "유은혜", "황원정", "김유빈"] },
+  ];
+
   /** WHDS 적용 상태 라벨 */
   const COMPONENT_LABEL = {
     applied: "적용",
@@ -280,7 +288,7 @@
       selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]], "파일 유형", "cell--center"),
       selectCell("component", Object.entries(COMPONENT_LABEL), "WHDS 적용", "cell--center"),
       inputCell("path", "피그마 주소 또는 XD 경로", { className: "cell--path" }),
-      inputCell("owner", "담당자", { className: "cell--center" }),
+      selectCell("owner", ownerOptions(), "담당자", "cell--center"),
       textareaCell("note", "비고 (Shift+Enter 로 줄 추가)"),
     );
     return tr;
@@ -439,6 +447,23 @@
       이 컬럼은 예전에 자유 입력('전체', '메뉴 1' 등)이었으므로, 현재 값이 표준
       옵션에 없으면 그 값도 옵션에 넣는다. 그러지 않으면 편집만 해도 값이 조용히
       Web 으로 바뀌어 버린다. */
+  /** 담당자 드롭다운 옵션.
+      이 컬럼은 예전에 자유 입력이라 조직도에 없는 값('2Cell', '홍길동' 등)이
+      남아 있을 수 있다. 현재 값이 목록에 없으면 '기타' 그룹으로 함께 넣어
+      편집만 해도 값이 조용히 바뀌는 것을 막는다. */
+  function ownerOptions() {
+    const known = OWNER_GROUPS.flatMap((g) => [g.cell, ...g.members]);
+    const current = draft?.owner;
+    const groups = [
+      [["", "—"]],
+      OWNER_GROUPS.map((g) => ({ group: g.cell, values: [g.cell, ...g.members] })),
+    ].flat();
+    if (current && !known.includes(current)) {
+      groups.push({ group: "기타", values: [current] });
+    }
+    return groups;
+  }
+
   function platformOptions() {
     const current = draft?.platform;
     const values = PLATFORM_OPTIONS.includes(current) || !current
@@ -454,12 +479,24 @@
     select.className = "input--cell";
     select.name = name;
     select.setAttribute("aria-label", label);
-    for (const [value, label] of options) {
+    const build = (value, text) => {
       const option = document.createElement("option");
       option.value = value;
-      option.textContent = label;
+      option.textContent = text;
       if (draft[name] === value) option.selected = true;
-      select.append(option);
+      return option;
+    };
+
+    // options 는 [value, label] 쌍이거나 { group, values } (optgroup) 이다.
+    for (const entry of options) {
+      if (entry.group) {
+        const group = document.createElement("optgroup");
+        group.label = entry.group;
+        for (const value of entry.values) group.append(build(value, value));
+        select.append(group);
+      } else {
+        select.append(build(entry[0], entry[1]));
+      }
     }
     td.append(select);
     return td;
@@ -544,7 +581,7 @@
       tool: draft.tool || "Figma",
       component: draft.component || "applied",
       path: (draft.path || "").trim(),
-      owner: (draft.owner || "").trim(),
+      owner: draft.owner || "",
       note: (draft.note || "").trim(),
     };
 
