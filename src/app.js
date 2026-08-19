@@ -11,7 +11,7 @@
   /** 신규 행(아직 저장되지 않은 행)에 쓰는 임시 id */
   const NEW_ID = "__new__";
 
-  /** 공통 컴포넌트 적용 상태 라벨 */
+  /** WHDS 적용 상태 라벨 */
   const COMPONENT_LABEL = {
     applied: "적용",
     missing: "미적용",
@@ -22,20 +22,11 @@
   /** 적용률 계산 대상 — '해당 없음'은 분모에서 제외한다. */
   const RATE_TARGET = ["applied", "missing", "partial"];
 
-  /** 휴지통 아이콘 path (viewBox 16×16) */
-  const ICON_TRASH = [
-    "M2.5 4.5h11",
-    "M6.5 4.5V3a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1.5",
-    "M4 4.5l.6 8a1 1 0 0 0 1 .9h4.8a1 1 0 0 0 1-.9l.6-8",
-    "M6.8 7.2v3.6",
-    "M9.2 7.2v3.6",
-  ];
-
   /* 시드 데이터는 팀 현황표(프로젝트/유형/주소링크/공통 반영 버전/반영 상태/작업자/
      Figma 이관 여부/비고)를 이 테이블의 컬럼에 매핑한 것이다. 매핑 규칙:
        메뉴명            ← 유형(Web/Mobile/C/S). 같은 서비스의 행을 구분하는 값이다.
        파일 유형         ← 주소링크 종류 (figma.com → Figma, 로컬 경로 → XD)
-       공통 컴포넌트 적용 ← 반영 상태 (완료 → 적용, 진행중 → 미적용, 해당사항 없음 → 해당 없음)
+       WHDS 적용 ← 반영 상태 (완료 → 적용, 진행중 → 미적용, 해당사항 없음 → 해당 없음)
        담당자            ← 작업자
        비고              ← 원래 비고 + 이 테이블에 칸이 없는 값(공통 반영 버전 /
                           Figma 이관 필요)을 잃지 않도록 함께 적었다. */
@@ -97,11 +88,14 @@
   // ── 상태 ────────────────────────────────────────────────
 
   let rows = load();
-  /* 파일 유형 / 공통 컴포넌트 필터. 필터 칩 UI 는 제거된 상태이며
+  /* 파일 유형 / WHDS 적용 필터. 필터 칩 UI 는 제거된 상태이며
      visibleRows() 의 필터 로직은 향후 UI 를 다시 붙일 때를 위해 남겨둔다. */
   const filters = { tool: null, component: null };
   let search = "";
   let sort = { key: null, dir: "asc" };
+
+  /** 체크박스로 선택된 행 id 집합 */
+  const selected = new Set();
 
   /** 편집 중인 행 id (신규는 NEW_ID). null 이면 편집 중이 아니다. */
   let editingId = null;
@@ -113,6 +107,8 @@
     tbody: $("tbody"),
     empty: $("empty"),
     rowCount: $("row-count"),
+    selectionCount: $("selection-count"),
+    checkAll: $("check-all"),
     search: $("search"),
     toast: $("toast"),
   };
@@ -169,7 +165,11 @@
       if (filters.tool && row.tool !== filters.tool) return false;
       if (filters.component && row.component !== filters.component) return false;
       if (!q) return true;
-      return [row.service, row.menu, row.path, row.owner, row.note, COMPONENT_LABEL[row.component], row.tool]
+      // 화면에는 디코딩된 파일명이 보이는데 row.path 는 퍼센트 인코딩 상태다.
+      // 보이는 그대로 검색되도록 디코딩된 라벨도 대상에 넣는다.
+      const label = figmaLabel(row.path);
+      return [row.service, row.menu, row.path, label?.name ?? "", row.owner, row.note,
+              COMPONENT_LABEL[row.component], row.tool]
         .join(" ")
         .toLowerCase()
         .includes(q);
@@ -234,25 +234,23 @@
     els.empty.hidden = display.length > 0;
     els.rowCount.textContent =
       list.length === rows.length ? `${rows.length}건` : `${list.length}건 / 전체 ${rows.length}건`;
+    syncSelectionUi();
   }
 
   function displayRow(row, no, continued) {
     const tr = document.createElement("tr");
     tr.append(
-      cell(String(no), "cell--no"),
+      checkboxCell(row.id),
+      cell(String(no), "cell--no cell--center"),
       serviceCell(row, continued),
-      cell(row.menu || "—", row.menu ? "" : "cell--muted"),
-      badgeCell(row.tool === "Figma" ? "figma" : "xd", row.tool),
+      cell(row.menu || "—", row.menu ? "cell--center" : "cell--center cell--muted"),
+      badgeCell(row.tool === "Figma" ? "figma" : "xd", row.tool, "cell--center"),
       componentCell(row.component),
       pathCell(row.path),
-      cell(row.owner || "—", row.owner ? "" : "cell--muted", row.owner),
+      cell(row.owner || "—", row.owner ? "cell--center" : "cell--center cell--muted", row.owner),
       cell(row.note || "", "cell--note", row.note),
-      actionCell([
-        // 수정은 행 hover(또는 포커스) 시에만 노출된다.
-        { label: "수정", action: "edit", cls: "btn--ghost row-action--hover" },
-        { label: "삭제", action: "delete", cls: "btn--ghost btn--icon-small btn--delete", icon: ICON_TRASH },
-      ], row.id),
     );
+    if (selected.has(row.id)) tr.dataset.selected = "true";
     return tr;
   }
 
@@ -262,20 +260,50 @@
     tr.dataset.editing = "true";
 
     tr.append(
-      cell(editingId === NEW_ID ? "신규" : String(no), "cell--no"),
+      // 편집 중인 행은 선택 대상이 아니므로 체크박스 없이 칸만 맞춘다.
+      cell("", "cell--check"),
+      cell(editingId === NEW_ID ? "신규" : String(no), "cell--no cell--center"),
       inputCell("service", "서비스명", { required: true }),
-      inputCell("menu", "메뉴명"),
-      selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]], "파일 유형"),
-      selectCell("component", Object.entries(COMPONENT_LABEL), "공통 컴포넌트 적용"),
+      inputCell("menu", "메뉴명", { className: "cell--center" }),
+      selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]], "파일 유형", "cell--center"),
+      selectCell("component", Object.entries(COMPONENT_LABEL), "WHDS 적용", "cell--center"),
       inputCell("path", "피그마 주소 또는 XD 경로", { className: "cell--path" }),
-      inputCell("owner", "담당자"),
-      inputCell("note", "비고", { className: "cell--note" }),
-      actionCell([
-        { label: "저장", action: "save", cls: "btn--primary" },
-        { label: "취소", action: "cancel", cls: "btn--ghost" },
-      ]),
+      inputCell("owner", "담당자", { className: "cell--center" }),
+      textareaCell("note", "비고 (Shift+Enter 로 줄 추가)"),
     );
     return tr;
+  }
+
+  /** 선택 체크박스 셀 */
+  function checkboxCell(id) {
+    const td = document.createElement("td");
+    td.className = "cell--check";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.className = "check";
+    box.checked = selected.has(id);
+    box.dataset.check = id;
+    box.setAttribute("aria-label", "행 선택");
+    td.append(box);
+    return td;
+  }
+
+  /** Figma URL 에서 사람이 식별할 수 있는 부분만 뽑는다.
+      https://www.figma.com/design/<파일키>/<파일명>?node-id=<노드>
+      앞의 도메인 29자 + 파일키 22자는 모든 행이 동일해 식별에 쓸모없으므로 버린다.
+      같은 파일의 다른 프레임을 가리키는 행이 있으므로 node-id 는 남긴다.
+      파싱할 수 없으면 null 을 돌려주고 호출부가 원본 URL 을 그대로 쓴다. */
+  function figmaLabel(url) {
+    try {
+      const parsed = new URL(url);
+      if (!parsed.hostname.endsWith("figma.com")) return null;
+      const segments = parsed.pathname.split("/").filter(Boolean); // [design, 키, 파일명]
+      if (segments.length < 3) return null;
+      // 파일명에 한글이 들어가면 퍼센트 인코딩되어 있다.
+      return { name: decodeURIComponent(segments[2]), node: parsed.searchParams.get("node-id") };
+    } catch {
+      return null;
+    }
   }
 
   /** 파일 경로 — http 로 시작하면 클릭 가능한 링크, 아니면(XD 로컬 경로 등) 일반 텍스트 */
@@ -285,19 +313,31 @@
 
     const td = document.createElement("td");
     td.className = "cell--path";
-    td.title = value;
+    td.title = value; // 전체 URL 은 마우스 오버로 확인한다
     const a = document.createElement("a");
     a.href = value;
-    a.textContent = value;
     a.target = "_blank";
     a.rel = "noopener noreferrer";
+
+    const label = figmaLabel(value);
+    if (label) {
+      a.append(document.createTextNode(label.name));
+      if (label.node) {
+        const node = document.createElement("span");
+        node.className = "path-node";
+        node.textContent = ` #${label.node}`;
+        a.append(node);
+      }
+    } else {
+      a.textContent = value;
+    }
     td.append(a);
     return td;
   }
 
   function componentCell(value) {
-    if (value === "none") return cell("해당 없음", "cell--muted");
-    return badgeCell(value, COMPONENT_LABEL[value]);
+    if (value === "none") return cell("해당 없음", "cell--center cell--muted");
+    return badgeCell(value, COMPONENT_LABEL[value], "cell--center");
   }
 
   function cell(text, className, title) {
@@ -313,7 +353,7 @@
     const td = document.createElement("td");
     if (className) td.className = className;
     const input = document.createElement("input");
-    input.className = "input input--cell";
+    input.className = "input--cell";
     input.name = name;
     input.value = draft[name] ?? "";
     input.placeholder = placeholder;
@@ -324,10 +364,35 @@
     return td;
   }
 
-  function selectCell(name, options, label) {
+  /** 비고 — Shift+Enter 로 줄을 추가할 수 있도록 textarea 를 쓴다. */
+  function textareaCell(name, placeholder) {
     const td = document.createElement("td");
+    td.className = "cell--note";
+    const area = document.createElement("textarea");
+    area.className = "input--cell";
+    area.name = name;
+    area.rows = 1;
+    area.value = draft[name] ?? "";
+    area.placeholder = placeholder;
+    area.maxLength = 500;
+    area.setAttribute("aria-label", placeholder);
+    td.append(area);
+    // 렌더 직후에는 아직 레이아웃 전이라 scrollHeight 가 0 이므로 다음 프레임에 맞춘다.
+    requestAnimationFrame(() => autoGrow(area));
+    return td;
+  }
+
+  /** 내용에 맞춰 textarea 높이를 늘린다. 그 행만 40px 보다 커진다. */
+  function autoGrow(area) {
+    area.style.height = "auto";
+    area.style.height = `${area.scrollHeight}px`;
+  }
+
+  function selectCell(name, options, label, className) {
+    const td = document.createElement("td");
+    if (className) td.className = className;
     const select = document.createElement("select");
-    select.className = "input input--cell";
+    select.className = "input--cell";
     select.name = name;
     select.setAttribute("aria-label", label);
     for (const [value, label] of options) {
@@ -350,8 +415,9 @@
     return td;
   }
 
-  function badgeCell(kind, label) {
+  function badgeCell(kind, label, className) {
     const td = document.createElement("td");
+    if (className) td.className = className;
     const span = document.createElement("span");
     span.className = `badge badge--${kind}`;
     span.textContent = label;
@@ -359,73 +425,48 @@
     return td;
   }
 
-  function actionCell(buttons, id) {
-    const td = document.createElement("td");
-    td.className = "cell--center";
-    const wrap = document.createElement("div");
-    wrap.className = "cell-actions";
-    for (const { label, action, cls, icon } of buttons) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = `btn btn--small ${cls}`;
-      btn.dataset.action = action;
-      if (id) btn.dataset.id = id;
-      if (icon) {
-        // 아이콘만 있는 버튼은 이름을 읽을 수 없으므로 aria-label 과 툴팁을 준다.
-        btn.append(svgIcon(icon));
-        btn.setAttribute("aria-label", label);
-        btn.title = label;
-      } else {
-        btn.textContent = label;
-      }
-      wrap.append(btn);
-    }
-    td.append(wrap);
-    return td;
-  }
-
-  function svgIcon(paths) {
-    const NS = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(NS, "svg");
-    svg.setAttribute("class", "icon");
-    svg.setAttribute("viewBox", "0 0 16 16");
-    svg.setAttribute("aria-hidden", "true");
-    for (const d of paths) {
-      const path = document.createElementNS(NS, "path");
-      path.setAttribute("d", d);
-      svg.append(path);
-    }
-    return svg;
-  }
-
   function render() {
     renderStats();
     renderTable();
+    syncSelectionUi();
   }
 
   // ── 편집 동작 ───────────────────────────────────────────
 
-  function startEdit(id) {
+  /** columnIndex 를 주면 그 칸의 입력 컨트롤로 바로 포커스한다(셀 클릭 진입). */
+  function startEdit(id, columnIndex) {
     const row = rows.find((r) => r.id === id);
     if (!row) return;
     editingId = id;
     draft = { ...row };
     renderTable();
-    focusFirstField();
+    syncToolbar();
+    focusCell(columnIndex);
   }
 
   function startCreate() {
     editingId = NEW_ID;
     draft = { service: "", menu: "", tool: "Figma", component: "applied", path: "", owner: "", note: "" };
     renderTable();
-    focusFirstField();
+    syncToolbar();
+    focusCell();
   }
 
-  function focusFirstField() {
-    const input = els.tbody.querySelector('tr[data-editing] input[name="service"]');
-    if (!input) return;
-    input.focus();
-    input.closest("tr").scrollIntoView({ block: "nearest" });
+  /** 편집 행에서 columnIndex 번째 칸에 포커스한다. 없으면 첫 입력 칸으로. */
+  function focusCell(columnIndex) {
+    const tr = els.tbody.querySelector("tr[data-editing]");
+    if (!tr) return;
+    const field =
+      (columnIndex !== undefined && tr.children[columnIndex]?.querySelector("[name]")) ||
+      tr.querySelector("[name]");
+    if (!field) return;
+    field.focus();
+    // 클릭으로 들어왔을 때 기존 값이 통째로 지워지지 않도록 커서를 끝에 둔다.
+    if (field.setSelectionRange && field.type !== "checkbox") {
+      const end = field.value.length;
+      field.setSelectionRange(end, end);
+    }
+    tr.scrollIntoView({ block: "nearest" });
   }
 
   function commit() {
@@ -433,7 +474,7 @@
     if (!service) {
       toast("서비스명을 입력해 주세요.");
       els.tbody.querySelector('tr[data-editing] input[name="service"]')?.focus();
-      return;
+      return false;
     }
 
     const next = {
@@ -459,32 +500,92 @@
     draft = null;
     save();
     render();
+    return true;
   }
 
   function cancelEdit() {
     editingId = null;
     draft = null;
     renderTable();
+    syncToolbar();
   }
 
-  function remove(id) {
-    const row = rows.find((r) => r.id === id);
-    if (!row) return;
-    if (!confirm(`'${row.service}' 항목을 삭제할까요?`)) return;
-    rows = rows.filter((r) => r.id !== id);
-    if (editingId === id) {
+  /** 선택된 행들을 한 번에 삭제한다. */
+  function removeSelected() {
+    const targets = rows.filter((r) => selected.has(r.id));
+    if (!targets.length) return;
+
+    const label = targets.length === 1 ? `'${targets[0].service}' 항목을` : `선택한 ${targets.length}건을`;
+    if (!confirm(`${label} 삭제할까요?`)) return;
+
+    rows = rows.filter((r) => !selected.has(r.id));
+    if (editingId && selected.has(editingId)) {
       editingId = null;
       draft = null;
     }
+    const count = targets.length;
+    selected.clear();
     save();
     render();
-    toast("항목을 삭제했습니다.");
+    toast(`${count}건을 삭제했습니다.`);
+  }
+
+  /** 체크박스 상태 → selected 집합 */
+  function toggleSelect(id, checked) {
+    if (checked) selected.add(id);
+    else selected.delete(id);
+    syncSelectionUi();
+  }
+
+  /** 헤더 체크박스 — 현재 목록(필터·검색 결과)만 전체 선택/해제한다. */
+  function toggleSelectAll(checked) {
+    const ids = visibleRows().map((r) => r.id);
+    for (const id of ids) {
+      if (checked) selected.add(id);
+      else selected.delete(id);
+    }
+    for (const box of els.tbody.querySelectorAll("[data-check]")) {
+      box.checked = selected.has(box.dataset.check);
+      box.closest("tr").toggleAttribute("data-selected", box.checked);
+    }
+    syncSelectionUi();
+  }
+
+  /** 선택 표시(행 배경·헤더 체크박스)와 툴바를 현재 상태에 맞춘다. */
+  function syncSelectionUi() {
+    for (const box of els.tbody.querySelectorAll("[data-check]")) {
+      box.closest("tr").toggleAttribute("data-selected", box.checked);
+    }
+    const visible = visibleRows().map((r) => r.id);
+    const picked = visible.filter((id) => selected.has(id)).length;
+    els.checkAll.checked = visible.length > 0 && picked === visible.length;
+    // 일부만 선택된 상태는 indeterminate 로 표시한다.
+    els.checkAll.indeterminate = picked > 0 && picked < visible.length;
+    syncToolbar();
+  }
+
+  /** 툴바 버튼 표시 — 기본 / 선택 / 편집 세 가지 상태가 있다. */
+  function syncToolbar() {
+    const editing = editingId !== null;
+    const count = selected.size;
+    const show = (el, on) => el.toggleAttribute("hidden", !on);
+
+    show(els.selectionCount, !editing && count > 0);
+    show($("btn-delete-selected"), !editing && count > 0);
+
+    show($("btn-save"), editing);
+    show($("btn-cancel"), editing);
+
+    // 편집 중이거나 선택 중에는 '추가'를 숨겨 동작이 섞이지 않게 한다.
+    show(document.querySelector('[data-action="add"]'), !editing && count === 0);
+
+    els.selectionCount.textContent = `${count}개 선택`;
   }
 
   // ── CSV 내보내기 ────────────────────────────────────────
 
   function exportCsv() {
-    const head = ["No", "서비스명", "메뉴명", "파일 유형", "공통 컴포넌트 적용", "파일 경로", "담당자", "비고"];
+    const head = ["No", "서비스명", "메뉴명", "파일 유형", "WHDS 적용", "파일 경로", "담당자", "비고"];
     const escape = (value) => `"${String(value).replaceAll('"', '""')}"`;
     const list = visibleRows();
     const body = list.map((row, i) =>
@@ -526,27 +627,66 @@
   // 편집 행 입력값을 즉시 draft 에 반영해 재렌더링에도 값이 유지되게 한다.
   els.tbody.addEventListener("input", (event) => {
     const field = event.target.closest("[name]");
-    if (field && draft) draft[field.name] = field.value;
+    if (!field || !draft) return;
+    draft[field.name] = field.value;
+    if (field.tagName === "TEXTAREA") autoGrow(field);
   });
+  // 편집 필드용 (체크박스는 name 이 없어 여기 걸리지 않는다)
   els.tbody.addEventListener("change", (event) => {
     const field = event.target.closest("[name]");
     if (field && draft) draft[field.name] = field.value;
   });
 
-  els.tbody.addEventListener("click", (event) => {
-    const btn = event.target.closest("[data-action]");
-    if (!btn) return;
-    const { action, id } = btn.dataset;
-    if (action === "edit") startEdit(id);
-    else if (action === "delete") remove(id);
-    else if (action === "save") commit();
-    else if (action === "cancel") cancelEdit();
+  // 체크박스 선택
+  els.tbody.addEventListener("change", (event) => {
+    const box = event.target.closest("[data-check]");
+    if (box) toggleSelect(box.dataset.check, box.checked);
   });
+
+  els.checkAll.addEventListener("change", (event) => toggleSelectAll(event.target.checked));
+
+  els.tbody.addEventListener("click", (event) => {
+    // 링크는 원래 동작(Figma 열기)을 유지한다
+    if (event.target.closest("a")) return;
+
+    // 체크박스 칸은 선택 전용. 칸의 빈 영역을 눌러도 토글되게 한다.
+    const checkCell = event.target.closest(".cell--check");
+    if (checkCell) {
+      // 체크박스를 직접 누른 경우는 change 이벤트가 처리하므로 중복 토글을 막는다
+      if (event.target.closest("[data-check]")) return;
+      const box = checkCell.querySelector("[data-check]");
+      if (box && editingId === null) {
+        box.checked = !box.checked;
+        toggleSelect(box.dataset.check, box.checked);
+      }
+      return;
+    }
+
+    // 그 밖의 셀을 클릭하면 그 칸이 바로 편집 상태가 된다.
+    const td = event.target.closest("td");
+    const tr = td?.closest("tr");
+    if (!tr) return;
+
+    // 이미 편집 중인 행 안의 클릭은 입력 컨트롤이 알아서 포커스를 받는다.
+    if (tr.dataset.editing) return;
+
+    // 다른 행을 편집 중이면 먼저 저장한다. 저장이 실패하면(필수값 누락) 이동하지 않는다.
+    if (editingId !== null && !commit()) return;
+
+    const id = tr.querySelector("[data-check]")?.dataset.check;
+    if (id) startEdit(id, [...tr.children].indexOf(td));
+  });
+
+  $("btn-delete-selected").addEventListener("click", removeSelected);
+  $("btn-save").addEventListener("click", commit);
+  $("btn-cancel").addEventListener("click", cancelEdit);
 
   // Enter 로 저장, Esc 로 취소
   els.tbody.addEventListener("keydown", (event) => {
     if (!editingId) return;
     if (event.key === "Enter") {
+      // 비고에서 Shift+Enter 는 저장이 아니라 줄바꿈이다(기본 동작을 그대로 둔다).
+      if (event.shiftKey && event.target.name === "note") return;
       event.preventDefault();
       commit();
     } else if (event.key === "Escape") {

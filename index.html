@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=1920" />
 <title>WEHAGO 서비스 피그마 · XD 파일 현황</title>
-<meta name="description" content="서비스/메뉴별 제작 도구(Figma·XD) 및 공통 컴포넌트 적용 여부를 파악하기 위한 팀 작업물 현황 사이트" />
+<meta name="description" content="서비스/메뉴별 제작 도구(Figma·XD) 및 WHDS 적용 여부를 파악하기 위한 팀 작업물 현황 사이트" />
 <link rel="stylesheet" href="src/tokens.css" />
 <link rel="stylesheet" href="src/styles.css" />
 </head>
@@ -17,7 +17,7 @@
     <div class="page-head__titles">
       <h1 class="page-head__title">WEHAGO 서비스 피그마 · XD 파일 현황</h1>
       <p class="page-head__desc">
-        서비스/메뉴별 제작 도구(Figma&middot;XD) 및 공통 컴포넌트 적용 여부를 파악하기 위한 현황 템플릿입니다.
+        서비스/메뉴별 제작 도구(Figma&middot;XD) 및 WHDS 적용 여부를 파악하기 위한 현황 템플릿입니다.
       </p>
     </div>
 
@@ -60,7 +60,7 @@
       </article>
 
       <article class="stat stat--rate">
-        <p class="stat__label">공통 컴포넌트 적용률</p>
+        <p class="stat__label">WHDS 적용률</p>
         <div class="stat__body">
           <strong class="stat__value" id="stat-rate">0%</strong>
           <div class="meter" role="img" aria-labelledby="stat-rate">
@@ -85,6 +85,15 @@
         <p class="panel__count" id="row-count" aria-live="polite">0건</p>
 
         <div class="panel__toolbar-right">
+          <!-- 선택 상태 -->
+          <p class="panel__selection" id="selection-count" hidden>0개 선택</p>
+          <button type="button" class="btn btn--danger-ghost" id="btn-delete-selected" hidden>삭제</button>
+
+          <!-- 편집 상태 -->
+          <button type="button" class="btn btn--primary" id="btn-save" hidden>저장</button>
+          <button type="button" class="btn btn--ghost" id="btn-cancel" hidden>취소</button>
+
+          <!-- 기본 상태 -->
           <!-- CSV 내보내기는 추후 제공 예정. hidden 만 제거하면 다시 노출된다. -->
           <button type="button" class="btn btn--secondary" id="btn-export" hidden>CSV 내보내기</button>
           <button type="button" class="btn btn--primary" data-action="add">
@@ -97,27 +106,29 @@
       <div class="table-wrap" tabindex="0">
         <table class="table">
           <colgroup>
+            <col style="width:44px"  /><!-- 선택 -->
             <col style="width:52px"  /><!-- No -->
             <col style="width:190px" /><!-- 서비스명 -->
             <col style="width:84px"  /><!-- 메뉴명 -->
             <col style="width:96px"  /><!-- 파일 유형 -->
-            <col style="width:144px" /><!-- 공통 컴포넌트 적용 -->
-            <col />                    <!-- 파일 경로 (남는 폭 전체) -->
+            <col style="width:100px" /><!-- WHDS 적용 -->
+            <col style="width:320px" /><!-- 파일 경로 -->
             <col style="width:92px"  /><!-- 담당자 -->
-            <col style="width:240px" /><!-- 비고 -->
-            <col style="width:132px" /><!-- 관리 -->
+            <col />                    <!-- 비고 (남는 폭 전체) -->
           </colgroup>
           <thead>
             <tr>
-              <th scope="col">No</th>
+              <th scope="col" class="cell--check">
+                <input type="checkbox" class="check" id="check-all" aria-label="전체 선택" />
+              </th>
+              <th scope="col" class="cell--center">No</th>
               <th scope="col"><button type="button" class="th-sort" data-sort="service">서비스명</button></th>
-              <th scope="col"><button type="button" class="th-sort" data-sort="menu">메뉴명</button></th>
-              <th scope="col"><button type="button" class="th-sort" data-sort="tool">파일 유형</button></th>
-              <th scope="col"><button type="button" class="th-sort" data-sort="component">공통 컴포넌트 적용</button></th>
+              <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="menu">메뉴명</button></th>
+              <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="tool">파일 유형</button></th>
+              <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="component">WHDS 적용</button></th>
               <th scope="col">파일 경로</th>
-              <th scope="col"><button type="button" class="th-sort" data-sort="owner">담당자</button></th>
+              <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="owner">담당자</button></th>
               <th scope="col">비고</th>
-              <th scope="col" class="cell--center">관리</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
