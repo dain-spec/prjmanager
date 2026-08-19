@@ -105,13 +105,13 @@
         <table class="table">
           <colgroup>
             <col style="width:44px"  /><!-- 선택 -->
-            <col style="width:52px"  /><!-- No -->
+            <col style="width:44px"  /><!-- No (최소 40) -->
             <col style="width:190px" /><!-- 서비스명 -->
-            <col style="width:96px"  /><!-- 플랫폼 -->
-            <col style="width:96px"  /><!-- 파일 유형 -->
-            <col style="width:100px" /><!-- WHDS 적용 -->
+            <col style="width:88px"  /><!-- 플랫폼 (최소 82) -->
+            <col style="width:88px"  /><!-- 파일 유형 (최소 82) -->
+            <col style="width:96px"  /><!-- WHDS 적용 (헤더 94, 드롭다운은 104 필요해 더 줄이지 않음) -->
             <col style="width:320px" /><!-- 파일 경로 -->
-            <col style="width:92px"  /><!-- 담당자 -->
+            <col style="width:76px"  /><!-- 담당자 (최소 68) -->
             <col />                    <!-- 비고 (남는 폭 전체) -->
           </colgroup>
           <thead>
@@ -140,6 +140,15 @@
   </main>
 </div>
 
+
+<!-- hover 한 행 왼쪽(표 바깥)에 따라다니는 행 추가 버튼.
+     셀 안에 두면 .panel 의 overflow: hidden 에 잘리므로 body 레벨에 둔다. -->
+<button type="button" class="row-insert" id="row-insert" title="아래에 행 추가" aria-label="아래에 행 추가" hidden>+</button>
+
+<!-- 행 우클릭 메뉴. .panel 은 overflow: hidden 이라 잘리므로 body 레벨에 둔다. -->
+<div class="menu" id="row-menu" role="menu" hidden>
+  <button type="button" class="menu__item" role="menuitem" data-menu="insert-below">아래에 행 추가</button>
+</div>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 

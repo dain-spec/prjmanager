@@ -104,6 +104,8 @@
   let editingId = null;
   /** 편집 중 입력값. 입력 즉시 여기에 반영되므로 재렌더링에도 값이 남는다. */
   let draft = null;
+  /** 신규 행을 이 id 의 행 바로 뒤에 넣는다. null 이면 목록 끝에 붙인다. */
+  let insertAfterId = null;
 
   const $ = (id) => document.getElementById(id);
   const els = {
@@ -220,8 +222,13 @@
 
   function renderTable() {
     const list = visibleRows();
-    // 신규 행은 아직 rows 에 없으므로 목록 끝에 붙여 보여준다.
-    const display = editingId === NEW_ID ? [...list, { id: NEW_ID }] : list;
+    // 신규 행은 아직 rows 에 없으므로 화면에서만 끼워 넣는다.
+    let display = list;
+    if (editingId === NEW_ID) {
+      const anchor = insertAfterId ? list.findIndex((r) => r.id === insertAfterId) : -1;
+      const at = anchor >= 0 ? anchor + 1 : list.length;
+      display = [...list.slice(0, at), { id: NEW_ID }, ...list.slice(at)];
+    }
 
     els.tbody.replaceChildren();
 
@@ -496,8 +503,9 @@
     focusCell(columnIndex);
   }
 
-  function startCreate() {
+  function startCreate(afterId) {
     editingId = NEW_ID;
+    insertAfterId = afterId ?? null;
     draft = { service: "", platform: PLATFORM_OPTIONS[0], tool: "Figma",
               component: "applied", path: "", owner: "", note: "" };
     renderTable();
@@ -541,7 +549,9 @@
     };
 
     if (editingId === NEW_ID) {
-      rows.push({ id: uid(), ...next });
+      const row = { id: uid(), ...next };
+      const anchor = insertAfterId ? rows.findIndex((r) => r.id === insertAfterId) : -1;
+      rows.splice(anchor >= 0 ? anchor + 1 : rows.length, 0, row);
       toast(`'${service}' 항목을 추가했습니다.`);
     } else {
       const i = rows.findIndex((r) => r.id === editingId);
@@ -551,6 +561,7 @@
 
     editingId = null;
     draft = null;
+    insertAfterId = null;
     save();
     render();
     return true;
@@ -559,6 +570,7 @@
   function cancelEdit() {
     editingId = null;
     draft = null;
+    insertAfterId = null;
     renderTable();
     syncToolbar();
   }
@@ -673,8 +685,107 @@
 
   // ── 이벤트 바인딩 ───────────────────────────────────────
 
+  // ── hover 한 행 왼쪽(표 바깥)의 행 추가 버튼 ───────────
+  const insertBtn = $("row-insert");
+  const tableWrap = document.querySelector(".table-wrap");
+  let insertAnchorId = null;
+
+  els.tbody.addEventListener("mouseover", (event) => {
+    // 편집 중이거나 정렬·검색 중이면 '이 행 아래' 가 모호하므로 내보내지 않는다.
+    if (editingId !== null || !reorderable()) return hideInsert();
+    const tr = event.target.closest("tr");
+    const id = tr?.querySelector("[data-check]")?.dataset.check;
+    if (!id) return;
+    insertAnchorId = id;
+    placeInsert(tr);
+  });
+
+  /** 버튼을 행의 세로 중앙 · 표 왼쪽 바깥에 놓는다. */
+  function placeInsert(tr) {
+    const row = tr.getBoundingClientRect();
+    const wrap = tableWrap.getBoundingClientRect();
+    const middle = row.top + row.height / 2;
+    // sticky 헤더에 가려진 행이나 스크롤 영역을 벗어난 행에는 붙이지 않는다.
+    if (middle < wrap.top || middle > wrap.bottom) return hideInsert();
+
+    insertBtn.hidden = false;
+    const size = insertBtn.offsetWidth;
+    const table = els.tbody.closest("table").getBoundingClientRect();
+    // 1440 에서 좌측 여백이 24px 뿐이라 화면 밖으로 나가지 않게 하한을 둔다.
+    insertBtn.style.left = `${Math.max(4, table.left - size - 4)}px`;
+    insertBtn.style.top = `${middle - size / 2}px`;
+  }
+
+  function hideInsert() {
+    insertBtn.hidden = true;
+    insertAnchorId = null;
+  }
+
+  // 표를 벗어나면 숨긴다. 단 버튼으로 이동하는 중이면 유지한다(버튼이 표 밖에 있다).
+  tableWrap.addEventListener("mouseleave", (event) => {
+    if (event.relatedTarget === insertBtn) return;
+    hideInsert();
+  });
+  insertBtn.addEventListener("mouseleave", (event) => {
+    if (event.relatedTarget?.closest?.("#tbody")) return;
+    hideInsert();
+  });
+
+  insertBtn.addEventListener("click", () => {
+    const id = insertAnchorId;
+    hideInsert();
+    if (id) startCreate(id);
+  });
+
+  // 스크롤·리사이즈 후에는 좌표가 어긋나므로 숨긴다.
+  tableWrap.addEventListener("scroll", hideInsert);
+  addEventListener("resize", hideInsert);
+
+  // ── 행 우클릭 메뉴 ────────────────────────────────────
+  const rowMenu = $("row-menu");
+  let menuRowId = null;
+
+  els.tbody.addEventListener("contextmenu", (event) => {
+    // 편집 중이거나 정렬·검색이 걸려 있으면 '이 행 아래' 가 모호하므로
+    // 브라우저 기본 메뉴를 그대로 둔다(행 추가 버튼과 같은 기준).
+    if (editingId !== null || !reorderable()) return;
+    const tr = event.target.closest("tr");
+    const id = tr?.querySelector("[data-check]")?.dataset.check;
+    if (!id) return;
+    event.preventDefault();
+    menuRowId = id;
+    rowMenu.hidden = false;
+    // 화면 밖으로 넘치지 않게 보정한다.
+    const box = rowMenu.getBoundingClientRect();
+    rowMenu.style.left = `${Math.min(event.clientX, innerWidth - box.width - 8)}px`;
+    rowMenu.style.top = `${Math.min(event.clientY, innerHeight - box.height - 8)}px`;
+  });
+
+  rowMenu.addEventListener("click", (event) => {
+    const item = event.target.closest("[data-menu]");
+    if (!item) return;
+    const id = menuRowId;
+    closeRowMenu();
+    if (item.dataset.menu === "insert-below" && id) startCreate(id);
+  });
+
+  function closeRowMenu() {
+    rowMenu.hidden = true;
+    menuRowId = null;
+  }
+
+  // 메뉴 밖 클릭 / Esc / 표 스크롤 시 닫는다.
+  document.addEventListener("click", (event) => {
+    if (!rowMenu.hidden && !event.target.closest("#row-menu")) closeRowMenu();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeRowMenu();
+  });
+  document.querySelector(".table-wrap").addEventListener("scroll", closeRowMenu);
+
   for (const btn of document.querySelectorAll('[data-action="add"]')) {
-    btn.addEventListener("click", startCreate);
+    // startCreate 를 그대로 넘기면 click 이벤트가 afterId 인자로 들어간다.
+    btn.addEventListener("click", () => startCreate());
   }
 
   // 편집 행 입력값을 즉시 draft 에 반영해 재렌더링에도 값이 유지되게 한다.
@@ -705,6 +816,7 @@
   let dragId = null;
 
   els.tbody.addEventListener("mousedown", (event) => {
+    if (event.button !== 0) return; // 우클릭은 컨텍스트 메뉴용이므로 드래그를 시작하지 않는다
     if (editingId !== null || !reorderable()) return;
     const handle = event.target.closest(".cell--no");
     if (!handle) return;

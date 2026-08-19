@@ -513,6 +513,31 @@ body[data-reordering] {
   text-align: center;
 }
 
+/* hover 한 행 왼쪽(표 바깥)에 떠 있는 행 추가 버튼.
+   위치는 JS 가 행 좌표를 보고 계산한다(표 밖이라 CSS 만으로는 붙일 수 없다). */
+.row-insert {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-4);
+  height: var(--size-4);
+  padding: 0;
+  border: 1px solid var(--color-border-basic);
+  border-radius: var(--radius-max);
+  background: var(--color-surface-basic);
+  color: var(--color-icon-subtle);
+  font-size: var(--font-body3);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.row-insert:hover {
+  border-color: var(--color-border-bolder);
+  color: var(--color-text-basic);
+}
+
 .check {
   width: var(--size-3);
   height: var(--size-3);
@@ -625,6 +650,37 @@ textarea.input--cell {
 /* 필수값(서비스명)이 비어 있으면 해당 칸을 옅게 표시한다. */
 .table tbody tr[data-editing] td:has(.input--cell:required:invalid) {
   background: var(--color-surface-error-subtler);
+}
+
+/* ── 우클릭 메뉴 ───────────────────────────────────────── */
+
+.menu {
+  position: fixed;
+  z-index: 40;
+  min-width: 148px;
+  padding: var(--padding-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-basic);
+  box-shadow: var(--shadow-level2);
+}
+
+.menu__item {
+  display: block;
+  width: 100%;
+  padding: var(--padding-4) var(--padding-5);
+  border: 0;
+  border-radius: var(--radius-xxsmall);
+  background: none;
+  color: var(--color-text-basic);
+  font-size: var(--font-body4);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.menu__item:hover {
+  background: var(--color-action-hover);
 }
 
 /* ── 토스트 ────────────────────────────────────────────── */
