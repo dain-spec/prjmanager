@@ -683,6 +683,21 @@ textarea.input--cell {
   background: var(--color-action-hover);
 }
 
+/* 되돌릴 수 없는 항목이라 색으로 구분하고 구분선으로 떼어 놓는다. */
+.menu__item--danger {
+  color: var(--color-text-point);
+}
+
+.menu__item--danger:hover {
+  background: var(--color-surface-error-subtler);
+}
+
+.menu__divider {
+  height: 1px;
+  margin: var(--padding-1) var(--padding-2);
+  background: var(--color-border-subtler);
+}
+
 /* ── 토스트 ────────────────────────────────────────────── */
 
 .toast {

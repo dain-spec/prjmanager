@@ -575,24 +575,28 @@
     syncToolbar();
   }
 
-  /** 선택된 행들을 한 번에 삭제한다. */
-  function removeSelected() {
-    const targets = rows.filter((r) => selected.has(r.id));
+  /** 주어진 id 들의 행을 삭제한다. 툴바 삭제와 우클릭 삭제가 함께 쓴다. */
+  function removeRows(ids) {
+    const targets = rows.filter((r) => ids.has(r.id));
     if (!targets.length) return;
 
     const label = targets.length === 1 ? `'${targets[0].service}' 항목을` : `선택한 ${targets.length}건을`;
     if (!confirm(`${label} 삭제할까요?`)) return;
 
-    rows = rows.filter((r) => !selected.has(r.id));
-    if (editingId && selected.has(editingId)) {
+    rows = rows.filter((r) => !ids.has(r.id));
+    if (editingId && ids.has(editingId)) {
       editingId = null;
       draft = null;
     }
+    for (const id of ids) selected.delete(id);
     const count = targets.length;
-    selected.clear();
     save();
     render();
     toast(`${count}건을 삭제했습니다.`);
+  }
+
+  function removeSelected() {
+    removeRows(new Set(selected));
   }
 
   /** 체크박스 상태 → selected 집합 */
@@ -746,16 +750,21 @@
   let menuRowId = null;
 
   els.tbody.addEventListener("contextmenu", (event) => {
-    // 편집 중이거나 정렬·검색이 걸려 있으면 '이 행 아래' 가 모호하므로
-    // 브라우저 기본 메뉴를 그대로 둔다(행 추가 버튼과 같은 기준).
-    if (editingId !== null || !reorderable()) return;
+    if (editingId !== null) return; // 편집 중에는 브라우저 기본 메뉴를 그대로 둔다
     const tr = event.target.closest("tr");
     const id = tr?.querySelector("[data-check]")?.dataset.check;
     if (!id) return;
     event.preventDefault();
     menuRowId = id;
+
+    // '아래에 행 추가' 는 표시 순서와 저장 순서가 같을 때만 의미가 있다.
+    // 삭제는 순서와 무관하므로 정렬·검색 중에도 쓸 수 있게 둔다.
+    const canInsert = reorderable();
+    $("menu-insert").hidden = !canInsert;
+    $("menu-divider").hidden = !canInsert;
+
     rowMenu.hidden = false;
-    // 화면 밖으로 넘치지 않게 보정한다.
+    // 항목 표시를 먼저 정한 뒤 크기를 재야 위치가 어긋나지 않는다.
     const box = rowMenu.getBoundingClientRect();
     rowMenu.style.left = `${Math.min(event.clientX, innerWidth - box.width - 8)}px`;
     rowMenu.style.top = `${Math.min(event.clientY, innerHeight - box.height - 8)}px`;
@@ -766,7 +775,14 @@
     if (!item) return;
     const id = menuRowId;
     closeRowMenu();
-    if (item.dataset.menu === "insert-below" && id) startCreate(id);
+    if (!id) return;
+
+    if (item.dataset.menu === "insert-below") {
+      startCreate(id);
+    } else if (item.dataset.menu === "delete") {
+      // 우클릭한 행이 선택에 포함돼 있으면 선택 전체를, 아니면 그 행만 삭제한다.
+      removeRows(selected.has(id) ? new Set(selected) : new Set([id]));
+    }
   });
 
   function closeRowMenu() {

@@ -147,7 +147,9 @@
 
 <!-- 행 우클릭 메뉴. .panel 은 overflow: hidden 이라 잘리므로 body 레벨에 둔다. -->
 <div class="menu" id="row-menu" role="menu" hidden>
-  <button type="button" class="menu__item" role="menuitem" data-menu="insert-below">아래에 행 추가</button>
+  <button type="button" class="menu__item" role="menuitem" data-menu="insert-below" id="menu-insert">아래에 행 추가</button>
+  <div class="menu__divider" id="menu-divider"></div>
+  <button type="button" class="menu__item menu__item--danger" role="menuitem" data-menu="delete">삭제</button>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
