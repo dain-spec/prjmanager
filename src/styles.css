@@ -86,7 +86,7 @@ textarea {
 
 .page-head__title {
   margin: 0;
-  font-size: var(--font-heading3);
+  font-size: var(--font-heading4);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-bolder);
 }
@@ -301,13 +301,6 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
-.panel__count {
-  margin: 0;
-  font-size: var(--font-body5);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-subtle);
-  font-variant-numeric: tabular-nums;
-}
 
 .search {
   position: relative;
@@ -421,9 +414,36 @@ textarea {
 
 .table tbody tr:hover td { background: var(--color-action-hover); }
 
+/* No 칸이 행 순서 변경 핸들이다(스프레드시트의 행 번호를 끌어 옮기는 것과 같다). */
 .cell--no {
   color: var(--color-text-subtler);
   font-variant-numeric: tabular-nums;
+  cursor: grab;
+  user-select: none;
+}
+
+/* 정렬·검색이 걸려 있으면 표시 순서와 실제 순서가 달라 옮길 수 없다. */
+.cell--no[data-locked] {
+  cursor: default;
+}
+
+.table tbody tr[data-dragging] td {
+  opacity: 0.4;
+}
+
+/* 드래그 중에는 문서 전체에서 선택을 막고 커서를 유지한다. */
+body[data-reordering] {
+  user-select: none;
+  cursor: grabbing;
+}
+
+/* 놓일 위치 표시 — border 로 하면 40px 행 높이가 밀리므로 inset 그림자를 쓴다.
+   클릭 상태에서 파란 선을 쓰지 않으므로 드롭 표시도 무채색으로 둔다. */
+.table tbody tr[data-drop="before"] td {
+  box-shadow: inset 0 2px 0 var(--color-border-bolder);
+}
+.table tbody tr[data-drop="after"] td {
+  box-shadow: inset 0 -2px 0 var(--color-border-bolder);
 }
 
 .cell--service { font-weight: var(--font-weight-bold); }
@@ -459,9 +479,24 @@ textarea {
   color: var(--color-text-subtle);
 }
 
+/* 비고만 줄바꿈을 허용해 내용 줄 수에 따라 행 높이가 늘어난다.
+   td 의 height(40px)는 표에서 '최소 높이'로 동작하므로 짧은 비고는 40px 를 유지한다.
+   pre-wrap 이라 Shift+Enter 로 넣은 줄바꿈도 그대로 보인다. */
 .table tbody .cell--note {
   font-size: var(--font-body5);
   color: var(--color-text-subtle);
+  white-space: pre-wrap;
+  overflow: visible;
+  text-overflow: clip;
+  /* 한국어는 단어 단위로 끊고, 끊을 곳이 없는 긴 문자열만 강제로 자른다. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  /* 여러 줄이 될 때 텍스트가 셀 위아래 끝에 붙지 않게 한다.
+     8px 이면 2줄 비고만으로 53px 가 되어 40px 기준이 크게 깨진다. 2px 면 2줄은
+     41px(텍스트 36 + 상하 4 + 보더 1)로 사실상 40px 를 유지한다. td 의 height 는
+     border-box 라 내용 영역이 39px 이므로 정확히 40px 를 맞추려면 1px 이어야 한다.
+     .table tbody td (0-1-2) 보다 우선순위가 높아 padding 단축 속성의 상하값만 덮는다. */
+  padding-block: var(--padding-1);
 }
 
 /* .table thead th (우선순위 0-1-2) 가 .cell--center (0-1-0) 를 이기므로
@@ -532,10 +567,10 @@ textarea {
 
 /* ── 인라인 편집 행 ────────────────────────────────────── */
 
-/* :hover 규칙보다 뒤에 와야 편집 중 배경이 밀리지 않는다. */
+/* 편집 중인 행은 파란 선 없이 배경 색만으로 구분한다.
+   :hover 규칙보다 뒤에 와야 배경이 밀리지 않는다. */
 .table tbody tr[data-editing] td {
   background: var(--color-action-select);
-  border-bottom-color: var(--color-element-primary);
 }
 
 /* 40px 행 안에 들어가는 입력 컨트롤 */
@@ -558,7 +593,9 @@ textarea {
 }
 
 .input--cell:focus {
-  outline: none; /* 포커스 표시는 셀 단위(td:focus-within)로 옮긴다 */
+  /* 클릭·포커스 시 파란 테두리를 쓰지 않는다. 텍스트 칸은 커서로 위치를 알 수 있고,
+     편집 중인 행은 배경 색으로 구분된다. */
+  outline: none;
 }
 
 .input--cell::placeholder {
@@ -583,12 +620,6 @@ textarea.input--cell {
 .table tbody tr[data-editing] .cell--note {
   overflow: visible;
   white-space: normal;
-}
-
-/* 스프레드시트의 '활성 셀'처럼 입력 중인 칸만 테두리로 표시한다. */
-.table tbody tr[data-editing] td:focus-within {
-  outline: 2px solid var(--color-element-primary);
-  outline-offset: -2px;
 }
 
 /* 필수값(서비스명)이 비어 있으면 해당 칸을 옅게 표시한다. */

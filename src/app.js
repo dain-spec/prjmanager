@@ -11,6 +11,9 @@
   /** 신규 행(아직 저장되지 않은 행)에 쓰는 임시 id */
   const NEW_ID = "__new__";
 
+  /** 플랫폼 (Web / Mobile / C/S) */
+  const PLATFORM_OPTIONS = ["Web", "Mobile", "C/S"];
+
   /** WHDS 적용 상태 라벨 */
   const COMPONENT_LABEL = {
     applied: "적용",
@@ -24,7 +27,7 @@
 
   /* 시드 데이터는 팀 현황표(프로젝트/유형/주소링크/공통 반영 버전/반영 상태/작업자/
      Figma 이관 여부/비고)를 이 테이블의 컬럼에 매핑한 것이다. 매핑 규칙:
-       메뉴명            ← 유형(Web/Mobile/C/S). 같은 서비스의 행을 구분하는 값이다.
+       플랫폼            ← 유형(Web/Mobile/C/S). 같은 서비스의 행을 구분하는 값이다.
        파일 유형         ← 주소링크 종류 (figma.com → Figma, 로컬 경로 → XD)
        WHDS 적용 ← 반영 상태 (완료 → 적용, 진행중 → 미적용, 해당사항 없음 → 해당 없음)
        담당자            ← 작업자
@@ -32,55 +35,55 @@
                           Figma 이관 필요)을 잃지 않도록 함께 적었다. */
   const FIGMA = "https://www.figma.com/design";
   const SEED = [
-    { service: "WEHAGO Web 2.0 공통", menu: "Web", tool: "Figma", component: "none",
+    { service: "WEHAGO Web 2.0 공통", platform: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/vVNdCTvO5nvN88byoPuYkV/WEHAGO-Web-2.0_DSG?m=auto&node-id=6556-35225&t=NrDWMe3BToXAjWwM-1`,
       owner: "2Cell", note: "" },
-    { service: "WEHAGO Mobile 2.0 공통", menu: "Mobile", tool: "Figma", component: "none",
+    { service: "WEHAGO Mobile 2.0 공통", platform: "Mobile", tool: "Figma", component: "none",
       path: `${FIGMA}/2hjgaltgwo1dIYAyMFxwDZ/WEHAGO-Mobile-2.0_DSG?m=auto&node-id=0-1&t=5WN7aFvvOpyG3MKk-1`,
       owner: "2Cell", note: "" },
-    { service: "WEHAGO Main 1.5", menu: "Web", tool: "XD", component: "none",
+    { service: "WEHAGO Main 1.5", platform: "Web", tool: "XD", component: "none",
       path: "XD : WEHAGO 1.0 메인_개선안(Cloud)",
       owner: "홍길동", note: "" },
-    { service: "WEHAGO Main 2.0", menu: "Web", tool: "Figma", component: "none",
+    { service: "WEHAGO Main 2.0", platform: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/nQnqiG4WPBVxC4t38nBEW2/WEHAGO-2.0-Web-%EB%A9%94%EC%9D%B8?node-id=723-6341&t=R4SN6APFALqVIQbX-1`,
       owner: "홍길동", note: "" },
-    { service: "WEHAGO AI Edition", menu: "Web", tool: "Figma", component: "none",
+    { service: "WEHAGO AI Edition", platform: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/nQnqiG4WPBVxC4t38nBEW2/WEHAGO-2.0-Web-%EB%A9%94%EC%9D%B8?node-id=4028-42604&t=R4SN6APFALqVIQbX-1`,
       owner: "홍길동", note: "WEHAGO 2.0 Web 메인 피그마 파일에 포함" },
-    { service: "WEHAGO T", menu: "Web", tool: "XD", component: "none",
+    { service: "WEHAGO T", platform: "Web", tool: "XD", component: "none",
       path: "XD : \\UXUI Unit\\2025\\WEHAGO T, Tedge\\작업물",
       owner: "홍길동", note: "" },
-    { service: "WEHAGO T AI Edition", menu: "Web", tool: "Figma", component: "missing",
+    { service: "WEHAGO T AI Edition", platform: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/qmWWQbn78V9VZeya9zmFBJ/WEHAGO-T?node-id=1-32&t=pIe1aQCojb8OETiP-1`,
       owner: "2Cell", note: "WEHAGO T 피그마 파일에 포함 / 수임처 AI 연말정산, 수임처관리, 수임처관리 리뉴얼 버전(holding) 혼재 / WHDS W v2.0 반영 진행중" },
-    { service: "ProActive AI", menu: "Web", tool: "Figma", component: "applied",
+    { service: "ProActive AI", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/ZKzpwsavMCqZM48Mvb730d/WEHAGO-Web-Proactive-AI?node-id=1178-16981&t=3y7IUc8MEWu3EEAj-1`,
       owner: "2Cell", note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0" },
-    { service: "ONE AI", menu: "Web", tool: "Figma", component: "applied",
+    { service: "ONE AI", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/brhXNqFg9rpqSNI0yK05zM/WEHAGO-Web-ONE-AI?node-id=169-2211&t=jWIchZl5pxcl09qL-1`,
       owner: "2Cell", note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요" },
-    { service: "ONE AI", menu: "Mobile", tool: "Figma", component: "applied",
+    { service: "ONE AI", platform: "Mobile", tool: "Figma", component: "applied",
       path: `${FIGMA}/jTkk4w5HWRH5zRrelHRKm9/WEHAGO-Mobile-ONE-AI?node-id=1-18&t=tTY327hL8syzZoxz-1`,
       owner: "2Cell", note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요" },
-    { service: "ONE AI CUBE", menu: "Web", tool: "Figma", component: "missing",
+    { service: "ONE AI CUBE", platform: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/fUfs6M2MqStNtESlVAR3p4/WEHAGO-Web-ONE-AI-CUBE?node-id=390-13900&t=J8CId3uoQkbWrSED-1`,
       owner: "2Cell", note: "WHDS W v2.0 반영 진행중" },
-    { service: "ONE AI Flow", menu: "Web", tool: "Figma", component: "missing",
+    { service: "ONE AI Flow", platform: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/DiIjSe99UXUVDl7pgilfZy/ONE-AI-Flow?node-id=1-10&t=hPMX3yI7fEr02kOF-1`,
       owner: "2Cell", note: "WHDS W v2.0 반영 진행중" },
-    { service: "Agent Market", menu: "Web", tool: "Figma", component: "applied",
+    { service: "Agent Market", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/e7cVdc0Ev8irKt8axNuzqy/Agent-Market?node-id=1-10&t=eJhSUAwnoVyY5NTX-1`,
       owner: "2Cell", note: "WHDS W v2.0" },
-    { service: "메신저", menu: "Web", tool: "Figma", component: "applied",
+    { service: "메신저", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/wgWUkgyGkZWG7GxevnLivm/WEHAGO-Web-%EB%A9%94%EC%8B%A0%EC%A0%80-%EC%9B%B9-%EC%84%A4%EC%B9%98%ED%98%95-?node-id=4427-2&t=bKujBqg9BLqYEpyt-1`,
       owner: "2Cell", note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
-    { service: "메신저", menu: "C/S", tool: "Figma", component: "applied",
+    { service: "메신저", platform: "C/S", tool: "Figma", component: "applied",
       path: `${FIGMA}/wgWUkgyGkZWG7GxevnLivm/WEHAGO-Web-%EB%A9%94%EC%8B%A0%EC%A0%80-%EC%9B%B9-%EC%84%A4%EC%B9%98%ED%98%95-?node-id=4512-2363&t=bKujBqg9BLqYEpyt-1`,
       owner: "2Cell", note: "WEHAGO Web 메신저 피그마 파일에 포함 / WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
-    { service: "화상회의", menu: "Web", tool: "Figma", component: "applied",
+    { service: "화상회의", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/aesogzuumvDi1EneInUZCt/WEHAGO-Web-%ED%99%94%EC%83%81%ED%9A%8C%EC%9D%98-Meet-?node-id=1-5312&t=pflCrCYHVNHPPnWo-1`,
       owner: "2Cell", note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
-    { service: "화상회의", menu: "Mobile", tool: "Figma", component: "applied",
+    { service: "화상회의", platform: "Mobile", tool: "Figma", component: "applied",
       path: `${FIGMA}/cNrqG2nLmmAt9klnanGBnl/WEHAGO-Meet-Mobile--%EB%A6%AC%EB%89%B4%EC%96%BC-?node-id=1-3063&t=NUPWIqx5l1LBcb6Z-1`,
       owner: "2Cell", note: "WHDS 2.0 완료 이전 작업물 / WHDS M v1.0" },
   ];
@@ -106,7 +109,6 @@
   const els = {
     tbody: $("tbody"),
     empty: $("empty"),
-    rowCount: $("row-count"),
     selectionCount: $("selection-count"),
     checkAll: $("check-all"),
     search: $("search"),
@@ -122,7 +124,11 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length) return parsed;
+        // '메뉴명'(자유 입력) → '플랫폼'(드롭다운) 으로 바뀌었다. 저장 키를 올려
+        // 데이터를 버리지 않고, 예전 menu 값을 platform 으로 옮긴다.
+        if (Array.isArray(parsed) && parsed.length) {
+          return parsed.map(({ menu, ...row }) => ({ ...row, platform: row.platform ?? menu ?? "" }));
+        }
       }
     } catch {
       /* 저장값이 손상된 경우 시드 데이터로 대체한다. */
@@ -168,7 +174,7 @@
       // 화면에는 디코딩된 파일명이 보이는데 row.path 는 퍼센트 인코딩 상태다.
       // 보이는 그대로 검색되도록 디코딩된 라벨도 대상에 넣는다.
       const label = figmaLabel(row.path);
-      return [row.service, row.menu, row.path, label?.name ?? "", row.owner, row.note,
+      return [row.service, row.platform, row.path, label?.name ?? "", row.owner, row.note,
               COMPONENT_LABEL[row.component], row.tool]
         .join(" ")
         .toLowerCase()
@@ -232,8 +238,6 @@
     });
 
     els.empty.hidden = display.length > 0;
-    els.rowCount.textContent =
-      list.length === rows.length ? `${rows.length}건` : `${list.length}건 / 전체 ${rows.length}건`;
     syncSelectionUi();
   }
 
@@ -241,14 +245,15 @@
     const tr = document.createElement("tr");
     tr.append(
       checkboxCell(row.id),
-      cell(String(no), "cell--no cell--center"),
+      handleCell(no),
       serviceCell(row, continued),
-      cell(row.menu || "—", row.menu ? "cell--center" : "cell--center cell--muted"),
+      cell(row.platform || "—", row.platform ? "cell--center" : "cell--center cell--muted"),
       badgeCell(row.tool === "Figma" ? "figma" : "xd", row.tool, "cell--center"),
       componentCell(row.component),
       pathCell(row.path),
       cell(row.owner || "—", row.owner ? "cell--center" : "cell--center cell--muted", row.owner),
-      cell(row.note || "", "cell--note", row.note),
+      // 비고는 줄바꿈되어 전체가 보이므로 title(툴팁)을 달지 않는다.
+      cell(row.note || "", "cell--note"),
     );
     if (selected.has(row.id)) tr.dataset.selected = "true";
     return tr;
@@ -264,7 +269,7 @@
       cell("", "cell--check"),
       cell(editingId === NEW_ID ? "신규" : String(no), "cell--no cell--center"),
       inputCell("service", "서비스명", { required: true }),
-      inputCell("menu", "메뉴명", { className: "cell--center" }),
+      selectCell("platform", platformOptions(), "플랫폼", "cell--center"),
       selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]], "파일 유형", "cell--center"),
       selectCell("component", Object.entries(COMPONENT_LABEL), "WHDS 적용", "cell--center"),
       inputCell("path", "피그마 주소 또는 XD 경로", { className: "cell--path" }),
@@ -272,6 +277,41 @@
       textareaCell("note", "비고 (Shift+Enter 로 줄 추가)"),
     );
     return tr;
+  }
+
+  /** No 셀 = 순서 변경 핸들. 정렬·검색이 걸려 있으면 옮길 수 없으므로 잠근다. */
+  function handleCell(no) {
+    const td = cell(String(no), "cell--no cell--center");
+    if (reorderable()) {
+      td.title = "드래그해서 순서 변경";
+    } else {
+      td.dataset.locked = "true";
+      td.title = "정렬·검색을 해제하면 순서를 변경할 수 있습니다";
+    }
+    return td;
+  }
+
+  /** 표시 순서와 실제 저장 순서가 같을 때만 순서를 바꿀 수 있다. */
+  function reorderable() {
+    return sort.key === null && search.trim() === "" && !filters.type && !filters.status;
+  }
+
+  /** dragged 행을 target 행의 앞/뒤로 옮긴다. */
+  function moveRow(draggedId, targetId, after) {
+    if (draggedId === targetId) return;
+    const from = rows.findIndex((r) => r.id === draggedId);
+    if (from < 0) return;
+    const [moved] = rows.splice(from, 1);
+    // splice 로 배열이 줄었으므로 target 위치를 다시 찾는다.
+    const to = rows.findIndex((r) => r.id === targetId);
+    if (to < 0) {
+      rows.splice(from, 0, moved); // 되돌린다
+      return;
+    }
+    rows.splice(to + (after ? 1 : 0), 0, moved);
+    save();
+    render();
+    toast(`'${moved.service}' 순서를 옮겼습니다.`);
   }
 
   /** 선택 체크박스 셀 */
@@ -388,6 +428,18 @@
     area.style.height = `${area.scrollHeight}px`;
   }
 
+  /** 플랫폼 드롭다운 옵션.
+      이 컬럼은 예전에 자유 입력('전체', '메뉴 1' 등)이었으므로, 현재 값이 표준
+      옵션에 없으면 그 값도 옵션에 넣는다. 그러지 않으면 편집만 해도 값이 조용히
+      Web 으로 바뀌어 버린다. */
+  function platformOptions() {
+    const current = draft?.platform;
+    const values = PLATFORM_OPTIONS.includes(current) || !current
+      ? PLATFORM_OPTIONS
+      : [...PLATFORM_OPTIONS, current];
+    return values.map((value) => [value, value]);
+  }
+
   function selectCell(name, options, label, className) {
     const td = document.createElement("td");
     if (className) td.className = className;
@@ -446,7 +498,8 @@
 
   function startCreate() {
     editingId = NEW_ID;
-    draft = { service: "", menu: "", tool: "Figma", component: "applied", path: "", owner: "", note: "" };
+    draft = { service: "", platform: PLATFORM_OPTIONS[0], tool: "Figma",
+              component: "applied", path: "", owner: "", note: "" };
     renderTable();
     syncToolbar();
     focusCell();
@@ -479,7 +532,7 @@
 
     const next = {
       service,
-      menu: (draft.menu || "").trim(),
+      platform: draft.platform || PLATFORM_OPTIONS[0],
       tool: draft.tool || "Figma",
       component: draft.component || "applied",
       path: (draft.path || "").trim(),
@@ -585,11 +638,11 @@
   // ── CSV 내보내기 ────────────────────────────────────────
 
   function exportCsv() {
-    const head = ["No", "서비스명", "메뉴명", "파일 유형", "WHDS 적용", "파일 경로", "담당자", "비고"];
+    const head = ["No", "서비스명", "플랫폼", "파일 유형", "WHDS 적용", "파일 경로", "담당자", "비고"];
     const escape = (value) => `"${String(value).replaceAll('"', '""')}"`;
     const list = visibleRows();
     const body = list.map((row, i) =>
-      [i + 1, row.service, row.menu, row.tool, COMPONENT_LABEL[row.component], row.path, row.owner, row.note]
+      [i + 1, row.service, row.platform, row.tool, COMPONENT_LABEL[row.component], row.path, row.owner, row.note]
         .map(escape)
         .join(","),
     );
@@ -645,6 +698,69 @@
 
   els.checkAll.addEventListener("change", (event) => toggleSelectAll(event.target.checked));
 
+  // ── 행 순서 변경 (No 칸을 핸들로 드래그) ────────────────
+  // HTML5 drag-and-drop 대신 마우스 이벤트로 구현한다. HTML5 DnD 는 브라우저가
+  // 만드는 네이티브 드래그 제스처가 필요해 자동 검증이 불가능하고, 드래그 이미지·
+  // dropEffect·Firefox 의 setData 요구 같은 브라우저별 차이도 많다.
+  let dragId = null;
+
+  els.tbody.addEventListener("mousedown", (event) => {
+    if (editingId !== null || !reorderable()) return;
+    const handle = event.target.closest(".cell--no");
+    if (!handle) return;
+    const tr = handle.closest("tr");
+    dragId = tr?.querySelector("[data-check]")?.dataset.check ?? null;
+    if (!dragId) return;
+    tr.dataset.dragging = "true";
+    document.body.dataset.reordering = "true";
+    event.preventDefault(); // 드래그 중 텍스트가 선택되지 않게 한다
+  });
+
+  document.addEventListener("mousemove", (event) => {
+    if (!dragId) return;
+    clearDropMarks();
+    const tr = rowAt(event.clientY);
+    if (!tr || tr.dataset.dragging) return;
+    const box = tr.getBoundingClientRect();
+    tr.dataset.drop = event.clientY > box.top + box.height / 2 ? "after" : "before";
+  });
+
+  document.addEventListener("mouseup", (event) => {
+    if (!dragId) return;
+    const tr = rowAt(event.clientY);
+    const targetId = tr?.querySelector("[data-check]")?.dataset.check;
+    const after = tr?.dataset.drop === "after";
+    const moved = dragId;
+    endDrag();
+    if (targetId) moveRow(moved, targetId, after);
+  });
+
+  // 드래그 중 Esc 로 취소
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && dragId) endDrag();
+  });
+
+  /** 화면 y 좌표에 걸리는 행 */
+  function rowAt(clientY) {
+    return (
+      [...els.tbody.querySelectorAll("tr")].find((tr) => {
+        const box = tr.getBoundingClientRect();
+        return clientY >= box.top && clientY <= box.bottom;
+      }) ?? null
+    );
+  }
+
+  function endDrag() {
+    clearDropMarks();
+    for (const tr of els.tbody.querySelectorAll("tr[data-dragging]")) delete tr.dataset.dragging;
+    delete document.body.dataset.reordering;
+    dragId = null;
+  }
+
+  function clearDropMarks() {
+    for (const tr of els.tbody.querySelectorAll("tr[data-drop]")) delete tr.dataset.drop;
+  }
+
   els.tbody.addEventListener("click", (event) => {
     // 링크는 원래 동작(Figma 열기)을 유지한다
     if (event.target.closest("a")) return;
@@ -661,6 +777,9 @@
       }
       return;
     }
+
+    // No 칸은 순서 변경 핸들이므로 편집 진입에서 제외한다.
+    if (event.target.closest(".cell--no")) return;
 
     // 그 밖의 셀을 클릭하면 그 칸이 바로 편집 상태가 된다.
     const td = event.target.closest("td");
@@ -703,9 +822,13 @@
   for (const th of document.querySelectorAll(".th-sort")) {
     th.addEventListener("click", () => {
       const key = th.dataset.sort;
-      sort = sort.key === key && sort.dir === "asc" ? { key, dir: "desc" } : { key, dir: "asc" };
+      // 오름 → 내림 → 해제 순으로 돌린다. 정렬을 해제해야 행 순서를 직접 바꿀 수 있다.
+      if (sort.key !== key) sort = { key, dir: "asc" };
+      else if (sort.dir === "asc") sort = { key, dir: "desc" };
+      else sort = { key: null, dir: "asc" };
+
       for (const other of document.querySelectorAll(".th-sort")) delete other.dataset.dir;
-      th.dataset.dir = sort.dir;
+      if (sort.key) th.dataset.dir = sort.dir;
       renderTable();
     });
   }

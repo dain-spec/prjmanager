@@ -79,10 +79,8 @@
             <circle cx="7" cy="7" r="4.6" /><path d="M10.4 10.4 14 14" />
           </svg>
           <input type="search" id="search" class="search__input"
-                 placeholder="서비스명, 메뉴명, 파일 경로, 담당자, 비고 검색" aria-label="목록 검색" />
+                 placeholder="서비스명, 플랫폼, 파일 경로, 담당자, 비고 검색" aria-label="목록 검색" />
         </div>
-
-        <p class="panel__count" id="row-count" aria-live="polite">0건</p>
 
         <div class="panel__toolbar-right">
           <!-- 선택 상태 -->
@@ -109,7 +107,7 @@
             <col style="width:44px"  /><!-- 선택 -->
             <col style="width:52px"  /><!-- No -->
             <col style="width:190px" /><!-- 서비스명 -->
-            <col style="width:84px"  /><!-- 메뉴명 -->
+            <col style="width:96px"  /><!-- 플랫폼 -->
             <col style="width:96px"  /><!-- 파일 유형 -->
             <col style="width:100px" /><!-- WHDS 적용 -->
             <col style="width:320px" /><!-- 파일 경로 -->
@@ -123,7 +121,7 @@
               </th>
               <th scope="col" class="cell--center">No</th>
               <th scope="col"><button type="button" class="th-sort" data-sort="service">서비스명</button></th>
-              <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="menu">메뉴명</button></th>
+              <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="platform">플랫폼</button></th>
               <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="tool">파일 유형</button></th>
               <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="component">WHDS 적용</button></th>
               <th scope="col">파일 경로</th>
