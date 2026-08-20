@@ -454,12 +454,19 @@ body[data-reordering] {
   font-size: var(--font-body5);
 }
 
-.cell--path a {
+.cell--path a,
+.cell--zeplin a {
   color: var(--color-text-primary);
   text-decoration: none;
 }
-.cell--path a:hover {
+.cell--path a:hover,
+.cell--zeplin a:hover {
   text-decoration: underline;
+}
+
+/* 제플린 주소는 hex id 뿐이라 '열기' 링크로만 보여준다. */
+.table tbody .cell--zeplin {
+  font-size: var(--font-body5);
 }
 
 /* 같은 파일의 다른 프레임을 구분하는 node-id — 보조 정보라 흐리게 둔다. */

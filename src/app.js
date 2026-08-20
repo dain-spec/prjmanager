@@ -89,54 +89,71 @@
   const SEED = [
     { service: "WEHAGO Web 2.0 공통", menu: "", platform: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/vVNdCTvO5nvN88byoPuYkV/WEHAGO-Web-2.0_DSG?m=auto&node-id=6556-35225&t=NrDWMe3BToXAjWwM-1`,
+      zeplin: "",
       owners: ["2Cell"], note: "" },
     { service: "WEHAGO Mobile 2.0 공통", menu: "", platform: "Mobile", tool: "Figma", component: "none",
       path: `${FIGMA}/2hjgaltgwo1dIYAyMFxwDZ/WEHAGO-Mobile-2.0_DSG?m=auto&node-id=0-1&t=5WN7aFvvOpyG3MKk-1`,
+      zeplin: "",
       owners: ["2Cell"], note: "" },
     { service: "WEHAGO Main 1.5", menu: "", platform: "Web", tool: "XD", component: "none",
       path: "XD : WEHAGO 1.0 메인_개선안(Cloud)",
+      zeplin: "",
       owners: ["홍길동"], note: "" },
     { service: "WEHAGO Main 2.0", menu: "", platform: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/nQnqiG4WPBVxC4t38nBEW2/WEHAGO-2.0-Web-%EB%A9%94%EC%9D%B8?node-id=723-6341&t=R4SN6APFALqVIQbX-1`,
+      zeplin: "",
       owners: ["홍길동"], note: "" },
     { service: "WEHAGO AI Edition", menu: "", platform: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/nQnqiG4WPBVxC4t38nBEW2/WEHAGO-2.0-Web-%EB%A9%94%EC%9D%B8?node-id=4028-42604&t=R4SN6APFALqVIQbX-1`,
+      zeplin: "",
       owners: ["홍길동"], note: "WEHAGO 2.0 Web 메인 피그마 파일에 포함" },
     { service: "WEHAGO T", menu: "", platform: "Web", tool: "XD", component: "none",
       path: "XD : \\UXUI Unit\\2025\\WEHAGO T, Tedge\\작업물",
+      zeplin: "",
       owners: ["홍길동"], note: "" },
     { service: "WEHAGO T AI Edition", menu: "", platform: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/qmWWQbn78V9VZeya9zmFBJ/WEHAGO-T?node-id=1-32&t=pIe1aQCojb8OETiP-1`,
+      zeplin: "",
       owners: ["2Cell"], note: "WEHAGO T 피그마 파일에 포함 / 수임처 AI 연말정산, 수임처관리, 수임처관리 리뉴얼 버전(holding) 혼재 / WHDS W v2.0 반영 진행중" },
     { service: "ProActive AI", menu: "", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/ZKzpwsavMCqZM48Mvb730d/WEHAGO-Web-Proactive-AI?node-id=1178-16981&t=3y7IUc8MEWu3EEAj-1`,
+      zeplin: "",
       owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0" },
     { service: "ONE AI", menu: "", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/brhXNqFg9rpqSNI0yK05zM/WEHAGO-Web-ONE-AI?node-id=169-2211&t=jWIchZl5pxcl09qL-1`,
+      zeplin: "",
       owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요" },
     { service: "ONE AI", menu: "", platform: "Mobile", tool: "Figma", component: "applied",
       path: `${FIGMA}/jTkk4w5HWRH5zRrelHRKm9/WEHAGO-Mobile-ONE-AI?node-id=1-18&t=tTY327hL8syzZoxz-1`,
+      zeplin: "",
       owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요" },
     { service: "ONE AI CUBE", menu: "", platform: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/fUfs6M2MqStNtESlVAR3p4/WEHAGO-Web-ONE-AI-CUBE?node-id=390-13900&t=J8CId3uoQkbWrSED-1`,
+      zeplin: "",
       owners: ["2Cell"], note: "WHDS W v2.0 반영 진행중" },
     { service: "ONE AI Flow", menu: "", platform: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/DiIjSe99UXUVDl7pgilfZy/ONE-AI-Flow?node-id=1-10&t=hPMX3yI7fEr02kOF-1`,
+      zeplin: "",
       owners: ["2Cell"], note: "WHDS W v2.0 반영 진행중" },
     { service: "Agent Market", menu: "", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/e7cVdc0Ev8irKt8axNuzqy/Agent-Market?node-id=1-10&t=eJhSUAwnoVyY5NTX-1`,
+      zeplin: "",
       owners: ["2Cell"], note: "WHDS W v2.0" },
     { service: "메신저", menu: "", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/wgWUkgyGkZWG7GxevnLivm/WEHAGO-Web-%EB%A9%94%EC%8B%A0%EC%A0%80-%EC%9B%B9-%EC%84%A4%EC%B9%98%ED%98%95-?node-id=4427-2&t=bKujBqg9BLqYEpyt-1`,
+      zeplin: "",
       owners: ["2Cell"], note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
     { service: "메신저", menu: "", platform: "C/S", tool: "Figma", component: "applied",
       path: `${FIGMA}/wgWUkgyGkZWG7GxevnLivm/WEHAGO-Web-%EB%A9%94%EC%8B%A0%EC%A0%80-%EC%9B%B9-%EC%84%A4%EC%B9%98%ED%98%95-?node-id=4512-2363&t=bKujBqg9BLqYEpyt-1`,
+      zeplin: "",
       owners: ["2Cell"], note: "WEHAGO Web 메신저 피그마 파일에 포함 / WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
     { service: "화상회의", menu: "", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/aesogzuumvDi1EneInUZCt/WEHAGO-Web-%ED%99%94%EC%83%81%ED%9A%8C%EC%9D%98-Meet-?node-id=1-5312&t=pflCrCYHVNHPPnWo-1`,
+      zeplin: "",
       owners: ["2Cell"], note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
     { service: "화상회의", menu: "", platform: "Mobile", tool: "Figma", component: "applied",
       path: `${FIGMA}/cNrqG2nLmmAt9klnanGBnl/WEHAGO-Meet-Mobile--%EB%A6%AC%EB%89%B4%EC%96%BC-?node-id=1-3063&t=NUPWIqx5l1LBcb6Z-1`,
+      zeplin: "",
       owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS M v1.0" },
   ];
 
@@ -242,7 +259,7 @@
       // 화면에는 디코딩된 파일명이 보이는데 row.path 는 퍼센트 인코딩 상태다.
       // 보이는 그대로 검색되도록 디코딩된 라벨도 대상에 넣는다.
       const label = figmaLabel(row.path);
-      return [row.service, row.menu, row.platform, row.path, label?.name ?? "", (row.owners ?? []).join(" "), row.note,
+      return [row.service, row.menu, row.platform, row.path, row.zeplin ?? "", label?.name ?? "", (row.owners ?? []).join(" "), row.note,
               COMPONENT_LABEL[row.component], row.tool]
         .join(" ")
         .toLowerCase()
@@ -325,6 +342,7 @@
       badgeCell(row.tool === "Figma" ? "figma" : "xd", row.tool, "cell--center"),
       componentCell(row.component),
       pathCell(row.path),
+      zeplinCell(row.zeplin),
       cell(ownerLabel(row.owners),
         row.owners?.length ? "cell--center" : "cell--center cell--muted",
         row.owners?.join(", ")),
@@ -350,6 +368,7 @@
       selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]], "파일 유형", "cell--center"),
       selectCell("component", Object.entries(COMPONENT_LABEL), "WHDS 적용", "cell--center"),
       inputCell("path", "피그마 주소 또는 XD 경로", { className: "cell--path" }),
+      inputCell("zeplin", "제플린 주소", { className: "cell--zeplin" }),
       ownerPickCell(),
       textareaCell("note", "비고 (Shift+Enter 로 줄 추가)"),
     );
@@ -448,6 +467,25 @@
     } else {
       a.textContent = value;
     }
+    td.append(a);
+    return td;
+  }
+
+  /** 제플린 주소 — Zeplin URL 은 project/screen id 가 hex 라 사람이 읽을 부분이
+      없다. 잘라 보여줘도 모든 행이 같아 보이므로 '열기' 링크로만 두고 전체 URL 은
+      title 로 남긴다. URL 이 아니면(메모 등) 그대로 보여준다. */
+  function zeplinCell(url) {
+    if (!url) return cell("—", "cell--center cell--muted");
+    if (!/^https?:\/\//.test(url)) return cell(url, "cell--center cell--plain", url);
+
+    const td = document.createElement("td");
+    td.className = "cell--center cell--zeplin";
+    td.title = url;
+    const a = document.createElement("a");
+    a.href = url;
+    a.textContent = "열기";
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
     td.append(a);
     return td;
   }
@@ -692,6 +730,7 @@
       tool: draft.tool || "Figma",
       component: draft.component || "applied",
       path: (draft.path || "").trim(),
+      zeplin: (draft.zeplin || "").trim(),
       owners: expandOwners(draft.owners),
       note: (draft.note || "").trim(),
     };
@@ -804,11 +843,11 @@
   // ── CSV 내보내기 ────────────────────────────────────────
 
   function exportCsv() {
-    const head = ["No", "서비스명", "메뉴명", "플랫폼", "파일 유형", "WHDS 적용", "파일 경로", "담당자", "비고"];
+    const head = ["No", "서비스명", "메뉴명", "플랫폼", "파일 유형", "WHDS 적용", "파일 경로", "제플린 주소", "담당자", "비고"];
     const escape = (value) => `"${String(value).replaceAll('"', '""')}"`;
     const list = visibleRows();
     const body = list.map((row, i) =>
-      [i + 1, row.service, row.menu, row.platform, row.tool, COMPONENT_LABEL[row.component], row.path, (row.owners ?? []).join(", "), row.note]
+      [i + 1, row.service, row.menu, row.platform, row.tool, COMPONENT_LABEL[row.component], row.path, row.zeplin ?? "", (row.owners ?? []).join(", "), row.note]
         .map(escape)
         .join(","),
     );
