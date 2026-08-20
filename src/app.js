@@ -87,55 +87,55 @@
                           Figma 이관 필요)을 잃지 않도록 함께 적었다. */
   const FIGMA = "https://www.figma.com/design";
   const SEED = [
-    { service: "WEHAGO Web 2.0 공통", platform: "Web", tool: "Figma", component: "none",
+    { service: "WEHAGO Web 2.0 공통", menu: "", platform: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/vVNdCTvO5nvN88byoPuYkV/WEHAGO-Web-2.0_DSG?m=auto&node-id=6556-35225&t=NrDWMe3BToXAjWwM-1`,
       owners: ["2Cell"], note: "" },
-    { service: "WEHAGO Mobile 2.0 공통", platform: "Mobile", tool: "Figma", component: "none",
+    { service: "WEHAGO Mobile 2.0 공통", menu: "", platform: "Mobile", tool: "Figma", component: "none",
       path: `${FIGMA}/2hjgaltgwo1dIYAyMFxwDZ/WEHAGO-Mobile-2.0_DSG?m=auto&node-id=0-1&t=5WN7aFvvOpyG3MKk-1`,
       owners: ["2Cell"], note: "" },
-    { service: "WEHAGO Main 1.5", platform: "Web", tool: "XD", component: "none",
+    { service: "WEHAGO Main 1.5", menu: "", platform: "Web", tool: "XD", component: "none",
       path: "XD : WEHAGO 1.0 메인_개선안(Cloud)",
       owners: ["홍길동"], note: "" },
-    { service: "WEHAGO Main 2.0", platform: "Web", tool: "Figma", component: "none",
+    { service: "WEHAGO Main 2.0", menu: "", platform: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/nQnqiG4WPBVxC4t38nBEW2/WEHAGO-2.0-Web-%EB%A9%94%EC%9D%B8?node-id=723-6341&t=R4SN6APFALqVIQbX-1`,
       owners: ["홍길동"], note: "" },
-    { service: "WEHAGO AI Edition", platform: "Web", tool: "Figma", component: "none",
+    { service: "WEHAGO AI Edition", menu: "", platform: "Web", tool: "Figma", component: "none",
       path: `${FIGMA}/nQnqiG4WPBVxC4t38nBEW2/WEHAGO-2.0-Web-%EB%A9%94%EC%9D%B8?node-id=4028-42604&t=R4SN6APFALqVIQbX-1`,
       owners: ["홍길동"], note: "WEHAGO 2.0 Web 메인 피그마 파일에 포함" },
-    { service: "WEHAGO T", platform: "Web", tool: "XD", component: "none",
+    { service: "WEHAGO T", menu: "", platform: "Web", tool: "XD", component: "none",
       path: "XD : \\UXUI Unit\\2025\\WEHAGO T, Tedge\\작업물",
       owners: ["홍길동"], note: "" },
-    { service: "WEHAGO T AI Edition", platform: "Web", tool: "Figma", component: "missing",
+    { service: "WEHAGO T AI Edition", menu: "", platform: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/qmWWQbn78V9VZeya9zmFBJ/WEHAGO-T?node-id=1-32&t=pIe1aQCojb8OETiP-1`,
       owners: ["2Cell"], note: "WEHAGO T 피그마 파일에 포함 / 수임처 AI 연말정산, 수임처관리, 수임처관리 리뉴얼 버전(holding) 혼재 / WHDS W v2.0 반영 진행중" },
-    { service: "ProActive AI", platform: "Web", tool: "Figma", component: "applied",
+    { service: "ProActive AI", menu: "", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/ZKzpwsavMCqZM48Mvb730d/WEHAGO-Web-Proactive-AI?node-id=1178-16981&t=3y7IUc8MEWu3EEAj-1`,
       owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0" },
-    { service: "ONE AI", platform: "Web", tool: "Figma", component: "applied",
+    { service: "ONE AI", menu: "", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/brhXNqFg9rpqSNI0yK05zM/WEHAGO-Web-ONE-AI?node-id=169-2211&t=jWIchZl5pxcl09qL-1`,
       owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요" },
-    { service: "ONE AI", platform: "Mobile", tool: "Figma", component: "applied",
+    { service: "ONE AI", menu: "", platform: "Mobile", tool: "Figma", component: "applied",
       path: `${FIGMA}/jTkk4w5HWRH5zRrelHRKm9/WEHAGO-Mobile-ONE-AI?node-id=1-18&t=tTY327hL8syzZoxz-1`,
       owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요" },
-    { service: "ONE AI CUBE", platform: "Web", tool: "Figma", component: "missing",
+    { service: "ONE AI CUBE", menu: "", platform: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/fUfs6M2MqStNtESlVAR3p4/WEHAGO-Web-ONE-AI-CUBE?node-id=390-13900&t=J8CId3uoQkbWrSED-1`,
       owners: ["2Cell"], note: "WHDS W v2.0 반영 진행중" },
-    { service: "ONE AI Flow", platform: "Web", tool: "Figma", component: "missing",
+    { service: "ONE AI Flow", menu: "", platform: "Web", tool: "Figma", component: "missing",
       path: `${FIGMA}/DiIjSe99UXUVDl7pgilfZy/ONE-AI-Flow?node-id=1-10&t=hPMX3yI7fEr02kOF-1`,
       owners: ["2Cell"], note: "WHDS W v2.0 반영 진행중" },
-    { service: "Agent Market", platform: "Web", tool: "Figma", component: "applied",
+    { service: "Agent Market", menu: "", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/e7cVdc0Ev8irKt8axNuzqy/Agent-Market?node-id=1-10&t=eJhSUAwnoVyY5NTX-1`,
       owners: ["2Cell"], note: "WHDS W v2.0" },
-    { service: "메신저", platform: "Web", tool: "Figma", component: "applied",
+    { service: "메신저", menu: "", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/wgWUkgyGkZWG7GxevnLivm/WEHAGO-Web-%EB%A9%94%EC%8B%A0%EC%A0%80-%EC%9B%B9-%EC%84%A4%EC%B9%98%ED%98%95-?node-id=4427-2&t=bKujBqg9BLqYEpyt-1`,
       owners: ["2Cell"], note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
-    { service: "메신저", platform: "C/S", tool: "Figma", component: "applied",
+    { service: "메신저", menu: "", platform: "C/S", tool: "Figma", component: "applied",
       path: `${FIGMA}/wgWUkgyGkZWG7GxevnLivm/WEHAGO-Web-%EB%A9%94%EC%8B%A0%EC%A0%80-%EC%9B%B9-%EC%84%A4%EC%B9%98%ED%98%95-?node-id=4512-2363&t=bKujBqg9BLqYEpyt-1`,
       owners: ["2Cell"], note: "WEHAGO Web 메신저 피그마 파일에 포함 / WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
-    { service: "화상회의", platform: "Web", tool: "Figma", component: "applied",
+    { service: "화상회의", menu: "", platform: "Web", tool: "Figma", component: "applied",
       path: `${FIGMA}/aesogzuumvDi1EneInUZCt/WEHAGO-Web-%ED%99%94%EC%83%81%ED%9A%8C%EC%9D%98-Meet-?node-id=1-5312&t=pflCrCYHVNHPPnWo-1`,
       owners: ["2Cell"], note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
-    { service: "화상회의", platform: "Mobile", tool: "Figma", component: "applied",
+    { service: "화상회의", menu: "", platform: "Mobile", tool: "Figma", component: "applied",
       path: `${FIGMA}/cNrqG2nLmmAt9klnanGBnl/WEHAGO-Meet-Mobile--%EB%A6%AC%EB%89%B4%EC%96%BC-?node-id=1-3063&t=NUPWIqx5l1LBcb6Z-1`,
       owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS M v1.0" },
   ];
@@ -160,6 +160,7 @@
   let insertAfterId = null;
 
   const $ = (id) => document.getElementById(id);
+  const menuList = () => $("menu-options");
   const els = {
     tbody: $("tbody"),
     empty: $("empty"),
@@ -179,15 +180,22 @@
       if (raw) {
         const parsed = JSON.parse(raw);
         // 스키마가 바뀔 때 저장 키를 올려 데이터를 버리는 대신 옛 필드를 옮긴다.
-        //   menu(자유 입력) → platform(드롭다운), owner(문자열) → owners(배열)
         if (Array.isArray(parsed) && parsed.length) {
-          return parsed.map(({ menu, owner, ...row }) => ({
-            ...row,
-            platform: row.platform ?? menu ?? "",
-            // 담당자가 한 명(문자열)에서 여러 명(배열)으로 바뀌었다.
-            // Cell 이름('2Cell')이 저장돼 있으면 구성원으로 펼친다.
-            owners: expandOwners(row.owners ?? (owner ? [owner] : [])),
-          }));
+          return parsed.map(({ menu, owner, ...row }) => {
+            /* menu 필드의 뜻이 두 번 바뀌었다.
+                 예전: platform 이 없고 menu 에 Web/Mobile 이 들어 있었다
+                 지금: platform 이 따로 있고 menu 는 서비스 하위 메뉴명이다
+               platform 유무로 구분한다. */
+            const legacy = row.platform === undefined;
+            return {
+              ...row,
+              platform: row.platform ?? menu ?? "",
+              menu: legacy ? "" : menu ?? "",
+              // 담당자가 한 명(문자열)에서 여러 명(배열)으로 바뀌었고,
+              // Cell 이름('2Cell')이 저장돼 있으면 구성원으로 펼친다.
+              owners: expandOwners(row.owners ?? (owner ? [owner] : [])),
+            };
+          });
         }
       }
     } catch {
@@ -234,7 +242,7 @@
       // 화면에는 디코딩된 파일명이 보이는데 row.path 는 퍼센트 인코딩 상태다.
       // 보이는 그대로 검색되도록 디코딩된 라벨도 대상에 넣는다.
       const label = figmaLabel(row.path);
-      return [row.service, row.platform, row.path, label?.name ?? "", (row.owners ?? []).join(" "), row.note,
+      return [row.service, row.menu, row.platform, row.path, label?.name ?? "", (row.owners ?? []).join(" "), row.note,
               COMPONENT_LABEL[row.component], row.tool]
         .join(" ")
         .toLowerCase()
@@ -252,7 +260,12 @@
           sort.key === "component"
             ? rank[a.component] - rank[b.component]
             : sortValue(a, sort.key).localeCompare(sortValue(b, sort.key), "ko");
-        return cmp * dir;
+        if (cmp !== 0) return cmp * dir;
+        // 같은 서비스 안에서는 메뉴명 순으로 묶어 보이게 한다.
+        if (sort.key === "service") {
+          return String(a.menu ?? "").localeCompare(String(b.menu ?? ""), "ko") * dir;
+        }
+        return 0;
       });
     }
     return list;
@@ -314,6 +327,8 @@
       checkboxCell(row.id),
       handleCell(no),
       serviceCell(row, continued),
+      // 메뉴명이 비면 '서비스 전체' 를 뜻한다.
+      cell(row.menu || "—", row.menu ? "" : "cell--muted", row.menu || "서비스 전체"),
       cell(row.platform || "—", row.platform ? "cell--center" : "cell--center cell--muted"),
       badgeCell(row.tool === "Figma" ? "figma" : "xd", row.tool, "cell--center"),
       componentCell(row.component),
@@ -338,6 +353,7 @@
       cell("", "cell--check"),
       cell(editingId === NEW_ID ? "신규" : String(no), "cell--no cell--center"),
       inputCell("service", "서비스명", { required: true }),
+      menuCell(),
       selectCell("platform", platformOptions(), "플랫폼", "cell--center"),
       selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]], "파일 유형", "cell--center"),
       selectCell("component", Object.entries(COMPONENT_LABEL), "WHDS 적용", "cell--center"),
@@ -458,7 +474,7 @@
     return td;
   }
 
-  function inputCell(name, placeholder, { required = false, className = "" } = {}) {
+  function inputCell(name, placeholder, { required = false, className = "", list = "" } = {}) {
     const td = document.createElement("td");
     if (className) td.className = className;
     const input = document.createElement("input");
@@ -468,6 +484,7 @@
     input.placeholder = placeholder;
     input.maxLength = name === "note" || name === "path" ? 500 : 60;
     if (required) input.required = true;
+    if (list) input.setAttribute("list", list);
     input.setAttribute("aria-label", placeholder);
     td.append(input);
     return td;
@@ -535,6 +552,33 @@
     return groups;
   }
 
+  /** 메뉴명 칸 — 만들 때 같은 서비스의 기존 메뉴명으로 자동완성 목록을 채운다. */
+  function menuCell() {
+    refreshMenuOptions();
+    return inputCell("menu", "메뉴명 (비우면 서비스 전체)", { list: "menu-options" });
+  }
+
+  /** 같은 서비스에서 이미 쓴 메뉴명을 자동완성으로 제안한다.
+      '전표입력' / '전표 입력' 처럼 표기가 갈리는 것을 줄이기 위한 것이다. */
+  function refreshMenuOptions() {
+    const service = (draft?.service ?? "").trim();
+    const used = [
+      ...new Set(
+        rows
+          .filter((r) => r.id !== editingId && r.service.trim() === service && r.menu)
+          .map((r) => r.menu),
+      ),
+    ].sort((a, b) => a.localeCompare(b, "ko"));
+
+    menuList().replaceChildren(
+      ...used.map((value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        return option;
+      }),
+    );
+  }
+
   function platformOptions() {
     const current = draft?.platform;
     const values = PLATFORM_OPTIONS.includes(current) || !current
@@ -574,7 +618,9 @@
   }
 
   function serviceCell(row, continued) {
-    const td = cell(continued ? "↳ 동일 서비스" : row.service, "cell--service");
+    // 같은 서비스가 이어지는 행은 서비스명을 비워 둔다(표기를 반복하지 않는다).
+    // 값 자체는 남아 있으므로 title 로 확인할 수 있다.
+    const td = cell(continued ? "" : row.service, "cell--service");
     if (continued) {
       td.dataset.continued = "true";
       td.title = row.service;
@@ -614,7 +660,7 @@
   function startCreate(afterId) {
     editingId = NEW_ID;
     insertAfterId = afterId ?? null;
-    draft = { service: "", platform: PLATFORM_OPTIONS[0], tool: "Figma",
+    draft = { service: "", menu: "", platform: PLATFORM_OPTIONS[0], tool: "Figma",
               component: "applied", path: "", owners: [], note: "" };
     renderTable();
     syncToolbar();
@@ -660,6 +706,7 @@
 
     const next = {
       service,
+      menu: (draft.menu || "").trim(),
       platform: draft.platform || PLATFORM_OPTIONS[0],
       tool: draft.tool || "Figma",
       component: draft.component || "applied",
@@ -776,11 +823,11 @@
   // ── CSV 내보내기 ────────────────────────────────────────
 
   function exportCsv() {
-    const head = ["No", "서비스명", "플랫폼", "파일 유형", "WHDS 적용", "파일 경로", "담당자", "비고"];
+    const head = ["No", "서비스명", "메뉴명", "플랫폼", "파일 유형", "WHDS 적용", "파일 경로", "담당자", "비고"];
     const escape = (value) => `"${String(value).replaceAll('"', '""')}"`;
     const list = visibleRows();
     const body = list.map((row, i) =>
-      [i + 1, row.service, row.platform, row.tool, COMPONENT_LABEL[row.component], row.path, (row.owners ?? []).join(", "), row.note]
+      [i + 1, row.service, row.menu, row.platform, row.tool, COMPONENT_LABEL[row.component], row.path, (row.owners ?? []).join(", "), row.note]
         .map(escape)
         .join(","),
     );
@@ -1057,6 +1104,8 @@
     if (!field || !draft) return;
     draft[field.name] = field.value;
     if (field.tagName === "TEXTAREA") autoGrow(field);
+    // 서비스가 바뀌면 제안할 메뉴명도 달라진다.
+    if (field.name === "service") refreshMenuOptions();
   });
   // 편집 필드용 (체크박스는 name 이 없어 여기 걸리지 않는다)
   els.tbody.addEventListener("change", (event) => {

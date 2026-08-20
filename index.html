@@ -6,7 +6,7 @@
 <title>WEHAGO 서비스 피그마 · XD 파일 현황</title>
 <meta name="description" content="서비스/메뉴별 제작 도구(Figma·XD) 및 WHDS 적용 여부를 파악하기 위한 팀 작업물 현황 사이트" />
 <link rel="stylesheet" href="src/tokens.css?v=b46a84c7" />
-<link rel="stylesheet" href="src/styles.css?v=c1c61cab" />
+<link rel="stylesheet" href="src/styles.css?v=3b076970" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -79,7 +79,7 @@
             <circle cx="7" cy="7" r="4.6" /><path d="M10.4 10.4 14 14" />
           </svg>
           <input type="search" id="search" class="search__input"
-                 placeholder="서비스명, 플랫폼, 파일 경로, 담당자, 비고 검색" aria-label="목록 검색" />
+                 placeholder="서비스명, 메뉴명, 플랫폼, 파일 경로, 담당자, 비고 검색" aria-label="목록 검색" />
         </div>
 
         <div class="panel__toolbar-right">
@@ -107,6 +107,7 @@
             <col style="width:44px"  /><!-- 선택 -->
             <col style="width:44px"  /><!-- No (최소 40) -->
             <col style="width:190px" /><!-- 서비스명 -->
+            <col style="width:140px" /><!-- 메뉴명 (비우면 서비스 전체) -->
             <col style="width:88px"  /><!-- 플랫폼 (최소 82) -->
             <col style="width:88px"  /><!-- 파일 유형 (최소 82) -->
             <col style="width:96px"  /><!-- WHDS 적용 (헤더 94, 드롭다운은 104 필요해 더 줄이지 않음) -->
@@ -121,6 +122,7 @@
               </th>
               <th scope="col" class="cell--center">No</th>
               <th scope="col"><button type="button" class="th-sort" data-sort="service">서비스명</button></th>
+              <th scope="col"><button type="button" class="th-sort" data-sort="menu">메뉴명</button></th>
               <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="platform">플랫폼</button></th>
               <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="tool">파일 유형</button></th>
               <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="component">WHDS 적용</button></th>
@@ -145,6 +147,9 @@
      셀 안에 두면 .panel 의 overflow: hidden 에 잘리므로 body 레벨에 둔다. -->
 <button type="button" class="row-insert" id="row-insert" title="아래에 행 추가" aria-label="아래에 행 추가" hidden>+</button>
 
+<!-- 같은 서비스에서 이미 쓴 메뉴명 자동완성. 항목은 JS 가 채운다. -->
+<datalist id="menu-options"></datalist>
+
 <!-- 담당자 복수 선택 팝업. 항목은 조직도(OWNER_GROUPS)에서 JS 가 만든다. -->
 <div class="menu menu--picker" id="owner-picker" role="dialog" aria-label="담당자 선택" hidden></div>
 
@@ -157,6 +162,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=388a872a"></script>
+<script src="src/app.js?v=17b9c50b"></script>
 </body>
 </html>

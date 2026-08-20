@@ -448,12 +448,6 @@ body[data-reordering] {
 
 .cell--service { font-weight: var(--font-weight-bold); }
 
-/* 같은 서비스의 연속 행은 서비스명을 반복하지 않고 이어짐 표시만 남긴다. */
-.cell--service[data-continued="true"] {
-  color: var(--color-text-subtler);
-  font-weight: var(--font-weight-regular);
-}
-
 /* 파일 경로 — Figma URL 은 매우 길어 한 줄로 자르고 title 로 전체를 보여준다.
    URL 인 경우 클릭해 바로 열 수 있도록 링크로 렌더한다. */
 .table tbody .cell--path {
