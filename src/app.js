@@ -305,28 +305,20 @@
 
     els.tbody.replaceChildren();
 
-    let prevService = null;
     display.forEach((row, index) => {
-      if (row.id === editingId) {
-        els.tbody.append(editRow(index + 1));
-        prevService = null; // 편집 행 다음 행은 서비스명을 다시 표시한다.
-        return;
-      }
-      const tr = displayRow(row, index + 1, row.service === prevService);
-      prevService = row.service;
-      els.tbody.append(tr);
+      els.tbody.append(row.id === editingId ? editRow(index + 1) : displayRow(row, index + 1));
     });
 
     els.empty.hidden = display.length > 0;
     syncSelectionUi();
   }
 
-  function displayRow(row, no, continued) {
+  function displayRow(row, no) {
     const tr = document.createElement("tr");
     tr.append(
       checkboxCell(row.id),
       handleCell(no),
-      serviceCell(row, continued),
+      cell(row.service, "cell--service", row.service),
       // 메뉴명이 비면 '서비스 전체' 를 뜻한다.
       cell(row.menu || "—", row.menu ? "" : "cell--muted", row.menu || "서비스 전체"),
       cell(row.platform || "—", row.platform ? "cell--center" : "cell--center cell--muted"),
@@ -614,17 +606,6 @@
       }
     }
     td.append(select);
-    return td;
-  }
-
-  function serviceCell(row, continued) {
-    // 같은 서비스가 이어지는 행은 서비스명을 비워 둔다(표기를 반복하지 않는다).
-    // 값 자체는 남아 있으므로 title 로 확인할 수 있다.
-    const td = cell(continued ? "" : row.service, "cell--service");
-    if (continued) {
-      td.dataset.continued = "true";
-      td.title = row.service;
-    }
     return td;
   }
 
