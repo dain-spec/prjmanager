@@ -175,3 +175,22 @@ css = f"""/* 이 파일은 자동 생성됩니다. 직접 수정하지 말고 `p
 out = ROOT / "src" / "tokens.css"
 out.write_text(css, encoding="utf-8")
 print(f"wrote {out.relative_to(ROOT)} ({len(css.splitlines())} lines)")
+
+# ── 파비콘 ────────────────────────────────────────────────────────────────
+# SVG 는 CSS 변수를 읽을 수 없어 색상을 직접 적어야 한다. 손으로 적으면 토큰과
+# 어긋나므로 여기서 함께 생성한다. 표(현황판)를 뜻하는 3줄 그리드 마크.
+primary = light_resolve(light_flat["color.element.primary"])
+surface = light_resolve(light_flat["color.element.static"])
+
+favicon = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <title>WEHAGO 파일 현황</title>
+  <rect width="32" height="32" rx="7" fill="{primary}" />
+  <rect x="7" y="9" width="18" height="3.4" rx="1.7" fill="{surface}" />
+  <rect x="7" y="14.3" width="18" height="3.4" rx="1.7" fill="{surface}" opacity=".78" />
+  <rect x="7" y="19.6" width="18" height="3.4" rx="1.7" fill="{surface}" opacity=".62" />
+</svg>
+"""
+
+icon = ROOT / "src" / "favicon.svg"
+icon.write_text(favicon, encoding="utf-8")
+print(f"wrote {icon.relative_to(ROOT)} (primary {primary}, mark {surface})")

@@ -20,8 +20,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 HTML = ROOT / "index.html"
 
-# href="src/…​.css" / src="src/…​.js" — 기존 ?v=… 는 무시하고 다시 붙인다.
-LINK = re.compile(r'(?P<attr>href|src)="(?P<path>src/[^"?]+\.(?:css|js))(?:\?[^"]*)?"')
+# href="src/…​.css" / src="src/…​.js" / 파비콘 svg — 기존 ?v=… 는 무시하고 다시 붙인다.
+LINK = re.compile(r'(?P<attr>href|src)="(?P<path>src/[^"?]+\.(?:css|js|svg))(?:\?[^"]*)?"')
 
 
 def main() -> int:

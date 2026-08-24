@@ -290,12 +290,15 @@
   --color-element-primary-light: #719bfc;
   --color-element-primary-lighter: #eff4ff;
   --color-element-shadow: #0000001a;
-  --color-element-skeleton-base: #0000001a;
+  --color-element-skeleton-base: #0000000f;
   --color-element-skeleton-highlight: #00000008;
   --color-element-static: #ffffff;
   --color-element-subtle: #e1e1e1;
   --color-element-subtler: #f4f4f4;
+  --color-element-success: #27c36f;
+  --color-element-success-bolder: #007e47;
   --color-element-warning: #ffa000;
+  --color-element-warning-bolder: #eb6400;
   --color-icon-basic: #4a4a4a;
   --color-icon-basic-inverse: #ffffff;
   --color-icon-disabled: #b4b4b4;
@@ -307,6 +310,7 @@
   --color-icon-success: #27c36f;
   --color-icon-success-bolder: #007e47;
   --color-icon-warning: #ffa000;
+  --color-icon-warning-bolder: #eb6400;
   --color-input-border: #d3d3d3;
   --color-input-border-error: #fa4553;
   --color-input-border-focus: #4a4a4a;
@@ -371,7 +375,7 @@
     --color-button-tertiary-hover: #b4b4b4;
     --color-element-primary-lighter: #002d93;
     --color-element-shadow: #00000080;
-    --color-element-skeleton-base: #ffffff1a;
+    --color-element-skeleton-base: #ffffff0f;
     --color-element-skeleton-highlight: #ffffff08;
     --color-element-static: #222222;
     --color-element-subtle: #777777;
@@ -426,7 +430,7 @@
   --color-button-tertiary-hover: #b4b4b4;
   --color-element-primary-lighter: #002d93;
   --color-element-shadow: #00000080;
-  --color-element-skeleton-base: #ffffff1a;
+  --color-element-skeleton-base: #ffffff0f;
   --color-element-skeleton-highlight: #ffffff08;
   --color-element-static: #222222;
   --color-element-subtle: #777777;
