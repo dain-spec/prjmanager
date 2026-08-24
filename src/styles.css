@@ -76,9 +76,6 @@ textarea {
 }
 
 .page-head__titles {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap-3);
   /* 제목 왼쪽의 파란 강조 바 */
   padding-left: var(--padding-6);
   border-left: 4px solid var(--color-element-primary);
@@ -89,12 +86,6 @@ textarea {
   font-size: var(--font-heading4);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-bolder);
-}
-
-.page-head__desc {
-  margin: 0;
-  font-size: var(--font-body3);
-  color: var(--color-text-subtle);
 }
 
 .page-head__actions {
@@ -386,10 +377,11 @@ textarea {
 .th-sort[data-dir] { color: var(--color-text-primary); }
 
 .table tbody td {
-  /* 행 높이 40px 고정 — 디자인 시스템의 --size-9(40px)를 쓴다.
-     box-sizing: border-box 이므로 아래 1px 보더가 40px 안에 포함되고,
-     vertical-align: middle 이 내용을 세로 중앙에 놓는다. */
-  height: var(--size-9);
+  /* 행 기본 높이 32px — 디자인 시스템의 --size-7(32px)를 쓴다.
+     box-sizing: border-box 이므로 아래 1px 보더가 32px 안에 포함되고,
+     vertical-align: middle 이 내용을 세로 중앙에 놓는다.
+     내용 영역 31px 안에 배지 20px, 편집 입력 28px 이 모두 들어간다. */
+  height: var(--size-7);
   padding: 0 var(--padding-5);
   border-bottom: 1px solid var(--color-border-subtler);
   font-size: var(--font-body4);
