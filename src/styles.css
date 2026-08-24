@@ -97,20 +97,15 @@ textarea {
   padding-top: var(--padding-3);
 }
 
-/* 제목과 탭을 한 묶음으로 두어 헤더의 space-between 이 액션 버튼만 오른쪽으로
-   밀어내게 한다. */
-.page-head__lead {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-8);
-}
-
 /* ── 탭 ────────────────────────────────────────────────── */
 
 /* 파일 현황과 일일 업무는 컬럼 구성이 완전히 달라 한 표에 담을 수 없다.
-   세그먼트 컨트롤로 지금 어느 표를 보고 있는지 항상 드러낸다. */
+   세그먼트 컨트롤로 지금 어느 표를 보고 있는지 항상 드러낸다.
+   헤더 액션 줄에서 검색·테마 버튼과 나란히 서므로 높이를 .btn 과 맞춘다
+   (36px 안에 보더 2 + 패딩 4 가 들어가고 탭 자체는 30px 이 된다). */
 .tabs {
   display: inline-flex;
+  height: var(--size-8);
   gap: var(--gap-1);
   padding: var(--padding-1);
   border: 1px solid var(--color-border-subtle);
@@ -119,8 +114,8 @@ textarea {
 }
 
 .tab {
-  height: var(--size-7);
-  padding-inline: var(--padding-7);
+  height: 100%;
+  padding-inline: var(--padding-6);
   border: 0;
   border-radius: var(--radius-xxsmall);
   background: none;

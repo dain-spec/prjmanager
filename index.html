@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 일일 요청업무 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=08659b71" />
+<link rel="stylesheet" href="src/styles.css?v=c272ba22" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -15,17 +15,9 @@
 <div class="app">
   <!-- ── 헤더 ───────────────────────────────────────────── -->
   <header class="page-head">
-    <div class="page-head__lead">
-      <div class="page-head__titles">
-        <!-- 제목은 선택된 탭에 따라 JS 가 바꾼다. -->
-        <h1 class="page-head__title" id="page-title">WEHAGO 서비스 피그마 · XD 파일 현황</h1>
-      </div>
-
-      <!-- 표 두 개(파일 현황 · 일일 업무)를 오가는 탭 -->
-      <nav class="tabs" id="tabs" role="tablist" aria-label="현황 종류">
-        <button type="button" class="tab" role="tab" data-view="works" aria-selected="true">파일 현황</button>
-        <button type="button" class="tab" role="tab" data-view="requests" aria-selected="false">일일 업무</button>
-      </nav>
+    <div class="page-head__titles">
+      <!-- 제목은 선택된 탭에 따라 JS 가 바꾼다. -->
+      <h1 class="page-head__title" id="page-title">WEHAGO 서비스 피그마 · XD 파일 현황</h1>
     </div>
 
     <div class="page-head__actions">
@@ -39,6 +31,12 @@
 
       <!-- CSV 내보내기는 추후 제공 예정. hidden 만 제거하면 다시 노출된다. -->
       <button type="button" class="btn btn--secondary" id="btn-export" hidden>CSV 내보내기</button>
+
+      <!-- 표 두 개(파일 현황 · 일일 업무)를 오가는 탭 -->
+      <nav class="tabs" id="tabs" role="tablist" aria-label="현황 종류">
+        <button type="button" class="tab" role="tab" data-view="works" aria-selected="true">파일 현황</button>
+        <button type="button" class="tab" role="tab" data-view="requests" aria-selected="false">일일 업무</button>
+      </nav>
 
       <!-- 평소엔 버튼만 보이고, 누르면 입력칸이 펼쳐진다. -->
       <div class="search" id="search-box">
