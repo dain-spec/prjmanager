@@ -1,12 +1,15 @@
-/* WEHAGO 팀 작업물 현황 — 상태 관리 / 렌더링
+/* WEHAGO 팀 작업 현황 — 상태 관리 / 렌더링
+   두 개의 표(파일 현황 · 일일 업무 현황)를 탭으로 전환한다. 두 표는 컬럼 구성만
+   다르고 편집·정렬·검색·순서 변경 동작은 완전히 같으므로, 컬럼을 데이터(VIEWS)로
+   기술하고 렌더링·저장·내보내기를 그 기술에서 만들어 낸다.
    추가·수정은 별도 다이얼로그 없이 테이블 행 안에서 바로 처리한다.
    데이터는 localStorage 에 저장되므로 새로고침해도 유지된다. */
 (() => {
   "use strict";
 
-  /* 담당자 컬럼이 추가되어 스키마가 바뀌었으므로 키를 v2 로 올린다. */
-  const STORAGE_KEY = "wehago-prj-manager/rows/v2";
   const THEME_KEY = "wehago-prj-manager/theme";
+  const VIEW_KEY = "wehago-prj-manager/view";
+  const COL_KEY = "wehago-prj-manager/cols/v2";
 
   /** 신규 행(아직 저장되지 않은 행)에 쓰는 임시 id */
   const NEW_ID = "__new__";
@@ -17,7 +20,7 @@
   /** 예전에 저장된 긴 이름을 한 글자로 옮기는 표. load() 에서만 쓴다. */
   const PLATFORM_LEGACY = { Web: "W", Mobile: "M", "C/S": "C" };
 
-  /** 담당자 — 1Unit 조직도. Cell 을 optgroup 으로 묶고, 개인뿐 아니라
+  /** 담당자 — 1Unit 조직도. Cell 을 그룹으로 묶고, 개인뿐 아니라
       Cell 자체도 담당자로 고를 수 있게 각 그룹 첫 항목에 Cell 을 넣는다.
       직급([리더/차장] 등)은 담당자 컬럼 폭에 들어가지 않아 이름만 쓴다. */
   const OWNER_GROUPS = [
@@ -80,6 +83,69 @@
   /** 적용률 계산 대상 — '해당 없음'은 분모에서 제외한다. */
   const RATE_TARGET = ["applied", "missing", "partial"];
 
+  // ── 컬럼 기술 ───────────────────────────────────────────
+  /* 컬럼 한 칸은 다음 속성으로 기술한다.
+       key         행 객체의 필드명
+       header      헤더 라벨
+       width       고정 폭. 생략한 컬럼 하나가 남는 폭을 전부 흡수한다.
+       type        text | note | select | owners | path | link | date
+       align       "center" 면 보기·편집 모두 가운데 정렬
+       sortable    헤더를 정렬 버튼으로 만든다
+       required    비어 있으면 저장을 막는다
+       badge       select 값 → 배지 종류. null 이면 배지 없이 글자로 둔다
+       labels      select 값 → 표시 라벨
+       rank        정렬 순서를 값 순서가 아니라 이 표로 정한다
+       suggest     "menu" 면 같은 서비스의 기존 메뉴명을 자동완성으로 제안한다 */
+
+  const WORK_COLUMNS = [
+    { key: "service", header: "서비스명", width: "190px", type: "text", sortable: true,
+      required: true, placeholder: "서비스명", className: "cell--service" },
+    { key: "menu", header: "메뉴명", width: "140px", type: "text", sortable: true,
+      placeholder: "메뉴명 (비우면 서비스 전체)", emptyTitle: "서비스 전체", suggest: "menu" },
+    // 헤더 27 + 좌우 패딩 24, 한 글자 드롭다운 31 이 들어간다.
+    { key: "platform", header: "OS", width: "56px", type: "select", align: "center",
+      sortable: true, options: PLATFORM_OPTIONS.map((v) => [v, v]), freeValue: true },
+    // 편집 드롭다운 55 + 좌우 패딩 24 = 79 가 하한.
+    { key: "tool", header: "유형", width: "80px", type: "select", align: "center", sortable: true,
+      options: [["Figma", "Figma"], ["XD", "XD"]], badge: (v) => (v === "Figma" ? "figma" : "xd") },
+    // 헤더 94, 드롭다운은 104 필요해 더 줄이지 않는다.
+    { key: "component", header: "WHDS 적용", width: "96px", type: "select", align: "center",
+      sortable: true, options: Object.entries(COMPONENT_LABEL), labels: COMPONENT_LABEL,
+      // '해당 없음'은 상태가 아니라 대상 제외이므로 배지 없이 흐린 글자로 둔다.
+      badge: (v) => (v === "none" ? null : v), mutedValues: ["none"],
+      // 가나다순이 아니라 '조치가 필요한 순서'로 정렬한다.
+      rank: { applied: 0, partial: 1, missing: 2, none: 3 } },
+    { key: "path", header: "파일 경로", width: "266px", type: "path",
+      placeholder: "피그마 주소 또는 XD 경로" },
+    { key: "zeplin", header: "zep", width: "52px", type: "link", align: "center",
+      placeholder: "제플린 주소" },
+    { key: "owners", header: "담당자", width: "90px", type: "owners", align: "center", sortable: true },
+    { key: "note", header: "비고", type: "note", placeholder: "비고 (Shift+Enter 로 줄 추가)" },
+  ];
+
+  const REQUEST_COLUMNS = [
+    { key: "dept", header: "요청부서", width: "110px", type: "text", sortable: true,
+      placeholder: "요청부서" },
+    { key: "requester", header: "요청자", width: "80px", type: "text", sortable: true,
+      placeholder: "요청자" },
+    // 폭을 주지 않아 남는 공간을 전부 가져간다. 요청내용이 가장 길고 중요한 값이다.
+    { key: "content", header: "요청내용", type: "note", required: true,
+      placeholder: "요청내용 (Shift+Enter 로 줄 추가)" },
+    { key: "message", header: "쪽지", width: "52px", type: "link", align: "center",
+      placeholder: "쪽지 링크" },
+    { key: "service", header: "서비스명", width: "150px", type: "text", sortable: true,
+      placeholder: "서비스명" },
+    { key: "menu", header: "메뉴명", width: "120px", type: "text",
+      placeholder: "메뉴명", suggest: "menu" },
+    { key: "path", header: "파일 경로", width: "200px", type: "path",
+      placeholder: "피그마 주소 또는 XD 경로" },
+    { key: "zeplin", header: "zep", width: "52px", type: "link", align: "center",
+      placeholder: "제플린 주소" },
+    { key: "owners", header: "담당자", width: "90px", type: "owners", align: "center", sortable: true },
+    // 네이티브 날짜 입력(달력 아이콘 포함)이 들어가려면 116px 가 필요하다.
+    { key: "done", header: "완료일", width: "116px", type: "date", align: "center", sortable: true },
+  ];
+
   /* 시드 데이터는 팀 현황표(프로젝트/유형/주소링크/공통 반영 버전/반영 상태/작업자/
      Figma 이관 여부/비고)를 이 테이블의 컬럼에 매핑한 것이다. 매핑 규칙:
        OS                ← 유형(W=Web/M=Mobile/C=C/S). 같은 서비스의 행을 구분하는 값이다.
@@ -89,7 +155,7 @@
        비고              ← 원래 비고 + 이 테이블에 칸이 없는 값(공통 반영 버전 /
                           Figma 이관 필요)을 잃지 않도록 함께 적었다. */
   const FIGMA = "https://www.figma.com/design";
-  const SEED = [
+  const WORK_SEED = [
     { service: "WEHAGO Web 2.0 공통", menu: "", platform: "W", tool: "Figma", component: "none",
       path: `${FIGMA}/vVNdCTvO5nvN88byoPuYkV/WEHAGO-Web-2.0_DSG?m=auto&node-id=6556-35225&t=NrDWMe3BToXAjWwM-1`,
       zeplin: "",
@@ -160,12 +226,66 @@
       owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS M v1.0" },
   ];
 
+  /** 파일 현황 저장값을 현재 스키마로 옮긴다. */
+  function migrateWorkRow({ menu, owner, ...row }) {
+    /* menu 필드의 뜻이 두 번 바뀌었다.
+         예전: platform 이 없고 menu 에 Web/Mobile 이 들어 있었다
+         지금: platform 이 따로 있고 menu 는 서비스 하위 메뉴명이다
+       platform 유무로 구분한다. */
+    const legacy = row.platform === undefined;
+    const platform = row.platform ?? menu ?? "";
+    return {
+      ...row,
+      // 'Web'/'Mobile'/'C/S' 로 저장된 값을 'W'/'M'/'C' 로 옮긴다.
+      platform: PLATFORM_LEGACY[platform] ?? platform,
+      menu: legacy ? "" : menu ?? "",
+      // 담당자가 한 명(문자열)에서 여러 명(배열)으로 바뀌었고,
+      // Cell 이름('2Cell')이 저장돼 있으면 구성원으로 펼친다.
+      owners: expandOwners(row.owners ?? (owner ? [owner] : [])),
+    };
+  }
+
+  const VIEWS = [
+    {
+      id: "works",
+      label: "파일 현황",
+      title: "WEHAGO 서비스 피그마 · XD 파일 현황",
+      noun: "작업물",
+      nameKey: "service",
+      // 담당자 컬럼이 추가되며 스키마가 바뀌어 키가 v2 다.
+      storageKey: "wehago-prj-manager/rows/v2",
+      searchHint: "서비스명, 메뉴명, OS, 파일 경로, 제플린, 담당자, 비고 검색",
+      csvName: "wehago-파일-현황.csv",
+      columns: WORK_COLUMNS,
+      seed: WORK_SEED,
+      migrate: migrateWorkRow,
+      stats: true,
+    },
+    {
+      id: "requests",
+      label: "일일 업무",
+      title: "WEHAGO 일일 업무 현황",
+      noun: "요청업무",
+      nameKey: "content",
+      storageKey: "wehago-prj-manager/requests/v1",
+      searchHint: "요청부서, 요청자, 요청내용, 서비스명, 메뉴명, 담당자 검색",
+      csvName: "wehago-일일-업무.csv",
+      columns: REQUEST_COLUMNS,
+      seed: [],
+    },
+  ];
+
   // ── 상태 ────────────────────────────────────────────────
 
-  let rows = load();
-  /* 유형 / WHDS 적용 필터. 필터 칩 UI 는 제거된 상태이며
-     visibleRows() 의 필터 로직은 향후 UI 를 다시 붙일 때를 위해 남겨둔다. */
-  const filters = { tool: null, component: null };
+  /** 뷰별 행 목록. 탭을 오갈 때 다시 읽지 않도록 여기 담아 둔다. */
+  const store = new Map();
+
+  let view = VIEWS[0];
+  let rows = [];
+
+  /* 컬럼 값 필터. 필터 칩 UI 는 제거된 상태이며 visibleRows() 의 필터 로직은
+     향후 UI 를 다시 붙일 때를 위해 남겨둔다. { 컬럼키: 값 } 형태다. */
+  let filters = {};
   let search = "";
   let sort = { key: null, dir: "asc" };
 
@@ -187,56 +307,206 @@
     emptyText: $("empty-text"),
     addFirst: $("btn-add-first"),
     selectionCount: $("selection-count"),
-    checkAll: $("check-all"),
     search: $("search"),
     toast: $("toast"),
+    tabs: $("tabs"),
+    stats: $("stats"),
+    colgroup: document.querySelector(".table colgroup"),
+    thead: document.querySelector(".table thead"),
+    headRow: document.querySelector(".table thead tr"),
+    title: $("page-title"),
   };
+
+  /* 전체 선택 체크박스는 헤더를 다시 그릴 때마다 새 th 로 옮겨 붙이므로
+     한 번만 만들어 두고 재사용한다(리스너도 한 번만 붙는다). */
+  const checkAll = document.createElement("input");
+  checkAll.type = "checkbox";
+  checkAll.className = "check";
+  checkAll.id = "check-all";
+  checkAll.setAttribute("aria-label", "전체 선택");
 
   function uid() {
     return `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
   }
 
-  function load() {
+  /** 컬럼 기술에 맞춰 빠진 필드를 채운다(저장값이 예전 스키마여도 깨지지 않게). */
+  function normalize(row) {
+    const out = { id: row.id ?? uid() };
+    for (const col of view.columns) {
+      out[col.key] = col.type === "owners" ? expandOwners(row[col.key]) : row[col.key] ?? "";
+    }
+    return out;
+  }
+
+  function load(target) {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(target.storageKey);
       if (raw) {
         const parsed = JSON.parse(raw);
         // 스키마가 바뀔 때 저장 키를 올려 데이터를 버리는 대신 옛 필드를 옮긴다.
         if (Array.isArray(parsed) && parsed.length) {
-          return parsed.map(({ menu, owner, ...row }) => {
-            /* menu 필드의 뜻이 두 번 바뀌었다.
-                 예전: platform 이 없고 menu 에 Web/Mobile 이 들어 있었다
-                 지금: platform 이 따로 있고 menu 는 서비스 하위 메뉴명이다
-               platform 유무로 구분한다. */
-            const legacy = row.platform === undefined;
-            const platform = row.platform ?? menu ?? "";
-            return {
-              ...row,
-              // 'Web'/'Mobile'/'C/S' 로 저장된 값을 'W'/'M'/'C' 로 옮긴다.
-              platform: PLATFORM_LEGACY[platform] ?? platform,
-              menu: legacy ? "" : menu ?? "",
-              // 담당자가 한 명(문자열)에서 여러 명(배열)으로 바뀌었고,
-              // Cell 이름('2Cell')이 저장돼 있으면 구성원으로 펼친다.
-              owners: expandOwners(row.owners ?? (owner ? [owner] : [])),
-            };
-          });
+          return parsed.map((row) => (target.migrate ? target.migrate(row) : row));
         }
       }
     } catch {
       /* 저장값이 손상된 경우 시드 데이터로 대체한다. */
     }
-    return SEED.map((row) => ({ id: uid(), ...row, owners: expandOwners(row.owners) }));
+    return target.seed.map((row) => ({ id: uid(), ...row, owners: expandOwners(row.owners) }));
   }
 
   function save() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+      localStorage.setItem(view.storageKey, JSON.stringify(rows));
     } catch {
       toast("브라우저 저장 공간에 기록하지 못했습니다.");
     }
   }
 
+  /** rows 를 통째로 갈아끼울 때 store 와 어긋나지 않게 한 곳에서 처리한다. */
+  function setRows(list) {
+    rows = list;
+    store.set(view.id, rows);
+  }
+
+  // ── 뷰 전환 ─────────────────────────────────────────────
+
+  function useView(id) {
+    const next = VIEWS.find((v) => v.id === id) ?? VIEWS[0];
+    if (next === view && store.has(view.id)) return;
+
+    // 편집·선택·정렬은 컬럼 구성에 매여 있으므로 탭을 옮길 때 정리한다.
+    closeOwnerPicker();
+    editingId = null;
+    draft = null;
+    insertAfterId = null;
+    selected.clear();
+    filters = {};
+    sort = { key: null, dir: "asc" };
+
+    view = next;
+    if (!store.has(view.id)) store.set(view.id, load(view));
+    rows = store.get(view.id);
+
+    localStorage.setItem(VIEW_KEY, view.id);
+    for (const tab of els.tabs.querySelectorAll("[data-view]")) {
+      tab.setAttribute("aria-selected", String(tab.dataset.view === view.id));
+    }
+    els.title.textContent = view.title;
+    document.title = view.title;
+    els.search.placeholder = view.searchHint;
+    els.stats.hidden = true; // 대시보드는 추후 제공 예정
+    buildHead();
+    render();
+  }
+
+  // ── 헤더 · 컬럼 폭 ──────────────────────────────────────
+
+  const MIN_COL_WIDTH = 44;
+
+  /** 선택 · No 는 데이터 컬럼이 아니라 항상 붙는 구조 컬럼이다. */
+  function layout() {
+    return [
+      { key: "__check", width: "44px", structural: "check" },
+      { key: "__no", width: "44px", header: "No", align: "center", structural: "no" },
+      ...view.columns,
+    ];
+  }
+
+  let cols = [];
+  let headCells = [];
+  let defaultColWidths = [];
+
+  function buildHead() {
+    const spec = layout();
+    defaultColWidths = spec.map((col) => col.width ?? "");
+
+    els.colgroup.replaceChildren(
+      ...spec.map((col) => {
+        const el = document.createElement("col");
+        if (col.width) el.style.width = col.width;
+        return el;
+      }),
+    );
+
+    els.headRow.replaceChildren(
+      ...spec.map((col, index) => {
+        const th = document.createElement("th");
+        th.scope = "col";
+        const classes = [];
+        if (col.structural === "check") classes.push("cell--check");
+        if (col.align === "center") classes.push("cell--center");
+        if (classes.length) th.className = classes.join(" ");
+
+        if (col.structural === "check") {
+          th.append(checkAll);
+        } else if (col.sortable) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "th-sort";
+          btn.dataset.sort = col.key;
+          btn.textContent = col.header;
+          if (sort.key === col.key) btn.dataset.dir = sort.dir;
+          th.append(btn);
+        } else {
+          th.textContent = col.header ?? "";
+        }
+
+        // 폭이 지정된 컬럼만 조절할 수 있다(유동 컬럼은 남는 폭을 흡수한다).
+        if (col.width) {
+          const handle = document.createElement("div");
+          handle.className = "col-resize";
+          handle.dataset.col = index;
+          handle.title = "드래그해서 폭 조절 (더블클릭 시 기본값)";
+          th.append(handle);
+        }
+        return th;
+      }),
+    );
+
+    cols = [...els.colgroup.children];
+    headCells = [...els.headRow.children];
+    applySavedColWidths();
+  }
+
+  /* 마지막에 폭을 주지 않은 컬럼이 남는 공간을 흡수한다. 전 컬럼에 고정 폭을 주면
+     table-layout: fixed 가 100% 를 채우려고 폭을 비례 확대해 지정값과 어긋난다. */
+  function readColWidths() {
+    try {
+      return JSON.parse(localStorage.getItem(COL_KEY) ?? "{}");
+    } catch {
+      return {}; // 저장값이 손상된 경우 기본 폭을 쓴다
+    }
+  }
+
+  function applySavedColWidths() {
+    const saved = readColWidths()[view.id] ?? {};
+    for (const [index, px] of Object.entries(saved)) {
+      if (cols[index] && defaultColWidths[index]) cols[index].style.width = `${px}px`;
+    }
+  }
+
+  function saveColWidths() {
+    const mine = {};
+    cols.forEach((col, index) => {
+      if (!defaultColWidths[index]) return; // 유동 컬럼은 저장하지 않는다
+      const px = Math.round(parseFloat(col.style.width));
+      if (px && `${px}px` !== defaultColWidths[index]) mine[index] = px;
+    });
+    try {
+      localStorage.setItem(COL_KEY, JSON.stringify({ ...readColWidths(), [view.id]: mine }));
+    } catch {
+      /* 저장 공간 문제는 폭 조절 자체를 막지 않는다 */
+    }
+  }
+
   // ── 파생 데이터 ─────────────────────────────────────────
+
+  /** 토스트·삭제 확인에 쓰는 행 이름. 요청내용처럼 길 수 있으므로 줄여 쓴다. */
+  function rowLabel(row) {
+    const raw = String(row?.[view.nameKey] ?? "").replace(/\s+/g, " ").trim();
+    if (!raw) return "이름 없는 항목";
+    return raw.length > 20 ? `${raw.slice(0, 20)}…` : raw;
+  }
 
   /** 서비스 단위 집계 — 한 서비스에 Figma/XD 가 섞이면 Figma 를 대표값으로 본다. */
   function serviceSummary(list) {
@@ -255,38 +525,47 @@
     return { services: byService.size, figma, xd };
   }
 
+  /** 검색 대상 문자열 — 화면에 보이는 값을 그대로 찾을 수 있게 라벨을 쓴다. */
+  function searchText(row) {
+    const parts = [];
+    for (const col of view.columns) {
+      const value = row[col.key];
+      if (col.type === "owners") parts.push((value ?? []).join(" "));
+      else parts.push(col.labels?.[value] ?? value ?? "");
+      // 화면에는 디코딩된 파일명이 보이는데 저장값은 퍼센트 인코딩 상태다.
+      if (col.type === "path" && value) parts.push(figmaLabel(value)?.name ?? "");
+    }
+    return parts.join(" ").toLowerCase();
+  }
+
+  function sortValue(row, col) {
+    if (col.type === "owners") return (row[col.key] ?? []).join(", ");
+    return String(col.labels?.[row[col.key]] ?? row[col.key] ?? "");
+  }
+
   function visibleRows() {
     const q = search.trim().toLowerCase();
     let list = rows.filter((row) => {
       // 편집 중인 행은 필터/검색으로 사라지지 않게 항상 남긴다.
       if (row.id === editingId) return true;
-      if (filters.tool && row.tool !== filters.tool) return false;
-      if (filters.component && row.component !== filters.component) return false;
+      for (const [key, value] of Object.entries(filters)) {
+        if (value && row[key] !== value) return false;
+      }
       if (!q) return true;
-      // 화면에는 디코딩된 파일명이 보이는데 row.path 는 퍼센트 인코딩 상태다.
-      // 보이는 그대로 검색되도록 디코딩된 라벨도 대상에 넣는다.
-      const label = figmaLabel(row.path);
-      return [row.service, row.menu, row.platform, row.path, row.zeplin ?? "", label?.name ?? "", (row.owners ?? []).join(" "), row.note,
-              COMPONENT_LABEL[row.component], row.tool]
-        .join(" ")
-        .toLowerCase()
-        .includes(q);
+      return searchText(row).includes(q);
     });
 
     if (sort.key) {
       const dir = sort.dir === "asc" ? 1 : -1;
-      // 적용 상태는 가나다순이 아니라 '조치가 필요한 순서'로 정렬한다.
-      const rank = { applied: 0, partial: 1, missing: 2, none: 3 };
-      const sortValue = (row, key) =>
-        key === "owner" ? (row.owners ?? []).join(", ") : String(row[key] ?? "");
+      const col = view.columns.find((c) => c.key === sort.key);
+      const menuCol = view.columns.find((c) => c.key === "menu");
       list = [...list].sort((a, b) => {
-        const cmp =
-          sort.key === "component"
-            ? rank[a.component] - rank[b.component]
-            : sortValue(a, sort.key).localeCompare(sortValue(b, sort.key), "ko");
+        const cmp = col.rank
+          ? col.rank[a[col.key]] - col.rank[b[col.key]]
+          : sortValue(a, col).localeCompare(sortValue(b, col), "ko");
         if (cmp !== 0) return cmp * dir;
         // 같은 서비스 안에서는 메뉴명 순으로 묶어 보이게 한다.
-        if (sort.key === "service") {
+        if (sort.key === "service" && menuCol) {
           return String(a.menu ?? "").localeCompare(String(b.menu ?? ""), "ko") * dir;
         }
         return 0;
@@ -298,6 +577,7 @@
   // ── 렌더링 ──────────────────────────────────────────────
 
   function renderStats() {
+    if (!view.stats) return;
     const { services, figma, xd } = serviceSummary(rows);
     const pct = (n) => (services ? Math.round((n / services) * 100) : 0);
 
@@ -339,11 +619,43 @@
       // 그 경우에만 추가 버튼을 내보낸다.
       const noData = rows.length === 0;
       els.emptyText.textContent = noData
-        ? "아직 등록된 작업물이 없습니다."
-        : "조건에 맞는 작업물이 없습니다. 검색어를 조정해 보세요.";
+        ? `아직 등록된 ${view.noun}이 없습니다.`
+        : `조건에 맞는 ${view.noun}이 없습니다. 검색어를 조정해 보세요.`;
       els.addFirst.hidden = !noData;
     }
     syncSelectionUi();
+  }
+
+  /** 보기 모드 셀 — 컬럼 type 에 따라 다르게 그린다. */
+  function displayCell(row, col) {
+    const value = row[col.key];
+    const base = [col.className, col.align === "center" ? "cell--center" : ""]
+      .filter(Boolean)
+      .join(" ");
+    const muted = (cls) => (cls ? `${cls} cell--muted` : "cell--muted");
+
+    switch (col.type) {
+      case "path":
+        return pathCell(value, base);
+      case "link":
+        return linkCell(value, base);
+      case "owners":
+        return cell(ownerLabel(value), value?.length ? base : muted(base), value?.join(", "));
+      case "note":
+        // 비고·요청내용은 줄바꿈되어 전체가 보이므로 title(툴팁)을 달지 않는다.
+        return cell(value || "", `${base} cell--note`.trim());
+      case "date":
+        return value ? cell(value, base) : cell("—", muted(base));
+      case "select": {
+        const kind = col.badge?.(value);
+        const label = col.labels?.[value] ?? value ?? "";
+        if (kind) return badgeCell(kind, label, base);
+        const dim = !value || col.mutedValues?.includes(value);
+        return cell(label || "—", dim ? muted(base) : base);
+      }
+      default:
+        return cell(value || "—", value ? base : muted(base), value || col.emptyTitle);
+    }
   }
 
   function displayRow(row, no) {
@@ -351,42 +663,42 @@
     tr.append(
       checkboxCell(row.id),
       handleCell(no),
-      cell(row.service, "cell--service", row.service),
-      // 메뉴명이 비면 '서비스 전체' 를 뜻한다.
-      cell(row.menu || "—", row.menu ? "" : "cell--muted", row.menu || "서비스 전체"),
-      cell(row.platform || "—", row.platform ? "cell--center" : "cell--center cell--muted"),
-      badgeCell(row.tool === "Figma" ? "figma" : "xd", row.tool, "cell--center"),
-      componentCell(row.component),
-      pathCell(row.path),
-      zeplinCell(row.zeplin),
-      cell(ownerLabel(row.owners),
-        row.owners?.length ? "cell--center" : "cell--center cell--muted",
-        row.owners?.join(", ")),
-      // 비고는 줄바꿈되어 전체가 보이므로 title(툴팁)을 달지 않는다.
-      cell(row.note || "", "cell--note"),
+      ...view.columns.map((col) => displayCell(row, col)),
     );
     if (selected.has(row.id)) tr.dataset.selected = "true";
     return tr;
+  }
+
+  /** 편집 모드 셀 */
+  function editCell(col) {
+    switch (col.type) {
+      case "owners":
+        return ownerPickCell(col);
+      case "note":
+        return textareaCell(col);
+      case "select":
+        return selectCell(col);
+      case "date":
+        return dateCell(col);
+      case "path":
+        return inputCell(col, "cell--path");
+      case "link":
+        // 링크는 길어서 가운데 정렬하면 URL 앞부분이 보이지 않는다. 왼쪽에 둔다.
+        return inputCell(col, "cell--zeplin");
+      default:
+        return inputCell(col, col.align === "center" ? "cell--center" : "");
+    }
   }
 
   /** 편집 행 — 각 칸을 입력 컨트롤로 바꾼다. */
   function editRow(no) {
     const tr = document.createElement("tr");
     tr.dataset.editing = "true";
-
     tr.append(
       // 편집 중인 행은 선택 대상이 아니므로 체크박스 없이 칸만 맞춘다.
       cell("", "cell--check"),
       cell(editingId === NEW_ID ? "신규" : String(no), "cell--no cell--center"),
-      inputCell("service", "서비스명", { required: true }),
-      menuCell(),
-      selectCell("platform", platformOptions(), "OS", "cell--center"),
-      selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]], "유형", "cell--center"),
-      selectCell("component", Object.entries(COMPONENT_LABEL), "WHDS 적용", "cell--center"),
-      inputCell("path", "피그마 주소 또는 XD 경로", { className: "cell--path" }),
-      inputCell("zeplin", "제플린 주소", { className: "cell--zeplin" }),
-      ownerPickCell(),
-      textareaCell("note", "비고 (Shift+Enter 로 줄 추가)"),
+      ...view.columns.map(editCell),
     );
     return tr;
   }
@@ -405,7 +717,11 @@
 
   /** 표시 순서와 실제 저장 순서가 같을 때만 순서를 바꿀 수 있다. */
   function reorderable() {
-    return sort.key === null && search.trim() === "" && !filters.type && !filters.status;
+    return (
+      sort.key === null &&
+      search.trim() === "" &&
+      Object.values(filters).every((value) => !value)
+    );
   }
 
   /** dragged 행을 target 행의 앞/뒤로 옮긴다. */
@@ -423,7 +739,7 @@
     rows.splice(to + (after ? 1 : 0), 0, moved);
     save();
     render();
-    toast(`'${moved.service}' 순서를 옮겼습니다.`);
+    toast(`'${rowLabel(moved)}' 순서를 옮겼습니다.`);
   }
 
   /** 선택 체크박스 셀 */
@@ -459,12 +775,12 @@
   }
 
   /** 파일 경로 — http 로 시작하면 클릭 가능한 링크, 아니면(XD 로컬 경로 등) 일반 텍스트 */
-  function pathCell(value) {
-    if (!value) return cell("—", "cell--muted");
-    if (!/^https?:\/\//.test(value)) return cell(value, "cell--path", value);
+  function pathCell(value, base) {
+    if (!value) return cell("—", `${base} cell--muted`.trim());
+    if (!/^https?:\/\//.test(value)) return cell(value, `${base} cell--path`.trim(), value);
 
     const td = document.createElement("td");
-    td.className = "cell--path";
+    td.className = `${base} cell--path`.trim();
     td.title = value; // 전체 URL 은 마우스 오버로 확인한다
     const a = document.createElement("a");
     a.href = value;
@@ -487,15 +803,15 @@
     return td;
   }
 
-  /** 제플린 주소 — Zeplin URL 은 project/screen id 가 hex 라 사람이 읽을 부분이
-      없다. 잘라 보여줘도 모든 행이 같아 보이므로 '열기' 링크로만 두고 전체 URL 은
-      title 로 남긴다. URL 이 아니면(메모 등) 그대로 보여준다. */
-  function zeplinCell(url) {
-    if (!url) return cell("—", "cell--center cell--muted");
-    if (!/^https?:\/\//.test(url)) return cell(url, "cell--center cell--plain", url);
+  /** 링크 컬럼(제플린 · 쪽지) — 주소에 사람이 읽을 부분이 없고 모든 행이 비슷해
+      보이므로 '열기' 링크로만 두고 전체 URL 은 title 로 남긴다.
+      URL 이 아니면(메모 등) 그대로 보여준다. */
+  function linkCell(url, base) {
+    if (!url) return cell("—", `${base} cell--muted`.trim());
+    if (!/^https?:\/\//.test(url)) return cell(url, `${base} cell--plain`.trim(), url);
 
     const td = document.createElement("td");
-    td.className = "cell--center cell--zeplin";
+    td.className = `${base} cell--zeplin`.trim();
     td.title = url;
     const a = document.createElement("a");
     a.href = url;
@@ -504,11 +820,6 @@
     a.rel = "noopener noreferrer";
     td.append(a);
     return td;
-  }
-
-  function componentCell(value) {
-    if (value === "none") return cell("해당 없음", "cell--center cell--muted");
-    return badgeCell(value, COMPONENT_LABEL[value], "cell--center");
   }
 
   function cell(text, className, title) {
@@ -520,59 +831,73 @@
     return td;
   }
 
-  function inputCell(name, placeholder, { required = false, className = "", list = "" } = {}) {
+  function inputCell(col, className) {
     const td = document.createElement("td");
     if (className) td.className = className;
     const input = document.createElement("input");
     input.className = "input--cell";
-    input.name = name;
-    input.value = draft[name] ?? "";
-    input.placeholder = placeholder;
-    input.maxLength = name === "note" || name === "path" ? 500 : 60;
-    if (required) input.required = true;
-    if (list) input.setAttribute("list", list);
-    input.setAttribute("aria-label", placeholder);
+    input.name = col.key;
+    input.value = draft[col.key] ?? "";
+    input.placeholder = col.placeholder ?? col.header;
+    // 주소·긴 문장은 60자로 자르면 잘려 나가므로 넉넉히 둔다.
+    input.maxLength = col.type === "path" || col.type === "link" ? 500 : 60;
+    if (col.required) input.required = true;
+    if (col.suggest === "menu") {
+      refreshMenuOptions();
+      input.setAttribute("list", "menu-options");
+    }
+    input.setAttribute("aria-label", col.header);
     td.append(input);
     return td;
   }
 
-  /** 비고 — Shift+Enter 로 줄을 추가할 수 있도록 textarea 를 쓴다. */
-  function textareaCell(name, placeholder) {
+  /** 여러 줄 칸(비고 · 요청내용) — Shift+Enter 로 줄을 추가할 수 있게 textarea 를 쓴다. */
+  function textareaCell(col) {
     const td = document.createElement("td");
     td.className = "cell--note";
     const area = document.createElement("textarea");
     area.className = "input--cell";
-    area.name = name;
+    area.name = col.key;
     area.rows = 1;
-    area.value = draft[name] ?? "";
-    area.placeholder = placeholder;
+    area.value = draft[col.key] ?? "";
+    area.placeholder = col.placeholder ?? col.header;
     area.maxLength = 500;
-    area.setAttribute("aria-label", placeholder);
+    if (col.required) area.required = true;
+    area.setAttribute("aria-label", col.header);
     td.append(area);
     // 렌더 직후에는 아직 레이아웃 전이라 scrollHeight 가 0 이므로 다음 프레임에 맞춘다.
     requestAnimationFrame(() => autoGrow(area));
     return td;
   }
 
-  /** 내용에 맞춰 textarea 높이를 늘린다. 그 행만 40px 보다 커진다. */
+  /** 내용에 맞춰 textarea 높이를 늘린다. 그 행만 32px 보다 커진다. */
   function autoGrow(area) {
     area.style.height = "auto";
     area.style.height = `${area.scrollHeight}px`;
   }
 
-  /** OS 드롭다운 옵션.
-      이 컬럼은 예전에 자유 입력('전체', '메뉴 1' 등)이었으므로, 현재 값이 표준
-      옵션에 없으면 그 값도 옵션에 넣는다. 그러지 않으면 편집만 해도 값이 조용히
-      W 로 바뀌어 버린다. */
+  function dateCell(col) {
+    const td = document.createElement("td");
+    td.className = "cell--center";
+    const input = document.createElement("input");
+    input.type = "date";
+    input.className = "input--cell";
+    input.name = col.key;
+    input.value = draft[col.key] ?? "";
+    input.setAttribute("aria-label", col.header);
+    td.append(input);
+    return td;
+  }
+
   /** 편집 행의 담당자 칸. 셀 전체가 선택 팝업을 여는 버튼이다. */
-  function ownerPickCell() {
+  function ownerPickCell(col) {
     const td = document.createElement("td");
     td.className = "cell--center";
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "owner-pick";
-    btn.dataset.ownerPick = "true";
-    btn.setAttribute("aria-label", "담당자 선택");
+    btn.dataset.ownerPick = col.key;
+    btn.setAttribute("aria-label", `${col.header} 선택`);
     syncOwnerButton(btn);
     td.append(btn);
     return td;
@@ -598,12 +923,6 @@
     return groups;
   }
 
-  /** 메뉴명 칸 — 만들 때 같은 서비스의 기존 메뉴명으로 자동완성 목록을 채운다. */
-  function menuCell() {
-    refreshMenuOptions();
-    return inputCell("menu", "메뉴명 (비우면 서비스 전체)", { list: "menu-options" });
-  }
-
   /** 같은 서비스에서 이미 쓴 메뉴명을 자동완성으로 제안한다.
       '전표입력' / '전표 입력' 처럼 표기가 갈리는 것을 줄이기 위한 것이다. */
   function refreshMenuOptions() {
@@ -611,7 +930,7 @@
     const used = [
       ...new Set(
         rows
-          .filter((r) => r.id !== editingId && r.service.trim() === service && r.menu)
+          .filter((r) => r.id !== editingId && (r.service ?? "").trim() === service && r.menu)
           .map((r) => r.menu),
       ),
     ].sort((a, b) => a.localeCompare(b, "ko"));
@@ -625,39 +944,29 @@
     );
   }
 
-  function platformOptions() {
-    const current = draft?.platform;
-    const values = PLATFORM_OPTIONS.includes(current) || !current
-      ? PLATFORM_OPTIONS
-      : [...PLATFORM_OPTIONS, current];
-    return values.map((value) => [value, value]);
+  /** select 옵션. freeValue 컬럼(OS)은 예전에 자유 입력이었으므로 현재 값이
+      표준 옵션에 없으면 그 값도 옵션에 넣는다. 그러지 않으면 편집만 해도
+      값이 조용히 첫 옵션으로 바뀌어 버린다. */
+  function optionsFor(col) {
+    const current = draft?.[col.key];
+    if (!col.freeValue || !current) return col.options;
+    if (col.options.some(([value]) => value === current)) return col.options;
+    return [...col.options, [current, current]];
   }
 
-  function selectCell(name, options, label, className) {
+  function selectCell(col) {
     const td = document.createElement("td");
-    if (className) td.className = className;
+    if (col.align === "center") td.className = "cell--center";
     const select = document.createElement("select");
     select.className = "input--cell";
-    select.name = name;
-    select.setAttribute("aria-label", label);
-    const build = (value, text) => {
+    select.name = col.key;
+    select.setAttribute("aria-label", col.header);
+    for (const [value, text] of optionsFor(col)) {
       const option = document.createElement("option");
       option.value = value;
       option.textContent = text;
-      if (draft[name] === value) option.selected = true;
-      return option;
-    };
-
-    // options 는 [value, label] 쌍이거나 { group, values } (optgroup) 이다.
-    for (const entry of options) {
-      if (entry.group) {
-        const group = document.createElement("optgroup");
-        group.label = entry.group;
-        for (const value of entry.values) group.append(build(value, value));
-        select.append(group);
-      } else {
-        select.append(build(entry[0], entry[1]));
-      }
+      if (draft[col.key] === value) option.selected = true;
+      select.append(option);
     }
     td.append(select);
     return td;
@@ -686,7 +995,7 @@
     const row = rows.find((r) => r.id === id);
     if (!row) return;
     editingId = id;
-    draft = { ...row };
+    draft = normalize(row);
     renderTable();
     syncToolbar();
     focusCell(columnIndex);
@@ -695,8 +1004,12 @@
   function startCreate(afterId) {
     editingId = NEW_ID;
     insertAfterId = afterId ?? null;
-    draft = { service: "", menu: "", platform: PLATFORM_OPTIONS[0], tool: "Figma",
-              component: "applied", path: "", owners: [], note: "" };
+    draft = {};
+    for (const col of view.columns) {
+      if (col.type === "owners") draft[col.key] = [];
+      else if (col.type === "select") draft[col.key] = col.options[0][0];
+      else draft[col.key] = "";
+    }
     renderTable();
     syncToolbar();
     focusCell();
@@ -717,8 +1030,8 @@
     if (field.dataset.ownerPick) {
       // 담당자 칸은 커스텀 팝업이라 바로 펼친다.
       openOwnerPicker(field);
-    } else if (field.tagName === "SELECT") {
-      /* 클릭으로 들어왔으면 목록을 바로 펼친다. showPicker 는 사용자 제스처
+    } else if (field.tagName === "SELECT" || field.type === "date") {
+      /* 클릭으로 들어왔으면 목록·달력을 바로 펼친다. showPicker 는 사용자 제스처
          안에서만 허용되고 구형 브라우저에는 없으므로 실패는 무시한다. */
       try {
         field.showPicker?.();
@@ -732,34 +1045,30 @@
   }
 
   function commit() {
-    const service = (draft.service || "").trim();
-    if (!service) {
-      toast("서비스명을 입력해 주세요.");
-      els.tbody.querySelector('tr[data-editing] input[name="service"]')?.focus();
-      return false;
+    const next = {};
+    for (const col of view.columns) {
+      const raw = draft[col.key];
+      if (col.type === "owners") next[col.key] = expandOwners(raw);
+      else if (col.type === "select") next[col.key] = raw || col.options[0][0];
+      else next[col.key] = (raw ?? "").trim();
     }
 
-    const next = {
-      service,
-      menu: (draft.menu || "").trim(),
-      platform: draft.platform || PLATFORM_OPTIONS[0],
-      tool: draft.tool || "Figma",
-      component: draft.component || "applied",
-      path: (draft.path || "").trim(),
-      zeplin: (draft.zeplin || "").trim(),
-      owners: expandOwners(draft.owners),
-      note: (draft.note || "").trim(),
-    };
+    const missing = view.columns.find((col) => col.required && !next[col.key]);
+    if (missing) {
+      toast(`${missing.header}을(를) 입력해 주세요.`);
+      els.tbody.querySelector(`tr[data-editing] [name="${missing.key}"]`)?.focus();
+      return false;
+    }
 
     if (editingId === NEW_ID) {
       const row = { id: uid(), ...next };
       const anchor = insertAfterId ? rows.findIndex((r) => r.id === insertAfterId) : -1;
       rows.splice(anchor >= 0 ? anchor + 1 : rows.length, 0, row);
-      toast(`'${service}' 항목을 추가했습니다.`);
+      toast(`'${rowLabel(row)}' 항목을 추가했습니다.`);
     } else {
       const i = rows.findIndex((r) => r.id === editingId);
       rows[i] = { ...rows[i], ...next };
-      toast(`'${service}' 항목을 수정했습니다.`);
+      toast(`'${rowLabel(rows[i])}' 항목을 수정했습니다.`);
     }
 
     closeOwnerPicker();
@@ -780,15 +1089,16 @@
     syncToolbar();
   }
 
-  /** 주어진 id 들의 행을 삭제한다. 툴바 삭제와 우클릭 삭제가 함께 쓴다. */
+  /** 주어진 id 들의 행을 삭제한다. 헤더 삭제와 우클릭 삭제가 함께 쓴다. */
   function removeRows(ids) {
     const targets = rows.filter((r) => ids.has(r.id));
     if (!targets.length) return;
 
-    const label = targets.length === 1 ? `'${targets[0].service}' 항목을` : `선택한 ${targets.length}건을`;
+    const label =
+      targets.length === 1 ? `'${rowLabel(targets[0])}' 항목을` : `선택한 ${targets.length}건을`;
     if (!confirm(`${label} 삭제할까요?`)) return;
 
-    rows = rows.filter((r) => !ids.has(r.id));
+    setRows(rows.filter((r) => !ids.has(r.id)));
     if (editingId && ids.has(editingId)) {
       editingId = null;
       draft = null;
@@ -825,20 +1135,20 @@
     syncSelectionUi();
   }
 
-  /** 선택 표시(행 배경·헤더 체크박스)와 툴바를 현재 상태에 맞춘다. */
+  /** 선택 표시(행 배경·헤더 체크박스)와 헤더 버튼을 현재 상태에 맞춘다. */
   function syncSelectionUi() {
     for (const box of els.tbody.querySelectorAll("[data-check]")) {
       box.closest("tr").toggleAttribute("data-selected", box.checked);
     }
     const visible = visibleRows().map((r) => r.id);
     const picked = visible.filter((id) => selected.has(id)).length;
-    els.checkAll.checked = visible.length > 0 && picked === visible.length;
+    checkAll.checked = visible.length > 0 && picked === visible.length;
     // 일부만 선택된 상태는 indeterminate 로 표시한다.
-    els.checkAll.indeterminate = picked > 0 && picked < visible.length;
+    checkAll.indeterminate = picked > 0 && picked < visible.length;
     syncToolbar();
   }
 
-  /** 툴바 버튼 표시 — 기본 / 선택 / 편집 세 가지 상태가 있다. */
+  /** 헤더 버튼 표시 — 기본 / 선택 / 편집 세 가지 상태가 있다. */
   function syncToolbar() {
     const editing = editingId !== null;
     const count = selected.size;
@@ -856,11 +1166,17 @@
   // ── CSV 내보내기 ────────────────────────────────────────
 
   function exportCsv() {
-    const head = ["No", "서비스명", "메뉴명", "OS", "유형", "WHDS 적용", "파일 경로", "제플린 주소", "담당자", "비고"];
+    const head = ["No", ...view.columns.map((col) => col.header)];
     const escape = (value) => `"${String(value).replaceAll('"', '""')}"`;
     const list = visibleRows();
     const body = list.map((row, i) =>
-      [i + 1, row.service, row.menu, row.platform, row.tool, COMPONENT_LABEL[row.component], row.path, row.zeplin ?? "", (row.owners ?? []).join(", "), row.note]
+      [
+        i + 1,
+        ...view.columns.map((col) => {
+          if (col.type === "owners") return (row[col.key] ?? []).join(", ");
+          return col.labels?.[row[col.key]] ?? row[col.key] ?? "";
+        }),
+      ]
         .map(escape)
         .join(","),
     );
@@ -871,7 +1187,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "wehago-작업물-현황.csv";
+    a.download = view.csvName;
     a.click();
     URL.revokeObjectURL(url);
     toast(`${list.length}건을 CSV 로 내보냈습니다.`);
@@ -891,58 +1207,21 @@
 
   // ── 이벤트 바인딩 ───────────────────────────────────────
 
-  // ── 컬럼 폭 조절 ──────────────────────────────────────
-  /* 마지막 컬럼(비고)은 폭을 주지 않아 남는 공간을 흡수한다. 그래서 조절
-     대상에서 빼고, 다른 컬럼을 줄이거나 늘리면 비고가 따라 변한다.
-     전 컬럼에 고정 폭을 주면 table-layout: fixed 가 100% 를 채우려고 폭을
-     비례 확대해 지정값과 어긋난다. */
-  const COL_KEY = "wehago-prj-manager/cols/v1";
-  const MIN_COL_WIDTH = 44;
-  const cols = [...document.querySelectorAll(".table colgroup col")];
-  const headCells = [...document.querySelectorAll(".table thead th")];
-  const defaultColWidths = cols.map((col) => col.style.width);
-
-  function applySavedColWidths() {
-    let saved;
-    try {
-      saved = JSON.parse(localStorage.getItem(COL_KEY) ?? "{}");
-    } catch {
-      return; // 저장값이 손상된 경우 기본 폭을 쓴다
-    }
-    for (const [index, px] of Object.entries(saved)) {
-      if (cols[index] && defaultColWidths[index]) cols[index].style.width = `${px}px`;
-    }
-  }
-
-  function saveColWidths() {
-    const saved = {};
-    cols.forEach((col, index) => {
-      if (!defaultColWidths[index]) return; // 유동 컬럼은 저장하지 않는다
-      const px = Math.round(parseFloat(col.style.width));
-      if (px && `${px}px` !== defaultColWidths[index]) saved[index] = px;
-    });
-    try {
-      localStorage.setItem(COL_KEY, JSON.stringify(saved));
-    } catch {
-      /* 저장 공간 문제는 폭 조절 자체를 막지 않는다 */
-    }
-  }
-
-  // 각 헤더 오른쪽 경계에 잡기 영역을 붙인다.
-  headCells.forEach((th, index) => {
-    if (!defaultColWidths[index]) return;
-    const handle = document.createElement("div");
-    handle.className = "col-resize";
-    handle.dataset.col = index;
-    handle.title = "드래그해서 폭 조절 (더블클릭 시 기본값)";
-    th.append(handle);
+  // ── 탭 ────────────────────────────────────────────────
+  els.tabs.addEventListener("click", (event) => {
+    const tab = event.target.closest("[data-view]");
+    if (!tab || tab.dataset.view === view.id) return;
+    // 편집 중이면 먼저 저장한다. 저장이 실패하면(필수값 누락) 탭을 옮기지 않는다.
+    if (editingId !== null && !commit()) return;
+    useView(tab.dataset.view);
   });
 
+  // ── 컬럼 폭 조절 ──────────────────────────────────────
   let resizeCol = null;
   let resizeStartX = 0;
   let resizeStartWidth = 0;
 
-  document.querySelector(".table thead").addEventListener("mousedown", (event) => {
+  els.thead.addEventListener("mousedown", (event) => {
     const handle = event.target.closest(".col-resize");
     if (!handle || event.button !== 0) return;
     resizeCol = Number(handle.dataset.col);
@@ -971,7 +1250,7 @@
   });
 
   // 손잡이를 더블클릭하면 그 컬럼만 기본 폭으로 되돌린다.
-  document.querySelector(".table thead").addEventListener("dblclick", (event) => {
+  els.thead.addEventListener("dblclick", (event) => {
     const handle = event.target.closest(".col-resize");
     if (!handle) return;
     const index = Number(handle.dataset.col);
@@ -980,7 +1259,20 @@
     toast("컬럼 폭을 기본값으로 되돌렸습니다.");
   });
 
-  applySavedColWidths();
+  // ── 정렬 ──────────────────────────────────────────────
+  els.thead.addEventListener("click", (event) => {
+    const th = event.target.closest(".th-sort");
+    if (!th) return;
+    const key = th.dataset.sort;
+    // 오름 → 내림 → 해제 순으로 돌린다. 정렬을 해제해야 행 순서를 직접 바꿀 수 있다.
+    if (sort.key !== key) sort = { key, dir: "asc" };
+    else if (sort.dir === "asc") sort = { key, dir: "desc" };
+    else sort = { key: null, dir: "asc" };
+
+    for (const other of els.thead.querySelectorAll(".th-sort")) delete other.dataset.dir;
+    if (sort.key) th.dataset.dir = sort.dir;
+    renderTable();
+  });
 
   // ── hover 한 행 왼쪽(표 바깥)의 행 추가 버튼 ───────────
   const insertBtn = $("row-insert");
@@ -1215,7 +1507,7 @@
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeRowMenu();
   });
-  document.querySelector(".table-wrap").addEventListener("scroll", closeRowMenu);
+  tableWrap.addEventListener("scroll", closeRowMenu);
 
   /* 빈 상태의 추가 버튼은 렌더 시점에 따라 존재 여부가 달라지므로 위임으로 받는다.
      startCreate 를 리스너로 그대로 넘기면 click 이벤트가 afterId 인자로 들어간다. */
@@ -1244,7 +1536,7 @@
     if (box) toggleSelect(box.dataset.check, box.checked);
   });
 
-  els.checkAll.addEventListener("change", (event) => toggleSelectAll(event.target.checked));
+  checkAll.addEventListener("change", (event) => toggleSelectAll(event.target.checked));
 
   // ── 행 순서 변경 (No 칸을 핸들로 드래그) ────────────────
   // HTML5 drag-and-drop 대신 마우스 이벤트로 구현한다. HTML5 DnD 는 브라우저가
@@ -1349,7 +1641,6 @@
   $("btn-save").addEventListener("click", commit);
   $("btn-cancel").addEventListener("click", cancelEdit);
 
-  // Enter 로 저장, Esc 로 취소
   // Enter 저장 / Esc 취소. 담당자 팝업은 body 레벨에 있어 tbody 로 이벤트가
   // 올라오지 않으므로 document 에서 듣는다.
   document.addEventListener("keydown", (event) => {
@@ -1369,8 +1660,8 @@
     }
 
     if (event.key !== "Enter") return;
-    // 비고에서 Shift+Enter 는 저장이 아니라 줄바꿈이다(기본 동작을 그대로 둔다).
-    if (event.shiftKey && event.target.name === "note") return;
+    // 여러 줄 칸에서 Shift+Enter 는 저장이 아니라 줄바꿈이다(기본 동작을 그대로 둔다).
+    if (event.shiftKey && event.target.tagName === "TEXTAREA") return;
     // 담당자 팝업의 체크박스에서 Enter 는 저장으로 본다(체크는 Space 로 한다).
     event.preventDefault();
     commit();
@@ -1413,20 +1704,6 @@
     if (!els.search.value.trim()) toggleSearch(false);
   });
 
-  for (const th of document.querySelectorAll(".th-sort")) {
-    th.addEventListener("click", () => {
-      const key = th.dataset.sort;
-      // 오름 → 내림 → 해제 순으로 돌린다. 정렬을 해제해야 행 순서를 직접 바꿀 수 있다.
-      if (sort.key !== key) sort = { key, dir: "asc" };
-      else if (sort.dir === "asc") sort = { key, dir: "desc" };
-      else sort = { key: null, dir: "asc" };
-
-      for (const other of document.querySelectorAll(".th-sort")) delete other.dataset.dir;
-      if (sort.key) th.dataset.dir = sort.dir;
-      renderTable();
-    });
-  }
-
   $("btn-export").addEventListener("click", exportCsv);
 
   // 테마 — 저장된 선택이 없으면 OS 설정을 따른다.
@@ -1440,9 +1717,9 @@
     localStorage.setItem(THEME_KEY, next);
   });
 
-  const saved = localStorage.getItem(THEME_KEY);
-  if (saved) document.documentElement.dataset.theme = saved;
+  const savedTheme = localStorage.getItem(THEME_KEY);
+  if (savedTheme) document.documentElement.dataset.theme = savedTheme;
   else document.documentElement.removeAttribute("data-theme");
 
-  render();
+  useView(localStorage.getItem(VIEW_KEY) ?? VIEWS[0].id);
 })();

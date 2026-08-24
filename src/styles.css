@@ -97,6 +97,50 @@ textarea {
   padding-top: var(--padding-3);
 }
 
+/* 제목과 탭을 한 묶음으로 두어 헤더의 space-between 이 액션 버튼만 오른쪽으로
+   밀어내게 한다. */
+.page-head__lead {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-8);
+}
+
+/* ── 탭 ────────────────────────────────────────────────── */
+
+/* 파일 현황과 일일 업무는 컬럼 구성이 완전히 달라 한 표에 담을 수 없다.
+   세그먼트 컨트롤로 지금 어느 표를 보고 있는지 항상 드러낸다. */
+.tabs {
+  display: inline-flex;
+  gap: var(--gap-1);
+  padding: var(--padding-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-subtler);
+}
+
+.tab {
+  height: var(--size-7);
+  padding-inline: var(--padding-7);
+  border: 0;
+  border-radius: var(--radius-xxsmall);
+  background: none;
+  color: var(--color-text-subtle);
+  font-size: var(--font-body4);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.tab:hover { color: var(--color-text-basic); }
+
+.tab[aria-selected="true"] {
+  background: var(--color-surface-basic);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-bold);
+  box-shadow: var(--shadow-level1);
+}
+
 
 /* ── 버튼 ──────────────────────────────────────────────── */
 
@@ -323,6 +367,10 @@ textarea {
 
 .table {
   width: 100%;
+  /* 폭을 주지 않은 컬럼(비고 · 요청내용)이 남는 공간을 흡수하는데, 창이 좁아지면
+     그 컬럼만 0 에 수렴해 글자가 한 자씩 세로로 쌓인다. 하한을 두어 그 전에
+     .table-wrap 의 가로 스크롤로 넘긴다. */
+  min-width: 1200px;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
@@ -662,6 +710,19 @@ body[data-col-resizing] {
 }
 
 select.input--cell {
+  cursor: pointer;
+}
+
+/* 완료일 — 네이티브 날짜 입력. 값 글자와 달력 아이콘이 116px 칸에 함께 들어가야
+   하므로 보기 모드(body4)보다 한 단계 작은 글자를 쓰고 아이콘 여백을 없앤다. */
+input[type="date"].input--cell {
+  font-size: var(--font-body5);
+  cursor: text;
+}
+
+input[type="date"].input--cell::-webkit-calendar-picker-indicator {
+  margin: 0;
+  padding: 0;
   cursor: pointer;
 }
 
