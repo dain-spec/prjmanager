@@ -632,9 +632,17 @@ body[data-col-resizing] {
 .badge--neutral  { background: var(--color-surface-subtle); color: var(--color-text-subtle); }
 
 .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-6);
   margin: 0;
   padding: var(--padding-13) var(--padding-8);
   text-align: center;
+}
+
+.empty__text {
+  margin: 0;
   font-size: var(--font-body3);
   color: var(--color-text-subtler);
 }

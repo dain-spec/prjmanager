@@ -181,6 +181,8 @@
   const els = {
     tbody: $("tbody"),
     empty: $("empty"),
+    emptyText: $("empty-text"),
+    addFirst: $("btn-add-first"),
     selectionCount: $("selection-count"),
     checkAll: $("check-all"),
     search: $("search"),
@@ -327,6 +329,15 @@
     });
 
     els.empty.hidden = display.length > 0;
+    if (!els.empty.hidden) {
+      // 데이터가 아예 없으면 hover·우클릭으로 행을 넣을 대상이 없으므로
+      // 그 경우에만 추가 버튼을 내보낸다.
+      const noData = rows.length === 0;
+      els.emptyText.textContent = noData
+        ? "아직 등록된 작업물이 없습니다."
+        : "조건에 맞는 작업물이 없습니다. 검색어를 조정해 보세요.";
+      els.addFirst.hidden = !noData;
+    }
     syncSelectionUi();
   }
 
@@ -834,9 +845,6 @@
     show($("btn-save"), editing);
     show($("btn-cancel"), editing);
 
-    // 편집 중이거나 선택 중에는 '추가'를 숨겨 동작이 섞이지 않게 한다.
-    show(document.querySelector('[data-action="add"]'), !editing && count === 0);
-
     els.selectionCount.textContent = `${count}개 선택`;
   }
 
@@ -1204,10 +1212,11 @@
   });
   document.querySelector(".table-wrap").addEventListener("scroll", closeRowMenu);
 
-  for (const btn of document.querySelectorAll('[data-action="add"]')) {
-    // startCreate 를 그대로 넘기면 click 이벤트가 afterId 인자로 들어간다.
-    btn.addEventListener("click", () => startCreate());
-  }
+  /* 빈 상태의 추가 버튼은 렌더 시점에 따라 존재 여부가 달라지므로 위임으로 받는다.
+     startCreate 를 리스너로 그대로 넘기면 click 이벤트가 afterId 인자로 들어간다. */
+  document.addEventListener("click", (event) => {
+    if (event.target.closest('[data-action="add"]')) startCreate();
+  });
 
   // 편집 행 입력값을 즉시 draft 에 반영해 재렌더링에도 값이 유지되게 한다.
   els.tbody.addEventListener("input", (event) => {
