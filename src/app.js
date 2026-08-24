@@ -11,8 +11,11 @@
   /** 신규 행(아직 저장되지 않은 행)에 쓰는 임시 id */
   const NEW_ID = "__new__";
 
-  /** 플랫폼 (Web / Mobile / C/S) */
-  const PLATFORM_OPTIONS = ["Web", "Mobile", "C/S"];
+  /** OS (W=Web / M=Mobile / C=C/S). 컬럼이 좁아 한 글자로 쓴다. */
+  const PLATFORM_OPTIONS = ["W", "M", "C"];
+
+  /** 예전에 저장된 긴 이름을 한 글자로 옮기는 표. load() 에서만 쓴다. */
+  const PLATFORM_LEGACY = { Web: "W", Mobile: "M", "C/S": "C" };
 
   /** 담당자 — 1Unit 조직도. Cell 을 optgroup 으로 묶고, 개인뿐 아니라
       Cell 자체도 담당자로 고를 수 있게 각 그룹 첫 항목에 Cell 을 넣는다.
@@ -79,7 +82,7 @@
 
   /* 시드 데이터는 팀 현황표(프로젝트/유형/주소링크/공통 반영 버전/반영 상태/작업자/
      Figma 이관 여부/비고)를 이 테이블의 컬럼에 매핑한 것이다. 매핑 규칙:
-       플랫폼            ← 유형(Web/Mobile/C/S). 같은 서비스의 행을 구분하는 값이다.
+       OS                ← 유형(W=Web/M=Mobile/C=C/S). 같은 서비스의 행을 구분하는 값이다.
        파일 유형         ← 주소링크 종류 (figma.com → Figma, 로컬 경로 → XD)
        WHDS 적용 ← 반영 상태 (완료 → 적용, 진행중 → 미적용, 해당사항 없음 → 해당 없음)
        담당자            ← 작업자
@@ -87,71 +90,71 @@
                           Figma 이관 필요)을 잃지 않도록 함께 적었다. */
   const FIGMA = "https://www.figma.com/design";
   const SEED = [
-    { service: "WEHAGO Web 2.0 공통", menu: "", platform: "Web", tool: "Figma", component: "none",
+    { service: "WEHAGO Web 2.0 공통", menu: "", platform: "W", tool: "Figma", component: "none",
       path: `${FIGMA}/vVNdCTvO5nvN88byoPuYkV/WEHAGO-Web-2.0_DSG?m=auto&node-id=6556-35225&t=NrDWMe3BToXAjWwM-1`,
       zeplin: "",
       owners: ["2Cell"], note: "" },
-    { service: "WEHAGO Mobile 2.0 공통", menu: "", platform: "Mobile", tool: "Figma", component: "none",
+    { service: "WEHAGO Mobile 2.0 공통", menu: "", platform: "M", tool: "Figma", component: "none",
       path: `${FIGMA}/2hjgaltgwo1dIYAyMFxwDZ/WEHAGO-Mobile-2.0_DSG?m=auto&node-id=0-1&t=5WN7aFvvOpyG3MKk-1`,
       zeplin: "",
       owners: ["2Cell"], note: "" },
-    { service: "WEHAGO Main 1.5", menu: "", platform: "Web", tool: "XD", component: "none",
+    { service: "WEHAGO Main 1.5", menu: "", platform: "W", tool: "XD", component: "none",
       path: "XD : WEHAGO 1.0 메인_개선안(Cloud)",
       zeplin: "",
       owners: ["홍길동"], note: "" },
-    { service: "WEHAGO Main 2.0", menu: "", platform: "Web", tool: "Figma", component: "none",
+    { service: "WEHAGO Main 2.0", menu: "", platform: "W", tool: "Figma", component: "none",
       path: `${FIGMA}/nQnqiG4WPBVxC4t38nBEW2/WEHAGO-2.0-Web-%EB%A9%94%EC%9D%B8?node-id=723-6341&t=R4SN6APFALqVIQbX-1`,
       zeplin: "",
       owners: ["홍길동"], note: "" },
-    { service: "WEHAGO AI Edition", menu: "", platform: "Web", tool: "Figma", component: "none",
+    { service: "WEHAGO AI Edition", menu: "", platform: "W", tool: "Figma", component: "none",
       path: `${FIGMA}/nQnqiG4WPBVxC4t38nBEW2/WEHAGO-2.0-Web-%EB%A9%94%EC%9D%B8?node-id=4028-42604&t=R4SN6APFALqVIQbX-1`,
       zeplin: "",
       owners: ["홍길동"], note: "WEHAGO 2.0 Web 메인 피그마 파일에 포함" },
-    { service: "WEHAGO T", menu: "", platform: "Web", tool: "XD", component: "none",
+    { service: "WEHAGO T", menu: "", platform: "W", tool: "XD", component: "none",
       path: "XD : \\UXUI Unit\\2025\\WEHAGO T, Tedge\\작업물",
       zeplin: "",
       owners: ["홍길동"], note: "" },
-    { service: "WEHAGO T AI Edition", menu: "", platform: "Web", tool: "Figma", component: "missing",
+    { service: "WEHAGO T AI Edition", menu: "", platform: "W", tool: "Figma", component: "missing",
       path: `${FIGMA}/qmWWQbn78V9VZeya9zmFBJ/WEHAGO-T?node-id=1-32&t=pIe1aQCojb8OETiP-1`,
       zeplin: "",
       owners: ["2Cell"], note: "WEHAGO T 피그마 파일에 포함 / 수임처 AI 연말정산, 수임처관리, 수임처관리 리뉴얼 버전(holding) 혼재 / WHDS W v2.0 반영 진행중" },
-    { service: "ProActive AI", menu: "", platform: "Web", tool: "Figma", component: "applied",
+    { service: "ProActive AI", menu: "", platform: "W", tool: "Figma", component: "applied",
       path: `${FIGMA}/ZKzpwsavMCqZM48Mvb730d/WEHAGO-Web-Proactive-AI?node-id=1178-16981&t=3y7IUc8MEWu3EEAj-1`,
       zeplin: "",
       owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0" },
-    { service: "ONE AI", menu: "", platform: "Web", tool: "Figma", component: "applied",
+    { service: "ONE AI", menu: "", platform: "W", tool: "Figma", component: "applied",
       path: `${FIGMA}/brhXNqFg9rpqSNI0yK05zM/WEHAGO-Web-ONE-AI?node-id=169-2211&t=jWIchZl5pxcl09qL-1`,
       zeplin: "",
       owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요" },
-    { service: "ONE AI", menu: "", platform: "Mobile", tool: "Figma", component: "applied",
+    { service: "ONE AI", menu: "", platform: "M", tool: "Figma", component: "applied",
       path: `${FIGMA}/jTkk4w5HWRH5zRrelHRKm9/WEHAGO-Mobile-ONE-AI?node-id=1-18&t=tTY327hL8syzZoxz-1`,
       zeplin: "",
       owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS W v1.0 / Figma 이관 필요" },
-    { service: "ONE AI CUBE", menu: "", platform: "Web", tool: "Figma", component: "missing",
+    { service: "ONE AI CUBE", menu: "", platform: "W", tool: "Figma", component: "missing",
       path: `${FIGMA}/fUfs6M2MqStNtESlVAR3p4/WEHAGO-Web-ONE-AI-CUBE?node-id=390-13900&t=J8CId3uoQkbWrSED-1`,
       zeplin: "",
       owners: ["2Cell"], note: "WHDS W v2.0 반영 진행중" },
-    { service: "ONE AI Flow", menu: "", platform: "Web", tool: "Figma", component: "missing",
+    { service: "ONE AI Flow", menu: "", platform: "W", tool: "Figma", component: "missing",
       path: `${FIGMA}/DiIjSe99UXUVDl7pgilfZy/ONE-AI-Flow?node-id=1-10&t=hPMX3yI7fEr02kOF-1`,
       zeplin: "",
       owners: ["2Cell"], note: "WHDS W v2.0 반영 진행중" },
-    { service: "Agent Market", menu: "", platform: "Web", tool: "Figma", component: "applied",
+    { service: "Agent Market", menu: "", platform: "W", tool: "Figma", component: "applied",
       path: `${FIGMA}/e7cVdc0Ev8irKt8axNuzqy/Agent-Market?node-id=1-10&t=eJhSUAwnoVyY5NTX-1`,
       zeplin: "",
       owners: ["2Cell"], note: "WHDS W v2.0" },
-    { service: "메신저", menu: "", platform: "Web", tool: "Figma", component: "applied",
+    { service: "메신저", menu: "", platform: "W", tool: "Figma", component: "applied",
       path: `${FIGMA}/wgWUkgyGkZWG7GxevnLivm/WEHAGO-Web-%EB%A9%94%EC%8B%A0%EC%A0%80-%EC%9B%B9-%EC%84%A4%EC%B9%98%ED%98%95-?node-id=4427-2&t=bKujBqg9BLqYEpyt-1`,
       zeplin: "",
       owners: ["2Cell"], note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
-    { service: "메신저", menu: "", platform: "C/S", tool: "Figma", component: "applied",
+    { service: "메신저", menu: "", platform: "C", tool: "Figma", component: "applied",
       path: `${FIGMA}/wgWUkgyGkZWG7GxevnLivm/WEHAGO-Web-%EB%A9%94%EC%8B%A0%EC%A0%80-%EC%9B%B9-%EC%84%A4%EC%B9%98%ED%98%95-?node-id=4512-2363&t=bKujBqg9BLqYEpyt-1`,
       zeplin: "",
       owners: ["2Cell"], note: "WEHAGO Web 메신저 피그마 파일에 포함 / WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
-    { service: "화상회의", menu: "", platform: "Web", tool: "Figma", component: "applied",
+    { service: "화상회의", menu: "", platform: "W", tool: "Figma", component: "applied",
       path: `${FIGMA}/aesogzuumvDi1EneInUZCt/WEHAGO-Web-%ED%99%94%EC%83%81%ED%9A%8C%EC%9D%98-Meet-?node-id=1-5312&t=pflCrCYHVNHPPnWo-1`,
       zeplin: "",
       owners: ["2Cell"], note: "WHDS 2.0 최종 버전으로 업데이트 필요 / WHDS W v2.0" },
-    { service: "화상회의", menu: "", platform: "Mobile", tool: "Figma", component: "applied",
+    { service: "화상회의", menu: "", platform: "M", tool: "Figma", component: "applied",
       path: `${FIGMA}/cNrqG2nLmmAt9klnanGBnl/WEHAGO-Meet-Mobile--%EB%A6%AC%EB%89%B4%EC%96%BC-?node-id=1-3063&t=NUPWIqx5l1LBcb6Z-1`,
       zeplin: "",
       owners: ["2Cell"], note: "WHDS 2.0 완료 이전 작업물 / WHDS M v1.0" },
@@ -206,9 +209,11 @@
                  지금: platform 이 따로 있고 menu 는 서비스 하위 메뉴명이다
                platform 유무로 구분한다. */
             const legacy = row.platform === undefined;
+            const platform = row.platform ?? menu ?? "";
             return {
               ...row,
-              platform: row.platform ?? menu ?? "",
+              // 'Web'/'Mobile'/'C/S' 로 저장된 값을 'W'/'M'/'C' 로 옮긴다.
+              platform: PLATFORM_LEGACY[platform] ?? platform,
               menu: legacy ? "" : menu ?? "",
               // 담당자가 한 명(문자열)에서 여러 명(배열)으로 바뀌었고,
               // Cell 이름('2Cell')이 저장돼 있으면 구성원으로 펼친다.
@@ -375,7 +380,7 @@
       cell(editingId === NEW_ID ? "신규" : String(no), "cell--no cell--center"),
       inputCell("service", "서비스명", { required: true }),
       menuCell(),
-      selectCell("platform", platformOptions(), "플랫폼", "cell--center"),
+      selectCell("platform", platformOptions(), "OS", "cell--center"),
       selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]], "파일 유형", "cell--center"),
       selectCell("component", Object.entries(COMPONENT_LABEL), "WHDS 적용", "cell--center"),
       inputCell("path", "피그마 주소 또는 XD 경로", { className: "cell--path" }),
@@ -555,10 +560,10 @@
     area.style.height = `${area.scrollHeight}px`;
   }
 
-  /** 플랫폼 드롭다운 옵션.
+  /** OS 드롭다운 옵션.
       이 컬럼은 예전에 자유 입력('전체', '메뉴 1' 등)이었으므로, 현재 값이 표준
       옵션에 없으면 그 값도 옵션에 넣는다. 그러지 않으면 편집만 해도 값이 조용히
-      Web 으로 바뀌어 버린다. */
+      W 로 바뀌어 버린다. */
   /** 편집 행의 담당자 칸. 셀 전체가 선택 팝업을 여는 버튼이다. */
   function ownerPickCell() {
     const td = document.createElement("td");
@@ -851,7 +856,7 @@
   // ── CSV 내보내기 ────────────────────────────────────────
 
   function exportCsv() {
-    const head = ["No", "서비스명", "메뉴명", "플랫폼", "파일 유형", "WHDS 적용", "파일 경로", "제플린 주소", "담당자", "비고"];
+    const head = ["No", "서비스명", "메뉴명", "OS", "파일 유형", "WHDS 적용", "파일 경로", "제플린 주소", "담당자", "비고"];
     const escape = (value) => `"${String(value).replaceAll('"', '""')}"`;
     const list = visibleRows();
     const body = list.map((row, i) =>

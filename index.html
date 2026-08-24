@@ -34,7 +34,7 @@
       <!-- 평소엔 버튼만 보이고, 누르면 입력칸이 펼쳐진다. -->
       <div class="search" id="search-box">
         <input type="search" id="search" class="search__input"
-               placeholder="서비스명, 메뉴명, 플랫폼, 파일 경로, 제플린, 담당자, 비고 검색"
+               placeholder="서비스명, 메뉴명, OS, 파일 경로, 제플린, 담당자, 비고 검색"
                aria-label="목록 검색" hidden />
         <button type="button" class="btn btn--ghost btn--icon" id="btn-search"
                 aria-label="검색" aria-expanded="false" title="검색">
@@ -102,7 +102,7 @@
             <col style="width:44px"  /><!-- No (최소 40) -->
             <col style="width:190px" /><!-- 서비스명 -->
             <col style="width:140px" /><!-- 메뉴명 (비우면 서비스 전체) -->
-            <col style="width:88px"  /><!-- 플랫폼 (최소 82) -->
+            <col style="width:56px"  /><!-- OS (헤더 27 + 좌우 패딩 24, 한 글자 드롭다운 31 이 들어간다) -->
             <col style="width:88px"  /><!-- 파일 유형 (최소 82) -->
             <col style="width:96px"  /><!-- WHDS 적용 (헤더 94, 드롭다운은 104 필요해 더 줄이지 않음) -->
             <col style="width:266px" /><!-- 파일 경로 (최장 내용 263 필요) -->
@@ -118,7 +118,7 @@
               <th scope="col" class="cell--center">No</th>
               <th scope="col"><button type="button" class="th-sort" data-sort="service">서비스명</button></th>
               <th scope="col"><button type="button" class="th-sort" data-sort="menu">메뉴명</button></th>
-              <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="platform">플랫폼</button></th>
+              <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="platform">OS</button></th>
               <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="tool">파일 유형</button></th>
               <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="component">WHDS 적용</button></th>
               <th scope="col">파일 경로</th>
@@ -164,6 +164,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=d4df01cf"></script>
+<script src="src/app.js?v=eab3ccad"></script>
 </body>
 </html>
