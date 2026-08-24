@@ -7,7 +7,7 @@
 <meta name="description" content="서비스/메뉴별 제작 도구(Figma·XD) 및 WHDS 적용 여부를 파악하기 위한 팀 작업물 현황 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=f453c79f" />
+<link rel="stylesheet" href="src/styles.css?v=749604c4" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -23,6 +23,19 @@
     </div>
 
     <div class="page-head__actions">
+      <!-- 평소엔 버튼만 보이고, 누르면 입력칸이 펼쳐진다. -->
+      <div class="search" id="search-box">
+        <input type="search" id="search" class="search__input"
+               placeholder="서비스명, 메뉴명, 플랫폼, 파일 경로, 제플린, 담당자, 비고 검색"
+               aria-label="목록 검색" hidden />
+        <button type="button" class="btn btn--ghost btn--icon" id="btn-search"
+                aria-label="검색" aria-expanded="false" title="검색">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="7" cy="7" r="4.6" /><path d="M10.4 10.4 14 14" />
+          </svg>
+        </button>
+      </div>
+
       <button type="button" class="btn btn--ghost btn--icon" id="btn-theme" aria-label="라이트/다크 모드 전환" title="라이트 / 다크 모드 전환">
         <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
           <circle cx="8" cy="8" r="3.1" />
@@ -75,14 +88,6 @@
     <!-- ── 현황 테이블 ───────────────────────────────────── -->
     <section class="panel" aria-label="작업물 목록">
       <div class="panel__toolbar">
-        <div class="search">
-          <svg class="icon search__icon" viewBox="0 0 16 16" aria-hidden="true">
-            <circle cx="7" cy="7" r="4.6" /><path d="M10.4 10.4 14 14" />
-          </svg>
-          <input type="search" id="search" class="search__input"
-                 placeholder="서비스명, 메뉴명, 플랫폼, 파일 경로, 제플린, 담당자, 비고 검색" aria-label="목록 검색" />
-        </div>
-
         <div class="panel__toolbar-right">
           <!-- 선택 상태 -->
           <p class="panel__selection" id="selection-count" hidden>0개 선택</p>
@@ -165,6 +170,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=35f87529"></script>
+<script src="src/app.js?v=dba66988"></script>
 </body>
 </html>

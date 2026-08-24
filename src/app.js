@@ -1362,9 +1362,41 @@
     commit();
   });
 
+  // ── 검색 (헤더 버튼) ──────────────────────────────────
+  const searchBtn = $("btn-search");
+
+  /** 입력칸을 펼치거나 접는다. 검색어가 남아 있으면 접지 않는다. */
+  function toggleSearch(open) {
+    const show = open ?? els.search.hidden;
+    if (!show && els.search.value.trim()) return; // 필터가 걸린 상태를 숨기지 않는다
+    els.search.hidden = !show;
+    searchBtn.setAttribute("aria-expanded", String(show));
+    if (show) els.search.focus();
+  }
+
+  searchBtn.addEventListener("click", () => toggleSearch());
+
   els.search.addEventListener("input", (event) => {
     search = event.target.value;
+    // 검색어가 있으면 접혀 있어도 알 수 있도록 버튼을 강조한다.
+    searchBtn.toggleAttribute("data-active", search.trim() !== "");
     renderTable();
+  });
+
+  els.search.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.stopPropagation(); // 편집 취소로 번지지 않게 한다
+    els.search.value = "";
+    search = "";
+    searchBtn.removeAttribute("data-active");
+    renderTable();
+    toggleSearch(false);
+    searchBtn.focus();
+  });
+
+  // 빈 상태로 포커스를 잃으면 접는다.
+  els.search.addEventListener("blur", () => {
+    if (!els.search.value.trim()) toggleSearch(false);
   });
 
   for (const th of document.querySelectorAll(".th-sort")) {

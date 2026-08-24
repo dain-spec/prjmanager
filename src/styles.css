@@ -302,34 +302,40 @@ textarea {
 }
 
 
+/* 검색 — 헤더에서 버튼만 보이고, 누르면 입력칸이 왼쪽으로 펼쳐진다. */
 .search {
-  position: relative;
-  width: var(--size-18);
-  min-width: 320px;
-  flex: 0 1 420px;
-}
-
-.search__icon {
-  position: absolute;
-  left: var(--padding-5);
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--color-icon-subtler);
-  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: var(--gap-3);
 }
 
 .search__input {
-  width: 100%;
+  width: 300px;
   height: var(--size-8);
-  padding-inline: calc(var(--padding-5) + var(--size-3) + var(--gap-4)) var(--padding-5);
+  padding-inline: var(--padding-5);
   border: 1px solid var(--color-input-border);
   border-radius: var(--radius-small);
   background: var(--color-input-field);
   font-size: var(--font-body4);
 }
-.search__input::placeholder { color: var(--color-text-subtler); }
-.search__input:focus { border-color: var(--color-input-border-focus); }
-.search__input::-webkit-search-cancel-button { cursor: pointer; }
+
+.search__input::placeholder {
+  color: var(--color-text-subtler);
+}
+
+.search__input:focus {
+  border-color: var(--color-input-border-focus);
+}
+
+.search__input::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+/* 검색어가 걸려 있으면 접혀 있어도 알 수 있게 버튼을 강조한다. */
+#btn-search[data-active] {
+  border-color: var(--color-border-bolder);
+  color: var(--color-text-basic);
+}
 
 /* ── 테이블 ────────────────────────────────────────────── */
 
