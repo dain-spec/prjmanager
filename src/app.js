@@ -878,6 +878,97 @@
 
   // ── 이벤트 바인딩 ───────────────────────────────────────
 
+  // ── 컬럼 폭 조절 ──────────────────────────────────────
+  /* 마지막 컬럼(비고)은 폭을 주지 않아 남는 공간을 흡수한다. 그래서 조절
+     대상에서 빼고, 다른 컬럼을 줄이거나 늘리면 비고가 따라 변한다.
+     전 컬럼에 고정 폭을 주면 table-layout: fixed 가 100% 를 채우려고 폭을
+     비례 확대해 지정값과 어긋난다. */
+  const COL_KEY = "wehago-prj-manager/cols/v1";
+  const MIN_COL_WIDTH = 44;
+  const cols = [...document.querySelectorAll(".table colgroup col")];
+  const headCells = [...document.querySelectorAll(".table thead th")];
+  const defaultColWidths = cols.map((col) => col.style.width);
+
+  function applySavedColWidths() {
+    let saved;
+    try {
+      saved = JSON.parse(localStorage.getItem(COL_KEY) ?? "{}");
+    } catch {
+      return; // 저장값이 손상된 경우 기본 폭을 쓴다
+    }
+    for (const [index, px] of Object.entries(saved)) {
+      if (cols[index] && defaultColWidths[index]) cols[index].style.width = `${px}px`;
+    }
+  }
+
+  function saveColWidths() {
+    const saved = {};
+    cols.forEach((col, index) => {
+      if (!defaultColWidths[index]) return; // 유동 컬럼은 저장하지 않는다
+      const px = Math.round(parseFloat(col.style.width));
+      if (px && `${px}px` !== defaultColWidths[index]) saved[index] = px;
+    });
+    try {
+      localStorage.setItem(COL_KEY, JSON.stringify(saved));
+    } catch {
+      /* 저장 공간 문제는 폭 조절 자체를 막지 않는다 */
+    }
+  }
+
+  // 각 헤더 오른쪽 경계에 잡기 영역을 붙인다.
+  headCells.forEach((th, index) => {
+    if (!defaultColWidths[index]) return;
+    const handle = document.createElement("div");
+    handle.className = "col-resize";
+    handle.dataset.col = index;
+    handle.title = "드래그해서 폭 조절 (더블클릭 시 기본값)";
+    th.append(handle);
+  });
+
+  let resizeCol = null;
+  let resizeStartX = 0;
+  let resizeStartWidth = 0;
+
+  document.querySelector(".table thead").addEventListener("mousedown", (event) => {
+    const handle = event.target.closest(".col-resize");
+    if (!handle || event.button !== 0) return;
+    resizeCol = Number(handle.dataset.col);
+    resizeStartX = event.clientX;
+    resizeStartWidth = headCells[resizeCol].getBoundingClientRect().width;
+    document.body.dataset.colResizing = "true";
+    handle.classList.add("col-resize--active");
+    event.preventDefault(); // 정렬 클릭·텍스트 선택을 막는다
+  });
+
+  document.addEventListener("mousemove", (event) => {
+    if (resizeCol === null) return;
+    const width = Math.max(
+      MIN_COL_WIDTH,
+      Math.round(resizeStartWidth + event.clientX - resizeStartX),
+    );
+    cols[resizeCol].style.width = `${width}px`;
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (resizeCol === null) return;
+    resizeCol = null;
+    delete document.body.dataset.colResizing;
+    document.querySelector(".col-resize--active")?.classList.remove("col-resize--active");
+    saveColWidths();
+  });
+
+  // 손잡이를 더블클릭하면 그 컬럼만 기본 폭으로 되돌린다.
+  document.querySelector(".table thead").addEventListener("dblclick", (event) => {
+    const handle = event.target.closest(".col-resize");
+    if (!handle) return;
+    const index = Number(handle.dataset.col);
+    cols[index].style.width = defaultColWidths[index];
+    saveColWidths();
+    toast("컬럼 폭을 기본값으로 되돌렸습니다.");
+  });
+
+  applySavedColWidths();
+
   // ── hover 한 행 왼쪽(표 바깥)의 행 추가 버튼 ───────────
   const insertBtn = $("row-insert");
   const tableWrap = document.querySelector(".table-wrap");

@@ -559,6 +559,48 @@ body[data-reordering] {
 
 .cell--muted { color: var(--color-text-subtler); }
 
+/* ── 컬럼 폭 조절 ──────────────────────────────────────── */
+
+/* 헤더 경계선에 걸친 잡기 영역. sticky 인 th 가 배치 기준이 된다. */
+.col-resize {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  z-index: 4;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+/* 잡을 수 있다는 표시. 클릭 상태에 파란 선을 쓰지 않으므로 무채색으로 둔다. */
+.col-resize::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  right: 4px;
+  width: 2px;
+  height: 60%;
+  background: var(--color-border-bolder);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.col-resize:hover::after,
+.col-resize--active::after {
+  opacity: 1;
+}
+
+body[data-col-resizing] .col-resize--active::after {
+  top: 0;
+  height: 100%;
+}
+
+/* 드래그 중에는 문서 전체에서 선택을 막고 커서를 유지한다. */
+body[data-col-resizing] {
+  cursor: col-resize;
+  user-select: none;
+}
+
 /* ── 배지 ──────────────────────────────────────────────── */
 
 .badge {
