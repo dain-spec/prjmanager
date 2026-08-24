@@ -7,7 +7,7 @@
 <meta name="description" content="서비스/메뉴별 제작 도구(Figma·XD) 및 WHDS 적용 여부를 파악하기 위한 팀 작업물 현황 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=0b045af8" />
+<link rel="stylesheet" href="src/styles.css?v=5a74afb3" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -23,6 +23,17 @@
     </div>
 
     <div class="page-head__actions">
+      <!-- 선택 상태 -->
+      <p class="page-head__selection" id="selection-count" hidden>0개 선택</p>
+      <button type="button" class="btn btn--danger-ghost" id="btn-delete-selected" hidden>삭제</button>
+
+      <!-- 편집 상태 -->
+      <button type="button" class="btn btn--primary" id="btn-save" hidden>저장</button>
+      <button type="button" class="btn btn--ghost" id="btn-cancel" hidden>취소</button>
+
+      <!-- CSV 내보내기는 추후 제공 예정. hidden 만 제거하면 다시 노출된다. -->
+      <button type="button" class="btn btn--secondary" id="btn-export" hidden>CSV 내보내기</button>
+
       <!-- 평소엔 버튼만 보이고, 누르면 입력칸이 펼쳐진다. -->
       <div class="search" id="search-box">
         <input type="search" id="search" class="search__input"
@@ -87,22 +98,6 @@
 
     <!-- ── 현황 테이블 ───────────────────────────────────── -->
     <section class="panel" aria-label="작업물 목록">
-      <div class="panel__toolbar">
-        <div class="panel__toolbar-right">
-          <!-- 선택 상태 -->
-          <p class="panel__selection" id="selection-count" hidden>0개 선택</p>
-          <button type="button" class="btn btn--danger-ghost" id="btn-delete-selected" hidden>삭제</button>
-
-          <!-- 편집 상태 -->
-          <button type="button" class="btn btn--primary" id="btn-save" hidden>저장</button>
-          <button type="button" class="btn btn--ghost" id="btn-cancel" hidden>취소</button>
-
-          <!-- 기본 상태 -->
-          <!-- CSV 내보내기는 추후 제공 예정. hidden 만 제거하면 다시 노출된다. -->
-          <button type="button" class="btn btn--secondary" id="btn-export" hidden>CSV 내보내기</button>
-        </div>
-      </div>
-
       <div class="table-wrap" tabindex="0">
         <table class="table">
           <colgroup>
