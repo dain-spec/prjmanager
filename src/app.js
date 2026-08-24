@@ -249,7 +249,6 @@
     {
       id: "works",
       label: "파일 현황",
-      title: "WEHAGO 서비스 피그마 · XD 파일 현황",
       noun: "작업물",
       nameKey: "service",
       // 담당자 컬럼이 추가되며 스키마가 바뀌어 키가 v2 다.
@@ -264,7 +263,6 @@
     {
       id: "requests",
       label: "일일 업무",
-      title: "WEHAGO 일일 업무 현황",
       noun: "요청업무",
       nameKey: "content",
       storageKey: "wehago-prj-manager/requests/v1",
@@ -314,7 +312,6 @@
     colgroup: document.querySelector(".table colgroup"),
     thead: document.querySelector(".table thead"),
     headRow: document.querySelector(".table thead tr"),
-    title: $("page-title"),
   };
 
   /* 전체 선택 체크박스는 헤더를 다시 그릴 때마다 새 th 로 옮겨 붙이므로
@@ -391,8 +388,6 @@
     for (const tab of els.tabs.querySelectorAll("[data-view]")) {
       tab.setAttribute("aria-selected", String(tab.dataset.view === view.id));
     }
-    els.title.textContent = view.title;
-    document.title = view.title;
     els.search.placeholder = view.searchHint;
     els.stats.hidden = true; // 대시보드는 추후 제공 예정
     buildHead();
