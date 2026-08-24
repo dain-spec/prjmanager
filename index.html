@@ -103,7 +103,7 @@
             <col style="width:190px" /><!-- 서비스명 -->
             <col style="width:140px" /><!-- 메뉴명 (비우면 서비스 전체) -->
             <col style="width:56px"  /><!-- OS (헤더 27 + 좌우 패딩 24, 한 글자 드롭다운 31 이 들어간다) -->
-            <col style="width:88px"  /><!-- 파일 유형 (최소 82) -->
+            <col style="width:80px"  /><!-- 유형 (편집 드롭다운 55 + 좌우 패딩 24 = 79 가 하한) -->
             <col style="width:96px"  /><!-- WHDS 적용 (헤더 94, 드롭다운은 104 필요해 더 줄이지 않음) -->
             <col style="width:266px" /><!-- 파일 경로 (최장 내용 263 필요) -->
             <col style="width:52px"  /><!-- zep (내용 '열기' 가 47px 필요) -->
@@ -119,7 +119,7 @@
               <th scope="col"><button type="button" class="th-sort" data-sort="service">서비스명</button></th>
               <th scope="col"><button type="button" class="th-sort" data-sort="menu">메뉴명</button></th>
               <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="platform">OS</button></th>
-              <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="tool">파일 유형</button></th>
+              <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="tool">유형</button></th>
               <th scope="col" class="cell--center"><button type="button" class="th-sort" data-sort="component">WHDS 적용</button></th>
               <th scope="col">파일 경로</th>
               <th scope="col" class="cell--center">zep</th>
@@ -164,6 +164,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=eab3ccad"></script>
+<script src="src/app.js?v=f9132628"></script>
 </body>
 </html>

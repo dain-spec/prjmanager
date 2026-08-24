@@ -83,7 +83,7 @@
   /* 시드 데이터는 팀 현황표(프로젝트/유형/주소링크/공통 반영 버전/반영 상태/작업자/
      Figma 이관 여부/비고)를 이 테이블의 컬럼에 매핑한 것이다. 매핑 규칙:
        OS                ← 유형(W=Web/M=Mobile/C=C/S). 같은 서비스의 행을 구분하는 값이다.
-       파일 유형         ← 주소링크 종류 (figma.com → Figma, 로컬 경로 → XD)
+       유형               ← 주소링크 종류 (figma.com → Figma, 로컬 경로 → XD)
        WHDS 적용 ← 반영 상태 (완료 → 적용, 진행중 → 미적용, 해당사항 없음 → 해당 없음)
        담당자            ← 작업자
        비고              ← 원래 비고 + 이 테이블에 칸이 없는 값(공통 반영 버전 /
@@ -163,7 +163,7 @@
   // ── 상태 ────────────────────────────────────────────────
 
   let rows = load();
-  /* 파일 유형 / WHDS 적용 필터. 필터 칩 UI 는 제거된 상태이며
+  /* 유형 / WHDS 적용 필터. 필터 칩 UI 는 제거된 상태이며
      visibleRows() 의 필터 로직은 향후 UI 를 다시 붙일 때를 위해 남겨둔다. */
   const filters = { tool: null, component: null };
   let search = "";
@@ -381,7 +381,7 @@
       inputCell("service", "서비스명", { required: true }),
       menuCell(),
       selectCell("platform", platformOptions(), "OS", "cell--center"),
-      selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]], "파일 유형", "cell--center"),
+      selectCell("tool", [["Figma", "Figma"], ["XD", "XD"]], "유형", "cell--center"),
       selectCell("component", Object.entries(COMPONENT_LABEL), "WHDS 적용", "cell--center"),
       inputCell("path", "피그마 주소 또는 XD 경로", { className: "cell--path" }),
       inputCell("zeplin", "제플린 주소", { className: "cell--zeplin" }),
@@ -856,7 +856,7 @@
   // ── CSV 내보내기 ────────────────────────────────────────
 
   function exportCsv() {
-    const head = ["No", "서비스명", "메뉴명", "OS", "파일 유형", "WHDS 적용", "파일 경로", "제플린 주소", "담당자", "비고"];
+    const head = ["No", "서비스명", "메뉴명", "OS", "유형", "WHDS 적용", "파일 경로", "제플린 주소", "담당자", "비고"];
     const escape = (value) => `"${String(value).replaceAll('"', '""')}"`;
     const list = visibleRows();
     const body = list.map((row, i) =>
