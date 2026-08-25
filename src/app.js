@@ -129,29 +129,27 @@
     { key: "zeplin", header: "zep", width: "52px", type: "link", align: "center",
       placeholder: "제플린 주소" },
     { key: "owners", header: "담당자", width: "90px", type: "owners", align: "center", sortable: true },
-    { key: "note", header: "비고", type: "note", placeholder: "비고 (Shift+Enter 로 줄 추가)" },
+    { key: "note", header: "비고", width: "320px", type: "note", grow: true,
+      placeholder: "비고 (Shift+Enter 로 줄 추가)" },
   ];
 
   const REQUEST_COLUMNS = [
     // 요청이 들어온 날. 새 행은 오늘로 채워 두고 다른 날이면 고치게 한다.
     { key: "requested", header: "요청일", width: "116px", type: "date", align: "center",
       sortable: true, defaultToday: true },
-    { key: "requester", header: "요청자", width: "76px", type: "text", sortable: true,
+    { key: "requester", header: "요청자", width: "72px", type: "text", sortable: true,
       placeholder: "요청자" },
     { key: "content", header: "요청내용", width: "300px", type: "note", required: true,
-      placeholder: "요청내용 (Shift+Enter 로 줄 추가)" },
+      grow: true, placeholder: "요청내용 (Shift+Enter 로 줄 추가)" },
     { key: "message", header: "쪽지", width: "52px", type: "link", align: "center",
       placeholder: "쪽지 링크" },
-    { key: "service", header: "서비스명", width: "130px", type: "text", sortable: true,
+    { key: "service", header: "서비스명", width: "120px", type: "text", sortable: true,
       placeholder: "서비스명" },
-    { key: "menu", header: "메뉴명", width: "110px", type: "text",
+    { key: "menu", header: "메뉴명", width: "100px", type: "text",
       placeholder: "메뉴명", suggest: "menu" },
     PLATFORM_COLUMN,
     TOOL_COLUMN,
-    /* 이 탭에서는 파일 경로가 남는 폭을 흡수한다(폭을 주지 않은 컬럼이 하나는
-       있어야 한다). 요청내용을 흡수 컬럼으로 두면 폭을 직접 조절할 수 없고,
-       파일 경로는 한 줄로 잘리며 전체 주소가 title 로 남아 눌려도 덜 아쉽다. */
-    { key: "path", header: "파일 경로", type: "path",
+    { key: "path", header: "파일 경로", width: "140px", type: "path",
       placeholder: "피그마 주소 또는 XD 경로" },
     { key: "zeplin", header: "zep", width: "52px", type: "link", align: "center",
       placeholder: "제플린 주소" },
@@ -420,12 +418,19 @@
 
   const MIN_COL_WIDTH = 44;
 
-  /** 선택 · No 는 데이터 컬럼이 아니라 항상 붙는 구조 컬럼이다. */
+  /* 선택 · No · 여백은 데이터 컬럼이 아니라 항상 붙는 구조 컬럼이다.
+
+     맨 끝 여백 칸에 폭을 주지 않아 남는 공간을 전부 흡수하게 한다. 이 칸이
+     없으면 데이터 컬럼 하나가 흡수 역할을 맡아야 하는데, 흡수 컬럼에는 폭을
+     지정할 수 없어 그 컬럼만 폭 조절이 안 된다. 여백 칸을 두면 모든 데이터
+     컬럼에 폭을 줄 수 있고, 폭 합계가 화면을 넘으면 여백이 0 이 된 뒤 표가
+     가로로 스크롤된다. */
   function layout() {
     return [
       { key: "__check", width: "44px", structural: "check" },
       { key: "__no", width: "44px", header: "No", align: "center", structural: "no" },
       ...view.columns,
+      { key: "__fill", structural: "fill" },
     ];
   }
 
@@ -448,6 +453,12 @@
     els.headRow.replaceChildren(
       ...spec.map((col, index) => {
         const th = document.createElement("th");
+        if (col.structural === "fill") {
+          // 값이 없는 여백 칸이라 읽어 줄 것이 없다.
+          th.className = "cell--fill";
+          th.setAttribute("aria-hidden", "true");
+          return th;
+        }
         th.scope = "col";
         const classes = [];
         if (col.structural === "check") classes.push("cell--check");
@@ -485,6 +496,30 @@
     applySavedColWidths();
   }
 
+  /* 여백 칸 덕분에 컬럼 폭은 정확히 지켜지지만, 기본값 합계가 화면보다 좁으면
+     오른쪽에 빈 띠가 남는다. 사용자가 폭을 정하기 전까지는 대표 컬럼
+     (비고 · 요청내용)을 남는 만큼 넓혀 화면을 채운다. 이렇게 넓힌 값은
+     사용자가 고른 값이 아니므로 저장하지 않는다. */
+  const autoGrown = new Set();
+
+  function growToFill() {
+    autoGrown.clear();
+    const spec = layout();
+    const index = spec.findIndex((col) => col.grow);
+    if (index < 0) return;
+    if (readColWidths()[view.id]?.[index]) return; // 사용자가 정한 폭이 우선
+
+    const room = tableWrap.clientWidth;
+    const others = spec.reduce(
+      (sum, col, i) => (i === index ? sum : sum + (parseFloat(cols[i].style.width) || 0)),
+      0,
+    );
+    const base = parseFloat(defaultColWidths[index]);
+    const width = Math.max(base, Math.floor(room - others));
+    cols[index].style.width = `${width}px`;
+    if (width !== base) autoGrown.add(index);
+  }
+
   /* 마지막에 폭을 주지 않은 컬럼이 남는 공간을 흡수한다. 전 컬럼에 고정 폭을 주면
      table-layout: fixed 가 100% 를 채우려고 폭을 비례 확대해 지정값과 어긋난다. */
   function readColWidths() {
@@ -505,7 +540,8 @@
   function saveColWidths() {
     const mine = {};
     cols.forEach((col, index) => {
-      if (!defaultColWidths[index]) return; // 유동 컬럼은 저장하지 않는다
+      if (!defaultColWidths[index]) return; // 여백 칸은 저장하지 않는다
+      if (autoGrown.has(index)) return; // 화면을 채우려고 늘린 값은 선택이 아니다
       const px = Math.round(parseFloat(col.style.width));
       if (px && `${px}px` !== defaultColWidths[index]) mine[index] = px;
     });
@@ -641,6 +677,9 @@
       els.addFirst.hidden = !noData;
     }
     syncSelectionUi();
+    /* 행 수가 달라지면 세로 스크롤바가 생기고 사라져 쓸 수 있는 폭도 달라진다.
+       행을 다 그린 뒤에 계산해야 값이 맞는다. */
+    growToFill();
   }
 
   /** 보기 모드 셀 — 컬럼 type 에 따라 다르게 그린다. */
@@ -682,6 +721,7 @@
       checkboxCell(row.id),
       handleCell(no),
       ...view.columns.map((col) => displayCell(row, col)),
+      fillCell(),
     );
     if (selected.has(row.id)) tr.dataset.selected = "true";
     return tr;
@@ -717,8 +757,14 @@
       cell("", "cell--check"),
       cell(editingId === NEW_ID ? "신규" : String(no), "cell--no cell--center"),
       ...view.columns.map(editCell),
+      fillCell(),
     );
     return tr;
+  }
+
+  /** 표 오른쪽 여백 칸. 남는 폭을 흡수하기만 하고 내용은 없다. */
+  function fillCell() {
+    return cell("", "cell--fill");
   }
 
   /** No 셀 = 순서 변경 핸들. 정렬·검색이 걸려 있으면 옮길 수 없으므로 잠근다. */
@@ -1262,6 +1308,8 @@
 
   document.addEventListener("mouseup", () => {
     if (resizeCol === null) return;
+    // 직접 끈 컬럼은 이제 사용자가 정한 값이다.
+    autoGrown.delete(resizeCol);
     resizeCol = null;
     delete document.body.dataset.colResizing;
     document.querySelector(".col-resize--active")?.classList.remove("col-resize--active");
@@ -1348,6 +1396,8 @@
   // 스크롤·리사이즈 후에는 좌표가 어긋나므로 숨긴다.
   tableWrap.addEventListener("scroll", hideInsert);
   addEventListener("resize", hideInsert);
+  // 창이 넓어지거나 좁아지면 대표 컬럼에 몰아 줄 폭도 달라진다.
+  addEventListener("resize", growToFill);
 
   // ── 담당자 복수 선택 팝업 ─────────────────────────────
   const ownerPicker = $("owner-picker");
@@ -1640,6 +1690,9 @@
 
     // No 칸은 순서 변경 핸들이므로 편집 진입에서 제외한다.
     if (event.target.closest(".cell--no")) return;
+
+    // 표 오른쪽 여백은 어느 값도 가리키지 않으므로 눌러도 편집으로 들어가지 않는다.
+    if (event.target.closest(".cell--fill")) return;
 
     // 그 밖의 셀을 클릭하면 그 칸이 바로 편집 상태가 된다.
     const td = event.target.closest("td");
