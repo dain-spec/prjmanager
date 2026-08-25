@@ -364,8 +364,9 @@ textarea {
   width: 100%;
   /* 폭을 주지 않은 컬럼(비고 · 요청내용)이 남는 공간을 흡수하는데, 창이 좁아지면
      그 컬럼만 0 에 수렴해 글자가 한 자씩 세로로 쌓인다. 하한을 두어 그 전에
-     .table-wrap 의 가로 스크롤로 넘긴다. */
-  min-width: 1200px;
+     .table-wrap 의 가로 스크롤로 넘긴다.
+     1320 = 일일 업무 탭의 고정 폭 합계(1146) + 요청내용이 읽히는 최소 폭. */
+  min-width: 1320px;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
@@ -596,6 +597,12 @@ body[data-reordering] {
   width: 8px;
   height: 100%;
   cursor: col-resize;
+}
+
+/* 마지막 컬럼에 폭이 지정돼 있으면(일일 업무 탭의 완료일) 손잡이가 표 오른쪽
+   경계를 4px 넘어 서서 가로 스크롤이 생긴다. 그 칸만 안쪽에 붙인다. */
+.table thead th:last-child .col-resize {
+  right: 0;
 }
 
 /* 잡을 수 있다는 표시. 클릭 상태에 파란 선을 쓰지 않으므로 무채색으로 둔다. */

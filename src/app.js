@@ -97,17 +97,26 @@
        rank        정렬 순서를 값 순서가 아니라 이 표로 정한다
        suggest     "menu" 면 같은 서비스의 기존 메뉴명을 자동완성으로 제안한다 */
 
+  /* OS 와 유형은 두 탭에서 같은 값을 뜻하므로 정의를 하나만 두고 나눠 쓴다.
+     컬럼 객체는 읽기만 하므로 두 뷰가 같은 객체를 가리켜도 문제되지 않는다. */
+
+  /** 헤더 27 + 좌우 패딩 24, 한 글자 드롭다운 31 이 들어간다. */
+  const PLATFORM_COLUMN = { key: "platform", header: "OS", width: "56px", type: "select",
+    align: "center", sortable: true, options: PLATFORM_OPTIONS.map((v) => [v, v]),
+    freeValue: true };
+
+  /** 편집 드롭다운 55 + 좌우 패딩 24 = 79 가 하한. */
+  const TOOL_COLUMN = { key: "tool", header: "유형", width: "80px", type: "select",
+    align: "center", sortable: true, options: [["Figma", "Figma"], ["XD", "XD"]],
+    badge: (v) => (v === "Figma" ? "figma" : "xd") };
+
   const WORK_COLUMNS = [
     { key: "service", header: "서비스명", width: "190px", type: "text", sortable: true,
       required: true, placeholder: "서비스명", className: "cell--service" },
     { key: "menu", header: "메뉴명", width: "140px", type: "text", sortable: true,
       placeholder: "메뉴명 (비우면 서비스 전체)", emptyTitle: "서비스 전체", suggest: "menu" },
-    // 헤더 27 + 좌우 패딩 24, 한 글자 드롭다운 31 이 들어간다.
-    { key: "platform", header: "OS", width: "56px", type: "select", align: "center",
-      sortable: true, options: PLATFORM_OPTIONS.map((v) => [v, v]), freeValue: true },
-    // 편집 드롭다운 55 + 좌우 패딩 24 = 79 가 하한.
-    { key: "tool", header: "유형", width: "80px", type: "select", align: "center", sortable: true,
-      options: [["Figma", "Figma"], ["XD", "XD"]], badge: (v) => (v === "Figma" ? "figma" : "xd") },
+    PLATFORM_COLUMN,
+    TOOL_COLUMN,
     // 헤더 94, 드롭다운은 104 필요해 더 줄이지 않는다.
     { key: "component", header: "WHDS 적용", width: "96px", type: "select", align: "center",
       sortable: true, options: Object.entries(COMPONENT_LABEL), labels: COMPONENT_LABEL,
@@ -127,18 +136,20 @@
     // 요청이 들어온 날. 새 행은 오늘로 채워 두고 다른 날이면 고치게 한다.
     { key: "requested", header: "요청일", width: "116px", type: "date", align: "center",
       sortable: true, defaultToday: true },
-    { key: "requester", header: "요청자", width: "80px", type: "text", sortable: true,
+    { key: "requester", header: "요청자", width: "76px", type: "text", sortable: true,
       placeholder: "요청자" },
     // 폭을 주지 않아 남는 공간을 전부 가져간다. 요청내용이 가장 길고 중요한 값이다.
     { key: "content", header: "요청내용", type: "note", required: true,
       placeholder: "요청내용 (Shift+Enter 로 줄 추가)" },
     { key: "message", header: "쪽지", width: "52px", type: "link", align: "center",
       placeholder: "쪽지 링크" },
-    { key: "service", header: "서비스명", width: "150px", type: "text", sortable: true,
+    { key: "service", header: "서비스명", width: "130px", type: "text", sortable: true,
       placeholder: "서비스명" },
-    { key: "menu", header: "메뉴명", width: "120px", type: "text",
+    { key: "menu", header: "메뉴명", width: "110px", type: "text",
       placeholder: "메뉴명", suggest: "menu" },
-    { key: "path", header: "파일 경로", width: "200px", type: "path",
+    PLATFORM_COLUMN,
+    TOOL_COLUMN,
+    { key: "path", header: "파일 경로", width: "180px", type: "path",
       placeholder: "피그마 주소 또는 XD 경로" },
     { key: "zeplin", header: "zep", width: "52px", type: "link", align: "center",
       placeholder: "제플린 주소" },
@@ -267,7 +278,7 @@
       noun: "요청업무",
       nameKey: "content",
       storageKey: "wehago-prj-manager/requests/v1",
-      searchHint: "요청일, 요청자, 요청내용, 서비스명, 메뉴명, 담당자 검색",
+      searchHint: "요청일, 요청자, 요청내용, 서비스명, 메뉴명, OS, 유형, 담당자 검색",
       csvName: "wehago-일일-업무.csv",
       columns: REQUEST_COLUMNS,
       seed: [],
@@ -651,11 +662,12 @@
       case "date":
         return value ? cell(value, base) : cell("—", muted(base));
       case "select": {
-        const kind = col.badge?.(value);
         const label = col.labels?.[value] ?? value ?? "";
+        // 컬럼이 나중에 생겨 값이 없는 행이 있다. 배지부터 만들면 빈 알약이 그려진다.
+        if (!label) return cell("—", muted(base));
+        const kind = col.badge?.(value);
         if (kind) return badgeCell(kind, label, base);
-        const dim = !value || col.mutedValues?.includes(value);
-        return cell(label || "—", dim ? muted(base) : base);
+        return cell(label, col.mutedValues?.includes(value) ? muted(base) : base);
       }
       default:
         return cell(value || "—", value ? base : muted(base), value || col.emptyTitle);
