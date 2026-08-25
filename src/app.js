@@ -138,8 +138,7 @@
       sortable: true, defaultToday: true },
     { key: "requester", header: "요청자", width: "76px", type: "text", sortable: true,
       placeholder: "요청자" },
-    // 폭을 주지 않아 남는 공간을 전부 가져간다. 요청내용이 가장 길고 중요한 값이다.
-    { key: "content", header: "요청내용", type: "note", required: true,
+    { key: "content", header: "요청내용", width: "300px", type: "note", required: true,
       placeholder: "요청내용 (Shift+Enter 로 줄 추가)" },
     { key: "message", header: "쪽지", width: "52px", type: "link", align: "center",
       placeholder: "쪽지 링크" },
@@ -149,7 +148,10 @@
       placeholder: "메뉴명", suggest: "menu" },
     PLATFORM_COLUMN,
     TOOL_COLUMN,
-    { key: "path", header: "파일 경로", width: "180px", type: "path",
+    /* 이 탭에서는 파일 경로가 남는 폭을 흡수한다(폭을 주지 않은 컬럼이 하나는
+       있어야 한다). 요청내용을 흡수 컬럼으로 두면 폭을 직접 조절할 수 없고,
+       파일 경로는 한 줄로 잘리며 전체 주소가 title 로 남아 눌려도 덜 아쉽다. */
+    { key: "path", header: "파일 경로", type: "path",
       placeholder: "피그마 주소 또는 XD 경로" },
     { key: "zeplin", header: "zep", width: "52px", type: "link", align: "center",
       placeholder: "제플린 주소" },

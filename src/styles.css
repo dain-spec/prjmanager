@@ -365,8 +365,8 @@ textarea {
   /* 폭을 주지 않은 컬럼(비고 · 요청내용)이 남는 공간을 흡수하는데, 창이 좁아지면
      그 컬럼만 0 에 수렴해 글자가 한 자씩 세로로 쌓인다. 하한을 두어 그 전에
      .table-wrap 의 가로 스크롤로 넘긴다.
-     1320 = 일일 업무 탭의 고정 폭 합계(1146) + 요청내용이 읽히는 최소 폭. */
-  min-width: 1320px;
+     1380 = 일일 업무 탭의 고정 폭 합계(1266) + 파일 경로가 읽히는 최소 폭. */
+  min-width: 1380px;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
