@@ -129,7 +129,10 @@
     { key: "zeplin", header: "zep", width: "52px", type: "link", align: "center",
       placeholder: "제플린 주소" },
     { key: "owners", header: "담당자", width: "90px", type: "owners", align: "center", sortable: true },
-    { key: "note", header: "비고", width: "320px", type: "note", grow: true,
+    /* 이 폭은 목표값이 아니라 하한이다. growToFill() 이 남는 공간을 줘서 실제로는
+       더 넓어진다. 하한이 남는 공간보다 크면 표가 컨테이너를 넘어 가로 스크롤이
+       생기므로, 1354px 컨테이너에서 남는 294px 보다 낮게 잡는다. */
+    { key: "note", header: "비고", width: "280px", type: "note", grow: true,
       placeholder: "비고 (Shift+Enter 로 줄 추가)" },
   ];
 
