@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 부서 업무 요청 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=847aadd9" />
+<link rel="stylesheet" href="src/styles.css?v=fde6f2a5" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -39,6 +39,26 @@
 
       <!-- CSV 내보내기는 추후 제공 예정. hidden 만 제거하면 다시 노출된다. -->
       <button type="button" class="btn btn--secondary" id="btn-export" hidden>CSV 내보내기</button>
+
+      <!-- 기간 보기 — 업무 요청 탭에서만 쓴다. 요청일이 고른 기간에 든 행만 남긴다. -->
+      <div class="period" id="period" hidden>
+        <div class="period__units" role="group" aria-label="기간 단위">
+          <button type="button" class="period__unit" data-unit="all" aria-pressed="true">전체</button>
+          <button type="button" class="period__unit" data-unit="week" aria-pressed="false">주</button>
+          <button type="button" class="period__unit" data-unit="month" aria-pressed="false">월</button>
+        </div>
+
+        <!-- 전체를 보고 있을 때는 오갈 기간이 없으므로 숨긴다. -->
+        <div class="period__nav" id="period-nav" hidden>
+          <button type="button" class="btn btn--ghost btn--icon" data-step="-1" aria-label="이전 기간">
+            <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5" /></svg>
+          </button>
+          <span class="period__label" id="period-label" aria-live="polite"></span>
+          <button type="button" class="btn btn--ghost btn--icon" data-step="1" aria-label="다음 기간">
+            <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
+          </button>
+        </div>
+      </div>
 
       <!-- 평소엔 버튼만 보이고, 누르면 입력칸이 펼쳐진다. -->
       <div class="search" id="search-box">
@@ -148,6 +168,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=c905d803"></script>
+<script src="src/app.js?v=3d92bac6"></script>
 </body>
 </html>

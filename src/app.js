@@ -308,6 +308,8 @@
       /* 저장 순서를 요청일 늦은 것부터로 맞춘다. 최근 요청이 지금 손볼
          일이므로 위에 둔다. 같은 날짜끼리는 넣은 순서를 지킨다. */
       order: { key: "requested", dir: "desc" },
+      // 요청일 기준으로 한 주 / 한 달만 보는 기간 보기를 쓴다.
+      period: true,
       columns: REQUEST_COLUMNS,
       seed: [],
     },
@@ -325,6 +327,12 @@
      향후 UI 를 다시 붙일 때를 위해 남겨둔다. { 컬럼키: 값 } 형태다. */
   let filters = {};
   let search = "";
+
+  /* 기간 보기 — view.period 인 뷰에서만 쓴다. unit 이 'all' 이 아니면 요청일이
+     그 기간에 든 행만 남긴다. offset 0 이 이번 주 / 이번 달, -1 이 지난 주 /
+     지난 달이다. 새로고침하면 전체로 돌아간다. 저장해 두면 다음에 열었을 때
+     '지난 주' 를 보고 있는데 그 사실을 모르는 상태가 되기 때문이다. */
+  let period = { unit: "all", offset: 0 };
   let sort = { key: null, dir: "asc" };
 
   /** 체크박스로 선택된 행 id 집합 */
@@ -348,6 +356,9 @@
     toast: $("toast"),
     tabs: $("tabs"),
     stats: $("stats"),
+    period: $("period"),
+    periodNav: $("period-nav"),
+    periodLabel: $("period-label"),
     colgroup: document.querySelector(".table colgroup"),
     thead: document.querySelector(".table thead"),
     headRow: document.querySelector(".table thead tr"),
@@ -518,6 +529,7 @@
     insertAfterId = null;
     selected.clear();
     filters = {};
+    period = { unit: "all", offset: 0 };
     sort = { key: null, dir: "asc" };
 
     view = next;
@@ -717,11 +729,96 @@
     return String(col.labels?.[value] ?? value ?? "");
   }
 
+  // ── 기간 보기 ───────────────────────────────────────────
+
+  /* 날짜는 'YYYY-MM-DD' 문자열로만 비교한다. Date 로 바꿔 비교하면 시간대에 따라
+     하루가 밀릴 수 있는데, 이 표의 날짜는 시각이 없는 '달력의 날' 이기 때문이다. */
+  const iso = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  function today() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  /** 그 날이 속한 주의 월요일. 한 주는 월요일에 시작한다. */
+  function mondayOf(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d;
+  }
+
+  function periodActive() {
+    return Boolean(view.period) && period.unit !== "all";
+  }
+
+  /** 지금 보고 있는 기간의 첫날과 끝날. 전체 보기면 null. */
+  function periodRange() {
+    if (!periodActive()) return null;
+    if (period.unit === "week") {
+      const start = mondayOf(today());
+      start.setDate(start.getDate() + period.offset * 7);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      return { start, end };
+    }
+    // 다음 달 0 일 = 이번 달 마지막 날. 연도 넘김도 Date 가 알아서 처리한다.
+    const t = today();
+    return {
+      start: new Date(t.getFullYear(), t.getMonth() + period.offset, 1),
+      end: new Date(t.getFullYear(), t.getMonth() + period.offset + 1, 0),
+    };
+  }
+
+  function periodText({ start, end }) {
+    if (period.unit === "month") return `${start.getFullYear()}년 ${start.getMonth() + 1}월`;
+    // 같은 달 안이면 끝날은 '일' 만 적어 문구를 짧게 유지한다.
+    const tail = start.getMonth() === end.getMonth()
+      ? `${end.getDate()}일`
+      : `${end.getMonth() + 1}월 ${end.getDate()}일`;
+    return `${start.getFullYear()}년 ${start.getMonth() + 1}월 ${start.getDate()}일 ~ ${tail}`;
+  }
+
+  /** 그 날짜가 보이려면 offset 이 얼마여야 하는지. */
+  function offsetFor(value) {
+    const [y, m, d] = value.split("-").map(Number);
+    const t = today();
+    if (period.unit === "month") return (y - t.getFullYear()) * 12 + (m - 1 - t.getMonth());
+    // 서머타임으로 한 시간이 밀릴 수 있어 반올림한다.
+    return Math.round((mondayOf(new Date(y, m - 1, d)) - mondayOf(t)) / (7 * 86400000));
+  }
+
+  /** 방금 저장한 행이 기간 밖이면 그 행이 든 기간으로 옮긴다.
+      저장했는데 목록에서 사라지면 지워진 줄 알기 때문이다. */
+  function revealInPeriod(row) {
+    if (!periodActive()) return;
+    const value = String(row?.requested ?? "").slice(0, 10);
+    if (!value) {
+      toast("요청일이 비어 있어 기간 보기에서는 보이지 않습니다.");
+      return;
+    }
+    const range = periodRange();
+    if (value >= iso(range.start) && value <= iso(range.end)) return;
+    period = { ...period, offset: offsetFor(value) };
+  }
+
+  function setPeriod(unit, offset) {
+    period = { unit, offset: unit === "all" ? 0 : offset };
+    render();
+  }
+
   function visibleRows() {
     const q = search.trim().toLowerCase();
+    const range = periodRange();
     let list = rows.filter((row) => {
       // 편집 중인 행은 필터/검색으로 사라지지 않게 항상 남긴다.
       if (row.id === editingId) return true;
+      if (range) {
+        const value = String(row.requested ?? "").slice(0, 10);
+        if (!value || value < iso(range.start) || value > iso(range.end)) return false;
+      }
       for (const [key, value] of Object.entries(filters)) {
         if (value && row[key] !== value) return false;
       }
@@ -771,8 +868,12 @@
       `적용 ${applied} / 대상 ${target.length}건 (해당 없음 ${rows.length - target.length}건 제외)`;
   }
 
+  /** 마지막으로 그린 행 수. 기간 라벨의 '· N건' 이 이 값을 쓴다. */
+  let shownCount = 0;
+
   function renderTable() {
     const list = visibleRows();
+    shownCount = list.length;
     // 신규 행은 아직 rows 에 없으므로 화면에서만 끼워 넣는다.
     let display = list;
     if (editingId === NEW_ID) {
@@ -803,9 +904,13 @@
       // 데이터가 아예 없으면 hover·우클릭으로 행을 넣을 대상이 없으므로
       // 그 경우에만 추가 버튼을 내보낸다.
       const noData = rows.length === 0;
+      /* 기간 보기 때문에 비었다면 '검색어를 조정' 은 엉뚱한 안내가 된다. */
+      const byPeriod = periodActive() && !search.trim();
       els.emptyText.textContent = noData
         ? `아직 등록된 ${view.noun}이 없습니다.`
-        : `조건에 맞는 ${view.noun}이 없습니다. 검색어를 조정해 보세요.`;
+        : byPeriod
+          ? `이 기간에 등록된 ${view.noun}이 없습니다.`
+          : `조건에 맞는 ${view.noun}이 없습니다. 검색어를 조정해 보세요.`;
       els.addFirst.hidden = !noData;
     }
     syncSelectionUi();
@@ -1242,9 +1347,22 @@
     return td;
   }
 
+  /** 기간 컨트롤 — 단위 선택 상태와 지금 보고 있는 기간을 화면에 맞춘다. */
+  function renderPeriod() {
+    els.period.hidden = !view.period;
+    if (!view.period) return;
+    for (const button of els.period.querySelectorAll("[data-unit]")) {
+      button.setAttribute("aria-pressed", String(button.dataset.unit === period.unit));
+    }
+    const range = periodRange();
+    els.periodNav.hidden = !range;
+    if (range) els.periodLabel.textContent = `${periodText(range)} · ${shownCount}건`;
+  }
+
   function render() {
     renderStats();
     renderTable();
+    renderPeriod();
     syncSelectionUi();
   }
 
@@ -1321,18 +1439,22 @@
       return false;
     }
 
+    let saved;
     if (editingId === NEW_ID) {
-      const row = { id: uid(), ...next };
+      saved = { id: uid(), ...next };
       const anchor = insertAfterId ? rows.findIndex((r) => r.id === insertAfterId) : -1;
-      rows.splice(anchor >= 0 ? anchor + 1 : rows.length, 0, row);
-      toast(`'${rowLabel(row)}' 항목을 추가했습니다.`);
+      rows.splice(anchor >= 0 ? anchor + 1 : rows.length, 0, saved);
+      toast(`'${rowLabel(saved)}' 항목을 추가했습니다.`);
     } else {
       const i = rows.findIndex((r) => r.id === editingId);
       rows[i] = { ...rows[i], ...next };
-      toast(`'${rowLabel(rows[i])}' 항목을 수정했습니다.`);
+      saved = rows[i];
+      toast(`'${rowLabel(saved)}' 항목을 수정했습니다.`);
     }
     // 서비스명·요청일이 바뀌었으면 있어야 할 자리도 달라진다.
     arrange();
+    // 기간 보기 중이면 방금 저장한 행이 보이는 기간으로 옮긴다.
+    revealInPeriod(saved);
 
     closeOwnerPicker();
     editingId = null;
@@ -1470,6 +1592,15 @@
   }
 
   // ── 이벤트 바인딩 ───────────────────────────────────────
+
+  // ── 기간 보기 ─────────────────────────────────────────
+  els.period.addEventListener("click", (event) => {
+    const unit = event.target.closest("[data-unit]");
+    // 단위를 바꾸면 기준이 달라지므로 항상 이번 주 / 이번 달부터 다시 시작한다.
+    if (unit) return setPeriod(unit.dataset.unit, 0);
+    const step = event.target.closest("[data-step]");
+    if (step) setPeriod(period.unit, period.offset + Number(step.dataset.step));
+  });
 
   // ── 탭 ────────────────────────────────────────────────
   els.tabs.addEventListener("click", (event) => {

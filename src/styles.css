@@ -113,8 +113,13 @@ textarea {
 /* 파일 현황과 일일 업무는 컬럼 구성이 완전히 달라 한 표에 담을 수 없다.
    세그먼트 컨트롤로 지금 어느 표를 보고 있는지 항상 드러낸다.
    제목 옆에 서지만 높이는 헤더 오른쪽 .btn 과 맞춰 둔다. 그래야 헤더 좌우가
-   같은 줄에 놓인다 (36px 안에 보더 2 + 패딩 4, 탭 자체는 30px). */
-.tabs {
+   같은 줄에 놓인다 (36px 안에 보더 2 + 패딩 4, 탭 자체는 30px).
+
+   기간 단위(전체 · 주 · 월)도 같은 세그먼트 컨트롤이므로 생김새를 공유한다.
+   다만 탭은 보는 표를 바꾸고(role=tab / aria-selected) 단위는 같은 표를 거르므로
+   (aria-pressed) 역할만 다르게 둔다. */
+.tabs,
+.period__units {
   display: inline-flex;
   height: var(--size-8);
   gap: var(--gap-1);
@@ -124,7 +129,8 @@ textarea {
   background: var(--color-surface-subtler);
 }
 
-.tab {
+.tab,
+.period__unit {
   height: 100%;
   padding-inline: var(--padding-6);
   border: 0;
@@ -138,15 +144,41 @@ textarea {
   transition: background-color 120ms ease, color 120ms ease;
 }
 
-.tab:hover { color: var(--color-text-basic); }
+.tab:hover,
+.period__unit:hover { color: var(--color-text-basic); }
 
-.tab[aria-selected="true"] {
+.tab[aria-selected="true"],
+.period__unit[aria-pressed="true"] {
   background: var(--color-surface-basic);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-bold);
   box-shadow: var(--shadow-level1);
 }
 
+
+/* ── 기간 보기 ─────────────────────────────────────────── */
+
+.period {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-4);
+}
+
+.period__nav {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-2);
+}
+
+/* 기간을 오갈 때 글자 길이가 달라져도 화살표가 흔들리지 않도록 폭을 잡아 둔다.
+   '2026년 12월 28일 ~ 1월 3일 · 12건' 이 가장 긴 문구다. */
+.period__label {
+  min-width: 232px;
+  text-align: center;
+  font-size: var(--font-body4);
+  color: var(--color-text-basic);
+  white-space: nowrap;
+}
 
 /* ── 버튼 ──────────────────────────────────────────────── */
 
