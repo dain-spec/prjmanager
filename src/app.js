@@ -302,6 +302,9 @@
          특정 화면을 가리키는 경우가 많고, 끝난 요청의 링크가 나중에 파일 현황이
          바뀌었다고 따라 바뀌면 곤란하다. */
       linked: ["tool", "path", "zeplin"],
+      /* 저장 순서를 요청일 늦은 것부터로 맞춘다. 최근 요청이 지금 손볼
+         일이므로 위에 둔다. 같은 날짜끼리는 넣은 순서를 지킨다. */
+      order: { key: "requested", dir: "desc" },
       columns: REQUEST_COLUMNS,
       seed: [],
     },
@@ -466,13 +469,37 @@
     return [...families.values()].flatMap((services) => [...services.values()].flat());
   }
 
-  /** 저장 순서를 묶인 상태로 맞춘다. 실제로 바뀌었으면 true. */
-  function regroup() {
-    if (!view.group) return false;
-    const next = grouped(rows);
-    if (next.every((row, i) => row === rows[i])) return false;
+  /* 뷰가 정한 순서로 정렬한다. Array.sort 는 안정 정렬이라 값이 같은 행끼리는
+     원래 순서가 그대로 남는다. 값이 빈 행은 아직 안 정해진 것이므로 맨 위에
+     두어 눈에 띄게 한다. */
+  function ordered(list) {
+    const { key, dir } = view.order;
+    const sign = dir === "desc" ? -1 : 1;
+    return [...list].sort((a, b) => {
+      const x = String(a[key] ?? "").trim();
+      const y = String(b[key] ?? "").trim();
+      if (x === y) return 0;
+      if (!x) return -1;
+      if (!y) return 1;
+      return x < y ? -sign : sign;
+    });
+  }
+
+  /* 저장 순서를 뷰가 정한 규칙(묶기 · 정렬)에 맞춘다. 실제로 바뀌었으면 true.
+
+     화면에서만 정리하지 않고 저장 순서를 직접 바꾸는 이유: 표시 순서와 저장
+     순서가 어긋나면 No 칸 드래그도 '아래에 행 추가' 도 잠긴다(reorderable).
+     그러면 첫 행을 넣은 뒤로는 행을 추가할 방법이 없어진다. */
+  function arrange() {
+    const next = view.group ? grouped(rows) : view.order ? ordered(rows) : rows;
+    if (next === rows || next.every((row, i) => row === rows[i])) return false;
     setRows(next);
     return true;
+  }
+
+  /** 순서를 붙들고 있는 컬럼. 이 값이 같은 행끼리만 자리를 바꿀 수 있다. */
+  function lockedBy() {
+    return view.group ?? view.order?.key ?? null;
   }
 
   // ── 뷰 전환 ─────────────────────────────────────────────
@@ -492,7 +519,7 @@
 
     view = next;
     rows = rowsOf(view.id);
-    if (regroup()) save();
+    if (arrange()) save();
 
     localStorage.setItem(VIEW_KEY, view.id);
     for (const tab of els.tabs.querySelectorAll("[data-view]")) {
@@ -908,13 +935,16 @@
     const from = rows.findIndex((r) => r.id === draggedId);
     if (from < 0) return;
 
-    /* 묶여 있는 표에서는 같은 값끼리만 자리를 바꿀 수 있다. 그 밖으로 옮겨 봐야
-       묶기가 다시 제자리로 끌어오므로, 옮기는 시늉만 하고 이유를 알려 준다.
-       판단 기준은 묶음(AI 제품군)이 아니라 컬럼 값(서비스명)이다. 묶음 안에서
-       옮기는 것은 허용해도 묶기가 서비스명끼리 다시 모아 되돌리기 때문이다. */
+    /* 순서가 묶기·정렬에 매여 있는 표에서는 그 값이 같은 행끼리만 자리를 바꿀 수
+       있다. 그 밖으로 옮겨 봐야 다음 정리에서 제자리로 돌아가므로, 옮기는 시늉만
+       하고 이유를 알려 준다. 판단 기준은 묶음(AI 제품군)이 아니라 컬럼 값
+       (서비스명 · 요청일)이다. 묶음 안에서 서비스명을 넘나드는 이동을 허용해도
+       묶기가 서비스명끼리 다시 모아 되돌리기 때문이다. */
+    const lock = lockedBy();
     const target = rows.find((r) => r.id === targetId);
-    if (view.group && target && groupValue(rows[from]) !== groupValue(target)) {
-      const header = view.columns.find((c) => c.key === view.group)?.header ?? "값";
+    const valueOf = (row) => String(row?.[lock] ?? "").trim();
+    if (lock && target && valueOf(rows[from]) !== valueOf(target)) {
+      const header = view.columns.find((c) => c.key === lock)?.header ?? "값";
       toast(`${header}이 같은 행끼리만 순서를 바꿀 수 있습니다.`);
       return;
     }
@@ -1298,8 +1328,8 @@
       rows[i] = { ...rows[i], ...next };
       toast(`'${rowLabel(rows[i])}' 항목을 수정했습니다.`);
     }
-    // 서비스명이 바뀌었으면 속한 그룹도 달라진다.
-    regroup();
+    // 서비스명·요청일이 바뀌었으면 있어야 할 자리도 달라진다.
+    arrange();
 
     closeOwnerPicker();
     editingId = null;
