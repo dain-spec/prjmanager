@@ -68,11 +68,21 @@ textarea {
 
 .page-head {
   display: flex;
-  align-items: flex-start;
+  /* 왼쪽은 제목 + 탭, 오른쪽은 검색·테마 버튼. 둘 다 36px 짜리 요소가
+     기준선을 잡으므로 세로 중앙에서 맞춘다. */
+  align-items: center;
   justify-content: space-between;
   gap: var(--gap-6);
   padding-bottom: var(--padding-6);
   border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.page-head__lead {
+  /* 제목과 탭을 한 줄에 둔다. 탭이 제목 바로 옆에 붙어야 지금 보고 있는 표가
+     제목의 일부처럼 읽힌다. */
+  display: flex;
+  align-items: center;
+  gap: var(--gap-6);
 }
 
 .page-head__titles {
@@ -94,15 +104,14 @@ textarea {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--gap-4);
-  padding-top: var(--padding-3);
 }
 
 /* ── 탭 ────────────────────────────────────────────────── */
 
 /* 파일 현황과 일일 업무는 컬럼 구성이 완전히 달라 한 표에 담을 수 없다.
    세그먼트 컨트롤로 지금 어느 표를 보고 있는지 항상 드러낸다.
-   헤더 액션 줄에서 검색·테마 버튼과 나란히 서므로 높이를 .btn 과 맞춘다
-   (36px 안에 보더 2 + 패딩 4 가 들어가고 탭 자체는 30px 이 된다). */
+   제목 옆에 서지만 높이는 헤더 오른쪽 .btn 과 맞춰 둔다. 그래야 헤더 좌우가
+   같은 줄에 놓인다 (36px 안에 보더 2 + 패딩 4, 탭 자체는 30px). */
 .tabs {
   display: inline-flex;
   height: var(--size-8);
