@@ -264,6 +264,9 @@
       // 담당자 컬럼이 추가되며 스키마가 바뀌어 키가 v2 다.
       storageKey: "wehago-prj-manager/rows/v2",
       searchHint: "서비스명, 메뉴명, OS, 파일 경로, 제플린, 담당자, 비고 검색",
+      // 저장 순서를 이 컬럼 기준으로 묶고, 안내 문구에는 이 이름을 쓴다.
+      group: "service",
+      groupNoun: "서비스",
       csvName: "wehago-파일-현황.csv",
       columns: WORK_COLUMNS,
       seed: WORK_SEED,
@@ -383,6 +386,36 @@
     store.set(view.id, rows);
   }
 
+  /* 같은 서비스의 행을 붙여 놓는다. 그룹 사이 순서는 그 서비스가 처음 나온
+     순서를, 그룹 안 순서는 원래 순서를 그대로 따른다. 그래서 이미 묶여 있으면
+     아무것도 움직이지 않고, 그룹 안에서 끌어 옮긴 결과도 그대로 남는다.
+
+     화면에서만 묶지 않고 저장 순서를 직접 바꾸는 이유: 표시 순서와 저장 순서가
+     어긋나면 No 칸 드래그(moveRow)와 '아래에 행 추가' 가 엉뚱한 자리를 가리킨다. */
+  /** 묶기 기준 값. 묶지 않는 뷰에서는 전부 같은 그룹으로 본다. */
+  function groupKey(row) {
+    return view.group ? String(row?.[view.group] ?? "").trim() : "";
+  }
+
+  function grouped(list) {
+    const groups = new Map(); // Map 은 넣은 순서를 지키므로 첫 등장 순서가 된다
+    for (const row of list) {
+      const key = groupKey(row);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(row);
+    }
+    return [...groups.values()].flat();
+  }
+
+  /** 저장 순서를 묶인 상태로 맞춘다. 실제로 바뀌었으면 true. */
+  function regroup() {
+    if (!view.group) return false;
+    const next = grouped(rows);
+    if (next.every((row, i) => row === rows[i])) return false;
+    setRows(next);
+    return true;
+  }
+
   // ── 뷰 전환 ─────────────────────────────────────────────
 
   function useView(id) {
@@ -401,6 +434,7 @@
     view = next;
     if (!store.has(view.id)) store.set(view.id, load(view));
     rows = store.get(view.id);
+    if (regroup()) save();
 
     localStorage.setItem(VIEW_KEY, view.id);
     for (const tab of els.tabs.querySelectorAll("[data-view]")) {
@@ -660,8 +694,19 @@
 
     els.tbody.replaceChildren();
 
+    /* 서비스가 바뀌는 자리에만 굵은 선을 그어 한 덩어리로 보이게 한다.
+       정렬을 걸면 서비스가 흩어져 거의 모든 행에 선이 생기므로, 저장 순서
+       그대로일 때(또는 서비스명 정렬일 때)만 표시한다. */
+    const showGroups = view.group && (sort.key === null || sort.key === view.group);
+    // 편집 중인 행은 아직 저장 전이라 입력 중인 값으로 판단한다.
+    const keyOf = (row) => (row?.id === editingId ? groupKey(draft) : groupKey(row));
+
     display.forEach((row, index) => {
-      els.tbody.append(row.id === editingId ? editRow(index + 1) : displayRow(row, index + 1));
+      const tr = row.id === editingId ? editRow(index + 1) : displayRow(row, index + 1);
+      if (showGroups && index < display.length - 1 && keyOf(row) !== keyOf(display[index + 1])) {
+        tr.dataset.groupEnd = "true";
+      }
+      els.tbody.append(tr);
     });
 
     els.empty.hidden = display.length > 0;
@@ -791,6 +836,15 @@
     if (draggedId === targetId) return;
     const from = rows.findIndex((r) => r.id === draggedId);
     if (from < 0) return;
+
+    /* 묶여 있는 표에서는 그룹 밖으로 내보낼 수 없다. 옮겨 봐야 묶기가 다시
+       제 그룹으로 끌어오므로, 옮기는 시늉만 하고 이유를 알려 준다. */
+    const target = rows.find((r) => r.id === targetId);
+    if (view.group && target && groupKey(rows[from]) !== groupKey(target)) {
+      toast(`같은 ${view.groupNoun}끼리 묶여 있어 그룹 밖으로는 옮길 수 없습니다.`);
+      return;
+    }
+
     const [moved] = rows.splice(from, 1);
     // splice 로 배열이 줄었으므로 target 위치를 다시 찾는다.
     const to = rows.findIndex((r) => r.id === targetId);
@@ -1133,6 +1187,8 @@
       rows[i] = { ...rows[i], ...next };
       toast(`'${rowLabel(rows[i])}' 항목을 수정했습니다.`);
     }
+    // 서비스명이 바뀌었으면 속한 그룹도 달라진다.
+    regroup();
 
     closeOwnerPicker();
     editingId = null;

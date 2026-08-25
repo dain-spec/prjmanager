@@ -473,6 +473,13 @@ body[data-reordering] {
 
 .cell--service { font-weight: var(--font-weight-bold); }
 
+/* 서비스가 바뀌는 자리 — 같은 서비스 행이 한 덩어리로 보이게 경계만 굵게 한다.
+   보더를 새로 얹으면 행 높이가 1px 밀리고 두 줄로 겹쳐 보이므로,
+   원래 있던 아래 보더의 색만 바꾼다. */
+.table tbody tr[data-group-end] td {
+  border-bottom-color: var(--color-border-basic);
+}
+
 /* 파일 경로 — Figma URL 은 매우 길어 한 줄로 자르고 title 로 전체를 보여준다.
    URL 인 경우 클릭해 바로 열 수 있도록 링크로 렌더한다. */
 .table tbody .cell--path {
