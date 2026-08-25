@@ -143,8 +143,9 @@
       grow: true, placeholder: "요청내용 (Shift+Enter 로 줄 추가)" },
     { key: "message", header: "쪽지", width: "52px", type: "link", align: "center",
       placeholder: "쪽지 링크" },
+    // 파일 현황과 이름이 정확히 같아야 연결되므로 등록된 서비스명을 제안한다.
     { key: "service", header: "서비스명", width: "120px", type: "text", sortable: true,
-      placeholder: "서비스명" },
+      placeholder: "서비스명", suggest: "service" },
     PLATFORM_COLUMN,
     TOOL_COLUMN,
     { key: "path", header: "파일 경로", width: "140px", type: "path",
@@ -296,6 +297,11 @@
       storageKey: "wehago-prj-manager/requests/v1",
       searchHint: "요청일, 요청자, 요청내용, 서비스명, OS, 유형, 담당자 검색",
       csvName: "wehago-일일-업무.csv",
+      /* 이 컬럼들은 비어 있으면 파일 현황(서비스명 + OS)에서 가져와 보여 준다.
+         직접 적은 값이 있으면 그 값이 이긴다 — 요청은 서비스 대표 파일이 아니라
+         특정 화면을 가리키는 경우가 많고, 끝난 요청의 링크가 나중에 파일 현황이
+         바뀌었다고 따라 바뀌면 곤란하다. */
+      linked: ["tool", "path", "zeplin"],
       columns: REQUEST_COLUMNS,
       seed: [],
     },
@@ -326,7 +332,6 @@
   let insertAfterId = null;
 
   const $ = (id) => document.getElementById(id);
-  const menuList = () => $("menu-options");
   const els = {
     tbody: $("tbody"),
     empty: $("empty"),
@@ -385,6 +390,34 @@
       /* 저장값이 손상된 경우 시드 데이터로 대체한다. */
     }
     return target.seed.map((row) => ({ id: uid(), ...row, owners: expandOwners(row.owners) }));
+  }
+
+  /** 다른 탭의 행도 읽을 수 있게 한다. 아직 연 적이 없으면 그때 불러온다. */
+  function rowsOf(id) {
+    if (!store.has(id)) store.set(id, load(VIEWS.find((v) => v.id === id)));
+    return store.get(id);
+  }
+
+  /* 업무 요청은 파일 현황에 이미 적힌 유형 · 파일 경로 · 제플린을 다시 적지
+     않는다. 서비스명 + OS 로 파일 현황 행을 찾아 비어 있는 칸을 채운다.
+     OS 까지 봐야 행 하나가 정해진다 — ONE AI(W/M) 처럼 OS 만 다른 서비스가 있다. */
+  function linkedRow(row) {
+    const service = String(row?.service ?? "").trim();
+    if (!service) return null;
+    const platform = String(row?.platform ?? "").trim();
+    const matches = rowsOf("works").filter(
+      (r) => String(r.service ?? "").trim() === service && (!platform || r.platform === platform),
+    );
+    // 메뉴명이 빈 행 = 그 서비스 전체를 가리키는 행. 없으면 첫 행을 쓴다.
+    return matches.find((r) => !r.menu) ?? matches[0] ?? null;
+  }
+
+  /** 화면 · 검색 · 내보내기에 쓰는 실제 값. 이 행이 비어 있으면 파일 현황에서 가져온다. */
+  function effective(row, col) {
+    const own = row?.[col.key];
+    if (own || !view.linked?.includes(col.key)) return { value: own, derived: false };
+    const value = linkedRow(row)?.[col.key];
+    return value ? { value, derived: true } : { value: own, derived: false };
   }
 
   function save() {
@@ -458,8 +491,7 @@
     sort = { key: null, dir: "asc" };
 
     view = next;
-    if (!store.has(view.id)) store.set(view.id, load(view));
-    rows = store.get(view.id);
+    rows = rowsOf(view.id);
     if (regroup()) save();
 
     localStorage.setItem(VIEW_KEY, view.id);
@@ -640,7 +672,7 @@
   function searchText(row) {
     const parts = [];
     for (const col of view.columns) {
-      const value = row[col.key];
+      const { value } = effective(row, col);
       if (col.type === "owners") parts.push((value ?? []).join(" "));
       else parts.push(col.labels?.[value] ?? value ?? "");
       // 화면에는 디코딩된 파일명이 보이는데 저장값은 퍼센트 인코딩 상태다.
@@ -651,7 +683,8 @@
 
   function sortValue(row, col) {
     if (col.type === "owners") return (row[col.key] ?? []).join(", ");
-    return String(col.labels?.[row[col.key]] ?? row[col.key] ?? "");
+    const { value } = effective(row, col);
+    return String(col.labels?.[value] ?? value ?? "");
   }
 
   function visibleRows() {
@@ -753,7 +786,19 @@
 
   /** 보기 모드 셀 — 컬럼 type 에 따라 다르게 그린다. */
   function displayCell(row, col) {
-    const value = row[col.key];
+    const { value, derived } = effective(row, col);
+    const td = buildDisplayCell(value, col);
+    if (derived) {
+      // 이 행에 적힌 값이 아니라 파일 현황에서 가져온 값이라는 표시.
+      td.dataset.derived = "true";
+      td.title = td.title
+        ? `${td.title}\n\n파일 현황에서 가져온 값입니다.`
+        : "파일 현황에서 가져온 값입니다.";
+    }
+    return td;
+  }
+
+  function buildDisplayCell(value, col) {
     const base = [col.className, col.align === "center" ? "cell--center" : ""]
       .filter(Boolean)
       .join(" ");
@@ -983,13 +1028,13 @@
     input.className = "input--cell";
     input.name = col.key;
     input.value = draft[col.key] ?? "";
-    input.placeholder = col.placeholder ?? col.header;
+    input.placeholder = linkedPlaceholder(col) ?? col.placeholder ?? col.header;
     // 주소·긴 문장은 60자로 자르면 잘려 나가므로 넉넉히 둔다.
     input.maxLength = col.type === "path" || col.type === "link" ? 500 : 60;
     if (col.required) input.required = true;
-    if (col.suggest === "menu") {
-      refreshMenuOptions();
-      input.setAttribute("list", "menu-options");
+    if (col.suggest) {
+      refreshSuggestions(col.suggest);
+      input.setAttribute("list", `${col.suggest}-options`);
     }
     input.setAttribute("aria-label", col.header);
     td.append(input);
@@ -1070,18 +1115,10 @@
 
   /** 같은 서비스에서 이미 쓴 메뉴명을 자동완성으로 제안한다.
       '전표입력' / '전표 입력' 처럼 표기가 갈리는 것을 줄이기 위한 것이다. */
-  function refreshMenuOptions() {
-    const service = (draft?.service ?? "").trim();
-    const used = [
-      ...new Set(
-        rows
-          .filter((r) => r.id !== editingId && (r.service ?? "").trim() === service && r.menu)
-          .map((r) => r.menu),
-      ),
-    ].sort((a, b) => a.localeCompare(b, "ko"));
-
-    menuList().replaceChildren(
-      ...used.map((value) => {
+  function refreshSuggestions(kind) {
+    const values = kind === "menu" ? sameServiceMenus() : linkedServices();
+    $(`${kind}-options`).replaceChildren(
+      ...values.map((value) => {
         const option = document.createElement("option");
         option.value = value;
         return option;
@@ -1089,14 +1126,59 @@
     );
   }
 
+  /** 같은 서비스에서 이미 쓴 메뉴명 */
+  function sameServiceMenus() {
+    const service = (draft?.service ?? "").trim();
+    return [
+      ...new Set(
+        rows
+          .filter((r) => r.id !== editingId && (r.service ?? "").trim() === service && r.menu)
+          .map((r) => r.menu),
+      ),
+    ].sort((a, b) => a.localeCompare(b, "ko"));
+  }
+
+  /** 파일 현황에 등록된 서비스명 — 이름이 정확히 맞아야 연결된다. */
+  function linkedServices() {
+    return [...new Set(rowsOf("works").map((r) => String(r.service ?? "").trim()).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, "ko"));
+  }
+
+  /** 연결된 칸에서 지금 비워 두면 들어올 값. 연결 대상이 아니면 null. */
+  function linkedPlaceholder(col) {
+    if (!view.linked?.includes(col.key)) return null;
+    const value = linkedRow(draft)?.[col.key];
+    return value || null;
+  }
+
+  /** 서비스명·OS 를 고치면 가져올 값도 달라진다. 편집 중인 행만 손본다. */
+  function syncLinkedPlaceholders() {
+    const tr = els.tbody.querySelector("tr[data-editing]");
+    if (!tr || !view.linked) return;
+    for (const key of view.linked) {
+      const field = tr.querySelector(`[name="${key}"]`);
+      const col = view.columns.find((c) => c.key === key);
+      if (!field || !col || field.tagName === "SELECT") continue;
+      field.placeholder = linkedPlaceholder(col) ?? col.placeholder ?? col.header;
+    }
+  }
+
   /** select 옵션. freeValue 컬럼(OS)은 예전에 자유 입력이었으므로 현재 값이
       표준 옵션에 없으면 그 값도 옵션에 넣는다. 그러지 않으면 편집만 해도
       값이 조용히 첫 옵션으로 바뀌어 버린다. */
   function optionsFor(col) {
+    /* 연결된 컬럼은 '비워 둠' 이 곧 '파일 현황 값을 쓴다' 는 뜻이다.
+       select 는 항상 값이 하나 선택되므로 빈 값을 고를 수 있게 넣어 준다. */
+    const base = view.linked?.includes(col.key) ? [["", "자동"], ...col.options] : col.options;
     const current = draft?.[col.key];
-    if (!col.freeValue || !current) return col.options;
-    if (col.options.some(([value]) => value === current)) return col.options;
-    return [...col.options, [current, current]];
+    if (!col.freeValue || !current) return base;
+    if (base.some(([value]) => value === current)) return base;
+    return [...base, [current, current]];
+  }
+
+  /** select 의 기본값. 연결된 컬럼은 비워 두어 파일 현황을 따르게 한다. */
+  function selectFallback(col) {
+    return view.linked?.includes(col.key) ? "" : col.options[0][0];
   }
 
   function selectCell(col) {
@@ -1152,7 +1234,7 @@
     draft = {};
     for (const col of view.columns) {
       if (col.type === "owners") draft[col.key] = [];
-      else if (col.type === "select") draft[col.key] = col.options[0][0];
+      else if (col.type === "select") draft[col.key] = selectFallback(col);
       else if (col.defaultToday) draft[col.key] = today();
       else draft[col.key] = "";
     }
@@ -1195,7 +1277,7 @@
     for (const col of view.columns) {
       const raw = draft[col.key];
       if (col.type === "owners") next[col.key] = expandOwners(raw);
-      else if (col.type === "select") next[col.key] = raw || col.options[0][0];
+      else if (col.type === "select") next[col.key] = raw || selectFallback(col);
       else next[col.key] = (raw ?? "").trim();
     }
 
@@ -1322,7 +1404,8 @@
         i + 1,
         ...view.columns.map((col) => {
           if (col.type === "owners") return (row[col.key] ?? []).join(", ");
-          return col.labels?.[row[col.key]] ?? row[col.key] ?? "";
+          const { value } = effective(row, col);
+          return col.labels?.[value] ?? value ?? "";
         }),
       ]
         .map(escape)
@@ -1673,13 +1756,19 @@
     if (!field || !draft) return;
     draft[field.name] = field.value;
     if (field.tagName === "TEXTAREA") autoGrow(field);
-    // 서비스가 바뀌면 제안할 메뉴명도 달라진다.
-    if (field.name === "service") refreshMenuOptions();
+    // 서비스가 바뀌면 제안할 메뉴명도, 파일 현황에서 가져올 값도 달라진다.
+    if (field.name === "service") {
+      refreshSuggestions("menu");
+      syncLinkedPlaceholders();
+    }
   });
   // 편집 필드용 (체크박스는 name 이 없어 여기 걸리지 않는다)
   els.tbody.addEventListener("change", (event) => {
     const field = event.target.closest("[name]");
-    if (field && draft) draft[field.name] = field.value;
+    if (!field || !draft) return;
+    draft[field.name] = field.value;
+    // OS 도 파일 현황 행을 고르는 키다.
+    if (field.name === "platform") syncLinkedPlaceholders();
   });
 
   // 체크박스 선택

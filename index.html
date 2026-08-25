@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 부서 업무 요청 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=547bf2de" />
+<link rel="stylesheet" href="src/styles.css?v=2227c551" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -128,8 +128,11 @@
      셀 안에 두면 .panel 의 overflow: hidden 에 잘리므로 body 레벨에 둔다. -->
 <button type="button" class="row-insert" id="row-insert" title="아래에 행 추가" aria-label="아래에 행 추가" hidden>+</button>
 
-<!-- 같은 서비스에서 이미 쓴 메뉴명 자동완성. 항목은 JS 가 채운다. -->
+<!-- 입력 자동완성. 항목은 JS 가 채운다.
+     menu   — 같은 서비스에서 이미 쓴 메뉴명
+     service — 파일 현황에 등록된 서비스명(이름이 맞아야 값이 연결된다) -->
 <datalist id="menu-options"></datalist>
+<datalist id="service-options"></datalist>
 
 <!-- 담당자 복수 선택 팝업. 항목은 조직도(OWNER_GROUPS)에서 JS 가 만든다. -->
 <div class="menu menu--picker" id="owner-picker" role="dialog" aria-label="담당자 선택" hidden></div>
@@ -143,6 +146,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=39173b09"></script>
+<script src="src/app.js?v=08662a86"></script>
 </body>
 </html>
