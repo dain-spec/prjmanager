@@ -124,6 +124,9 @@
   ];
 
   const REQUEST_COLUMNS = [
+    // 요청이 들어온 날. 새 행은 오늘로 채워 두고 다른 날이면 고치게 한다.
+    { key: "requested", header: "요청일", width: "116px", type: "date", align: "center",
+      sortable: true, defaultToday: true },
     { key: "dept", header: "요청부서", width: "110px", type: "text", sortable: true,
       placeholder: "요청부서" },
     { key: "requester", header: "요청자", width: "80px", type: "text", sortable: true,
@@ -266,7 +269,7 @@
       noun: "요청업무",
       nameKey: "content",
       storageKey: "wehago-prj-manager/requests/v1",
-      searchHint: "요청부서, 요청자, 요청내용, 서비스명, 메뉴명, 담당자 검색",
+      searchHint: "요청일, 요청부서, 요청자, 요청내용, 서비스명, 메뉴명, 담당자 검색",
       csvName: "wehago-일일-업무.csv",
       columns: REQUEST_COLUMNS,
       seed: [],
@@ -324,6 +327,14 @@
 
   function uid() {
     return `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+  }
+
+  /** 오늘 날짜(YYYY-MM-DD). toISOString 은 UTC 라 KST 밤 9시 이후에는
+      하루 앞선 날짜가 나오므로 로컬 값으로 직접 만든다. */
+  function today() {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   }
 
   /** 컬럼 기술에 맞춰 빠진 필드를 채운다(저장값이 예전 스키마여도 깨지지 않게). */
@@ -1003,6 +1014,7 @@
     for (const col of view.columns) {
       if (col.type === "owners") draft[col.key] = [];
       else if (col.type === "select") draft[col.key] = col.options[0][0];
+      else if (col.defaultToday) draft[col.key] = today();
       else draft[col.key] = "";
     }
     renderTable();
