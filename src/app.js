@@ -1512,12 +1512,29 @@
   const tableWrap = document.querySelector(".table-wrap");
   let insertAnchorId = null;
 
+  /* 버튼은 표 바깥(왼쪽)에 떠 있다. 버튼으로 가려면 표와 버튼 사이의 빈 곳을
+     지나야 하는데, 그 순간 '표를 벗어났다' 로 보고 바로 숨기면 손을 뻗는 도중에
+     버튼이 사라진다(1920 에서는 그 틈이 4px 다). 그래서 숨김을 잠깐 미루고,
+     그 사이 표나 버튼으로 들어오면 취소한다. */
+  const HIDE_DELAY = 180;
+  let hideTimer;
+
+  function keepInsert() {
+    clearTimeout(hideTimer);
+  }
+
+  function scheduleHide() {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(hideInsert, HIDE_DELAY);
+  }
+
   els.tbody.addEventListener("mouseover", (event) => {
     // 편집 중이거나 정렬·검색 중이면 '이 행 아래' 가 모호하므로 내보내지 않는다.
     if (editingId !== null || !reorderable()) return hideInsert();
     const tr = event.target.closest("tr");
     const id = tr?.querySelector("[data-check]")?.dataset.check;
     if (!id) return;
+    keepInsert();
     insertAnchorId = id;
     placeInsert(tr);
   });
@@ -1539,19 +1556,15 @@
   }
 
   function hideInsert() {
+    clearTimeout(hideTimer);
     insertBtn.hidden = true;
     insertAnchorId = null;
   }
 
-  // 표를 벗어나면 숨긴다. 단 버튼으로 이동하는 중이면 유지한다(버튼이 표 밖에 있다).
-  tableWrap.addEventListener("mouseleave", (event) => {
-    if (event.relatedTarget === insertBtn) return;
-    hideInsert();
-  });
-  insertBtn.addEventListener("mouseleave", (event) => {
-    if (event.relatedTarget?.closest?.("#tbody")) return;
-    hideInsert();
-  });
+  // 표나 버튼을 벗어나면 숨기되, 둘 사이를 오가는 중이면 취소된다.
+  tableWrap.addEventListener("mouseleave", scheduleHide);
+  insertBtn.addEventListener("mouseenter", keepInsert);
+  insertBtn.addEventListener("mouseleave", scheduleHide);
 
   insertBtn.addEventListener("click", () => {
     const id = insertAnchorId;
@@ -1559,8 +1572,11 @@
     if (id) startCreate(id);
   });
 
-  // 스크롤·리사이즈 후에는 좌표가 어긋나므로 숨긴다.
+  /* 스크롤·리사이즈 후에는 좌표가 어긋나므로 바로 숨긴다. 버튼이 position: fixed
+     라 페이지가 스크롤돼도 제자리에 남아 엉뚱한 행을 가리키므로, 표 안 스크롤과
+     페이지 스크롤을 함께 듣는다(페이지 스크롤은 창이 낮을 때 생긴다). */
   tableWrap.addEventListener("scroll", hideInsert);
+  addEventListener("scroll", hideInsert);
   addEventListener("resize", hideInsert);
   // 창이 넓어지거나 좁아지면 대표 컬럼에 몰아 줄 폭도 달라진다.
   addEventListener("resize", growToFill);
