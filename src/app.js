@@ -127,8 +127,6 @@
     // 요청이 들어온 날. 새 행은 오늘로 채워 두고 다른 날이면 고치게 한다.
     { key: "requested", header: "요청일", width: "116px", type: "date", align: "center",
       sortable: true, defaultToday: true },
-    { key: "dept", header: "요청부서", width: "110px", type: "text", sortable: true,
-      placeholder: "요청부서" },
     { key: "requester", header: "요청자", width: "80px", type: "text", sortable: true,
       placeholder: "요청자" },
     // 폭을 주지 않아 남는 공간을 전부 가져간다. 요청내용이 가장 길고 중요한 값이다.
@@ -269,7 +267,7 @@
       noun: "요청업무",
       nameKey: "content",
       storageKey: "wehago-prj-manager/requests/v1",
-      searchHint: "요청일, 요청부서, 요청자, 요청내용, 서비스명, 메뉴명, 담당자 검색",
+      searchHint: "요청일, 요청자, 요청내용, 서비스명, 메뉴명, 담당자 검색",
       csvName: "wehago-일일-업무.csv",
       columns: REQUEST_COLUMNS,
       seed: [],
