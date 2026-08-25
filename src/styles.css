@@ -426,7 +426,7 @@ textarea {
   height: var(--size-7);
   padding: 0 var(--padding-5);
   border-bottom: 1px solid var(--color-border-subtler);
-  font-size: var(--font-body4);
+  font-size: var(--font-body5);
   color: var(--color-text-basic);
   vertical-align: middle;
   /* 40px 행 높이를 지키려면 어떤 칸도 줄바꿈되어서는 안 된다.
@@ -482,9 +482,6 @@ body[data-reordering] {
 
 /* 파일 경로 — Figma URL 은 매우 길어 한 줄로 자르고 title 로 전체를 보여준다.
    URL 인 경우 클릭해 바로 열 수 있도록 링크로 렌더한다. */
-.table tbody .cell--path {
-  font-size: var(--font-body5);
-}
 
 .cell--path a,
 .cell--zeplin a {
@@ -496,19 +493,12 @@ body[data-reordering] {
   text-decoration: underline;
 }
 
-/* 제플린 주소는 hex id 뿐이라 '열기' 링크로만 보여준다. */
-.table tbody .cell--zeplin {
-  font-size: var(--font-body5);
-}
-
 /* 같은 파일의 다른 프레임을 구분하는 node-id — 보조 정보라 흐리게 둔다. */
 .path-node {
   color: var(--color-text-subtler);
-  font-size: var(--font-body6);
 }
 
 .cell--plain {
-  font-size: var(--font-body5);
   color: var(--color-text-subtle);
 }
 
@@ -516,7 +506,6 @@ body[data-reordering] {
    td 의 height(40px)는 표에서 '최소 높이'로 동작하므로 짧은 비고는 40px 를 유지한다.
    pre-wrap 이라 Shift+Enter 로 넣은 줄바꿈도 그대로 보인다. */
 .table tbody .cell--note {
-  font-size: var(--font-body5);
   color: var(--color-text-subtle);
   white-space: pre-wrap;
   overflow: visible;
@@ -738,10 +727,9 @@ select.input--cell {
   cursor: pointer;
 }
 
-/* 완료일 — 네이티브 날짜 입력. 값 글자와 달력 아이콘이 116px 칸에 함께 들어가야
-   하므로 보기 모드(body4)보다 한 단계 작은 글자를 쓰고 아이콘 여백을 없앤다. */
+/* 요청일 · 완료일 — 네이티브 날짜 입력. 값 글자와 달력 아이콘이 116px 칸에
+   함께 들어가야 하므로 아이콘 여백을 없앤다. */
 input[type="date"].input--cell {
-  font-size: var(--font-body5);
   cursor: text;
 }
 
