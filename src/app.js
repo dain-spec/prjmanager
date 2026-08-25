@@ -255,6 +255,20 @@
     };
   }
 
+  /* 이름이 달라도 한 덩어리로 볼 서비스들. AI 제품군은 서로 다른 서비스지만
+     같은 흐름으로 보고 관리하므로 표에서도 붙여 둔다. 여기 없는 서비스는
+     저마다 하나의 묶음이 된다. 묶고 싶은 서비스명을 members 에 더하면 된다. */
+  const SERVICE_FAMILIES = [
+    { name: "AI 제품군",
+      members: ["ProActive AI", "ONE AI", "ONE AI CUBE", "ONE AI Flow", "Agent Market"] },
+  ];
+
+  /** 서비스명 → 묶음 이름. 묶음에 없으면 서비스명 자체가 묶음이 된다. */
+  function serviceFamily(service) {
+    const name = String(service ?? "").trim();
+    return SERVICE_FAMILIES.find((f) => f.members.includes(name))?.name ?? name;
+  }
+
   const VIEWS = [
     {
       id: "works",
@@ -264,9 +278,10 @@
       // 담당자 컬럼이 추가되며 스키마가 바뀌어 키가 v2 다.
       storageKey: "wehago-prj-manager/rows/v2",
       searchHint: "서비스명, 메뉴명, OS, 파일 경로, 제플린, 담당자, 비고 검색",
-      // 저장 순서를 이 컬럼 기준으로 묶고, 안내 문구에는 이 이름을 쓴다.
+      /* 저장 순서를 이 컬럼 기준으로 묶는다. groupOf 가 여러 서비스명을 한
+         묶음으로 접어 주므로, 구분선은 묶음이 바뀌는 자리에만 그려진다. */
       group: "service",
-      groupNoun: "서비스",
+      groupOf: serviceFamily,
       csvName: "wehago-파일-현황.csv",
       columns: WORK_COLUMNS,
       seed: WORK_SEED,
@@ -392,19 +407,30 @@
 
      화면에서만 묶지 않고 저장 순서를 직접 바꾸는 이유: 표시 순서와 저장 순서가
      어긋나면 No 칸 드래그(moveRow)와 '아래에 행 추가' 가 엉뚱한 자리를 가리킨다. */
-  /** 묶기 기준 값. 묶지 않는 뷰에서는 전부 같은 그룹으로 본다. */
-  function groupKey(row) {
+  /** 컬럼 값 그대로. 같은 값끼리는 항상 붙어 있어야 한다. */
+  function groupValue(row) {
     return view.group ? String(row?.[view.group] ?? "").trim() : "";
   }
 
+  /** 한 덩어리로 볼 단위. 여러 서비스명이 한 묶음으로 접히기도 한다. */
+  function groupKey(row) {
+    const value = groupValue(row);
+    return view.groupOf ? view.groupOf(value) : value;
+  }
+
+  /* 묶음 → 그 안의 서비스명 두 단계로 모은다. 순서는 두 단계 모두 '처음 나온
+     순서' 이므로, 이미 묶여 있으면 아무것도 움직이지 않는다. */
   function grouped(list) {
-    const groups = new Map(); // Map 은 넣은 순서를 지키므로 첫 등장 순서가 된다
+    const families = new Map(); // Map 은 넣은 순서를 지키므로 첫 등장 순서가 된다
     for (const row of list) {
       const key = groupKey(row);
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(row);
+      if (!families.has(key)) families.set(key, new Map());
+      const services = families.get(key);
+      const value = groupValue(row);
+      if (!services.has(value)) services.set(value, []);
+      services.get(value).push(row);
     }
-    return [...groups.values()].flat();
+    return [...families.values()].flatMap((services) => [...services.values()].flat());
   }
 
   /** 저장 순서를 묶인 상태로 맞춘다. 실제로 바뀌었으면 true. */
@@ -837,11 +863,14 @@
     const from = rows.findIndex((r) => r.id === draggedId);
     if (from < 0) return;
 
-    /* 묶여 있는 표에서는 그룹 밖으로 내보낼 수 없다. 옮겨 봐야 묶기가 다시
-       제 그룹으로 끌어오므로, 옮기는 시늉만 하고 이유를 알려 준다. */
+    /* 묶여 있는 표에서는 같은 값끼리만 자리를 바꿀 수 있다. 그 밖으로 옮겨 봐야
+       묶기가 다시 제자리로 끌어오므로, 옮기는 시늉만 하고 이유를 알려 준다.
+       판단 기준은 묶음(AI 제품군)이 아니라 컬럼 값(서비스명)이다. 묶음 안에서
+       옮기는 것은 허용해도 묶기가 서비스명끼리 다시 모아 되돌리기 때문이다. */
     const target = rows.find((r) => r.id === targetId);
-    if (view.group && target && groupKey(rows[from]) !== groupKey(target)) {
-      toast(`같은 ${view.groupNoun}끼리 묶여 있어 그룹 밖으로는 옮길 수 없습니다.`);
+    if (view.group && target && groupValue(rows[from]) !== groupValue(target)) {
+      const header = view.columns.find((c) => c.key === view.group)?.header ?? "값";
+      toast(`${header}이 같은 행끼리만 순서를 바꿀 수 있습니다.`);
       return;
     }
 
