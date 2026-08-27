@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 부서 업무 요청 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=17c6e973" />
+<link rel="stylesheet" href="src/styles.css?v=b266117c" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -169,7 +169,9 @@
 
       <article class="stat">
         <p class="stat__label">담당자별 건수</p>
-        <ul class="bars" id="req-owners"></ul>
+        <div class="stat__body">
+          <strong class="stat__list" id="req-owners">—</strong>
+        </div>
         <p class="stat__foot" id="req-owners-foot"></p>
       </article>
     </section>
@@ -221,6 +223,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=d85c418f"></script>
+<script src="src/app.js?v=67a51c78"></script>
 </body>
 </html>

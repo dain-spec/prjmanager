@@ -271,8 +271,8 @@ textarea {
 .stat {
   display: flex;
   flex-direction: column;
-  gap: var(--gap-4);
-  padding: var(--padding-8) var(--padding-9);
+  gap: var(--gap-3);
+  padding: var(--padding-7) var(--padding-8);
   border: 1px solid var(--color-border-outline);
   border-radius: var(--radius-medium);
   /* 라이트에서 #f7f8fa. 디자인 시스템에 #fafafa 인 표면 토큰이 없어 가장 가까운
@@ -283,6 +283,8 @@ textarea {
 
 .stat__label {
   margin: 0;
+  /* 모두 한 줄짜리 글이므로 기본 줄간격의 위아래 여유가 그대로 타일 높이가 된다. */
+  line-height: 1.3;
   font-size: var(--font-body4);
   color: var(--color-text-subtle);
 }
@@ -294,7 +296,7 @@ textarea {
 }
 
 .stat__value {
-  font-size: var(--font-heading3);
+  font-size: var(--font-heading4);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-bolder);
   font-variant-numeric: tabular-nums;
@@ -305,8 +307,21 @@ textarea {
 /* 값이 숫자가 아니라 서비스명일 때. 28px 로는 'WEHAGO Web 2.0 공통' 같은 이름이
    두 줄로 넘어가 타일 높이가 서로 어긋난다. */
 .stat__value--text {
-  font-size: var(--font-heading6);
+  font-size: var(--font-heading7);
   min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 담당자별 건수처럼 값이 여러 항목인 칸. 큰 숫자와 같은 자리에 놓이지만
+   한 줄에 셋을 담아야 하므로 본문 크기를 쓴다. */
+.stat__list {
+  min-width: 0;
+  line-height: 1.3;
+  font-size: var(--font-body4);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-basic);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -319,53 +334,9 @@ textarea {
 
 .stat__foot {
   margin: 0;
+  line-height: 1.3;
   font-size: var(--font-body6);
   color: var(--color-text-subtler);
-}
-
-/* 담당자별 건수 — 이름 / 막대 / 건수 세 칸을 맞춰 세운다. 막대 길이는 1위를
-   100% 로 본 상대값이므로 서로 비교하는 용도이고 절대량은 오른쪽 숫자로 읽는다. */
-.bars {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: var(--gap-3);
-}
-
-.bars__row {
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) 28px;
-  align-items: center;
-  gap: var(--gap-4);
-  font-size: var(--font-body5);
-  color: var(--color-text-basic);
-}
-
-.bars__name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.bars__track {
-  /* .meter 와 같은 두께를 쓴다. 같은 뜻의 막대가 두 군데 있으면 굵기가 같아야 한다. */
-  height: var(--size-1);
-  border-radius: var(--radius-max);
-  background: var(--color-element-subtler);
-  overflow: hidden;
-}
-
-.bars__fill {
-  height: 100%;
-  border-radius: var(--radius-max);
-  background: var(--color-element-primary);
-}
-
-.bars__count {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-subtle);
 }
 
 .meter {
@@ -388,7 +359,9 @@ textarea {
 .content {
   display: flex;
   flex-direction: column;
-  gap: var(--gap-8);
+  /* 대시보드와 표 사이 간격. 표는 남는 높이를 전부 쓰므로 이 값이 곧 보이는
+     행 수를 정한다 (1440x900 에서 20px 이면 20행, 24px 이면 19행). */
+  gap: var(--gap-7);
   flex: 1;
   min-height: 0;
 }

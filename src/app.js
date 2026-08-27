@@ -1037,43 +1037,21 @@
         ? "진행 중인 요청에 요청일이 없습니다"
         : "진행 중인 요청이 없습니다";
 
-    renderOwnerBars(s);
+    renderOwnerLine(s);
   }
 
-  /** 담당자별 건수 상위 3명. 막대는 1위를 100% 로 본 상대값이다. */
-  function renderOwnerBars(s) {
-    const list = document.getElementById("req-owners");
-    const topOwners = s.owners.slice(0, 3);
-    const max = topOwners[0]?.[1] ?? 0;
-    list.replaceChildren(
-      ...topOwners.map(([name, count]) => {
-        const li = document.createElement("li");
-        li.className = "bars__row";
-
-        const label = document.createElement("span");
-        label.className = "bars__name";
-        label.textContent = name;
-        label.title = name;
-
-        const track = document.createElement("div");
-        track.className = "bars__track";
-        const fill = document.createElement("div");
-        fill.className = "bars__fill";
-        fill.style.width = `${max ? Math.round((count / max) * 100) : 0}%`;
-        track.append(fill);
-
-        const value = document.createElement("span");
-        value.className = "bars__count";
-        value.textContent = count;
-
-        li.append(label, track, value);
-        return li;
-      }),
-    );
-    list.title = s.owners.length
+  /** 담당자별 건수 — 상위 3명을 한 줄로. 전체 명단은 마우스를 올려 본다. */
+  function renderOwnerLine(s) {
+    const top = s.owners.slice(0, 3);
+    const line = document.getElementById("req-owners");
+    line.textContent = top.length
+      ? top.map(([name, count]) => `${name} ${count}`).join(" · ")
+      : "—";
+    line.title = s.owners.length
       ? s.owners.map(([name, n]) => `${name} ${n}건`).join("\n")
       : "";
-    const rest = s.owners.length - topOwners.length;
+
+    const rest = s.owners.length - top.length;
     $("req-owners-foot").textContent = s.owners.length
       ? [
           `담당자 ${s.owners.length}명`,
