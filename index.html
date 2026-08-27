@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 부서 업무 요청 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=fde6f2a5" />
+<link rel="stylesheet" href="src/styles.css?v=17c6e973" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -93,7 +93,7 @@
         </div>
       </article>
 
-      <article class="stat stat--figma">
+      <article class="stat">
         <p class="stat__label">Figma 서비스 수</p>
         <div class="stat__body">
           <strong class="stat__value" id="stat-figma">0</strong>
@@ -101,7 +101,7 @@
         </div>
       </article>
 
-      <article class="stat stat--xd">
+      <article class="stat">
         <p class="stat__label">XD 서비스 수</p>
         <div class="stat__body">
           <strong class="stat__value" id="stat-xd">0</strong>
@@ -109,7 +109,7 @@
         </div>
       </article>
 
-      <article class="stat stat--rate">
+      <article class="stat">
         <p class="stat__label">WHDS 적용률</p>
         <div class="stat__body">
           <strong class="stat__value" id="stat-rate">0%</strong>
@@ -118,6 +118,59 @@
           </div>
         </div>
         <p class="stat__foot" id="stat-rate-foot">적용 0 / 대상 0</p>
+      </article>
+    </section>
+
+    <!-- ── 대시보드 (업무 요청) ──────────────────────────── -->
+    <!-- 요청일 기준 건수와 가장 많이 손댄 서비스. 표 위에 있는 기간 보기와
+         무관하게 항상 전체 데이터를 집계한다 — 요약이 필터에 따라 흔들리면
+         지금 보는 숫자가 무엇인지 알기 어렵다. -->
+    <section class="stats stats--5" id="request-stats" aria-label="업무 요청 요약" hidden>
+      <!-- 건수만 헤더의 기간 선택(전체 · 주 · 월)을 따라간다. 나머지 타일은
+           항상 전체 데이터를 집계한다 — 요약이 전부 필터에 따라 흔들리면 지금
+           보는 숫자가 무엇인지 알기 어렵다. -->
+      <article class="stat">
+        <p class="stat__label">요청 건수</p>
+        <div class="stat__body">
+          <strong class="stat__value" id="req-count">0</strong>
+          <span class="stat__aside" id="req-count-delta">건</span>
+        </div>
+        <p class="stat__foot" id="req-count-foot"></p>
+      </article>
+
+      <!-- 완료일이 적힌 요청 / 전체 -->
+      <article class="stat">
+        <p class="stat__label">완료율</p>
+        <div class="stat__body">
+          <strong class="stat__value" id="req-done">0%</strong>
+          <div class="meter" role="img" aria-labelledby="req-done">
+            <div class="meter__fill" id="req-done-bar" style="width:0%"></div>
+          </div>
+        </div>
+        <p class="stat__foot" id="req-done-foot"></p>
+      </article>
+
+      <article class="stat">
+        <p class="stat__label">최다 수행 서비스</p>
+        <div class="stat__body">
+          <strong class="stat__value stat__value--text" id="req-top">—</strong>
+        </div>
+        <p class="stat__foot" id="req-top-foot"></p>
+      </article>
+
+      <!-- 완료일이 비어 있는 요청 중 요청일이 가장 오래된 것 -->
+      <article class="stat">
+        <p class="stat__label">최장 대기</p>
+        <div class="stat__body">
+          <strong class="stat__value" id="req-wait">—</strong>
+        </div>
+        <p class="stat__foot" id="req-wait-foot"></p>
+      </article>
+
+      <article class="stat">
+        <p class="stat__label">담당자별 건수</p>
+        <ul class="bars" id="req-owners"></ul>
+        <p class="stat__foot" id="req-owners-foot"></p>
       </article>
     </section>
 
@@ -168,6 +221,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=064a7061"></script>
+<script src="src/app.js?v=d85c418f"></script>
 </body>
 </html>

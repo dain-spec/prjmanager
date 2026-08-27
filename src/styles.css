@@ -261,8 +261,12 @@ textarea {
 .stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--gap-7);
+  gap: var(--gap-6);
 }
+
+/* 업무 요청 요약은 타일이 다섯 개다. 두 줄로 접히면 표가 그만큼 밀려 내려가므로
+   한 줄에 모두 세운다 (1352px 기준 타일 폭 254px). */
+.stats--5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 
 .stat {
   display: flex;
@@ -270,17 +274,12 @@ textarea {
   gap: var(--gap-4);
   padding: var(--padding-8) var(--padding-9);
   border: 1px solid var(--color-border-outline);
-  /* 좌측 컬러 인디케이터 */
-  border-left: 4px solid var(--color-element-primary);
   border-radius: var(--radius-medium);
-  background: var(--color-surface-basic);
-  box-shadow: var(--shadow-level1);
+  /* 라이트에서 #f7f8fa. 디자인 시스템에 #fafafa 인 표면 토큰이 없어 가장 가까운
+     표면 토큰을 쓴다(3 단위 차이). 원시 팔레트의 --color-gray-25 가 #fafafa 지만
+     다크 값이 없어 다크 모드에서 흰 카드가 된다. */
+  background: var(--color-surface-subtler);
 }
-
-.stat--total { border-left-color: var(--color-element-primary); }
-.stat--figma { border-left-color: var(--color-primary-300); }
-.stat--xd    { border-left-color: var(--color-secondary-400); }
-.stat--rate  { border-left-color: var(--color-positive-400); }
 
 .stat__label {
   margin: 0;
@@ -303,6 +302,16 @@ textarea {
 }
 .stat--total .stat__value { color: var(--color-text-primary); }
 
+/* 값이 숫자가 아니라 서비스명일 때. 28px 로는 'WEHAGO Web 2.0 공통' 같은 이름이
+   두 줄로 넘어가 타일 높이가 서로 어긋난다. */
+.stat__value--text {
+  font-size: var(--font-heading6);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .stat__aside {
   font-size: var(--font-body5);
   color: var(--color-text-subtler);
@@ -312,6 +321,51 @@ textarea {
   margin: 0;
   font-size: var(--font-body6);
   color: var(--color-text-subtler);
+}
+
+/* 담당자별 건수 — 이름 / 막대 / 건수 세 칸을 맞춰 세운다. 막대 길이는 1위를
+   100% 로 본 상대값이므로 서로 비교하는 용도이고 절대량은 오른쪽 숫자로 읽는다. */
+.bars {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--gap-3);
+}
+
+.bars__row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: var(--gap-4);
+  font-size: var(--font-body5);
+  color: var(--color-text-basic);
+}
+
+.bars__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bars__track {
+  /* .meter 와 같은 두께를 쓴다. 같은 뜻의 막대가 두 군데 있으면 굵기가 같아야 한다. */
+  height: var(--size-1);
+  border-radius: var(--radius-max);
+  background: var(--color-element-subtler);
+  overflow: hidden;
+}
+
+.bars__fill {
+  height: 100%;
+  border-radius: var(--radius-max);
+  background: var(--color-element-primary);
+}
+
+.bars__count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-subtle);
 }
 
 .meter {

@@ -313,6 +313,8 @@
       order: { key: "requested", dir: "desc" },
       // 요청일 기준으로 한 주 / 한 달만 보는 기간 보기를 쓴다.
       period: true,
+      // 표 위에 요약 대시보드를 띄운다.
+      dashboard: true,
       columns: REQUEST_COLUMNS,
       seed: [],
     },
@@ -359,6 +361,7 @@
     toast: $("toast"),
     tabs: $("tabs"),
     stats: $("stats"),
+    requestStats: $("request-stats"),
     period: $("period"),
     periodNav: $("period-nav"),
     periodLabel: $("period-label"),
@@ -544,7 +547,7 @@
       tab.setAttribute("aria-selected", String(tab.dataset.view === view.id));
     }
     els.search.placeholder = view.searchHint;
-    els.stats.hidden = true; // 대시보드는 추후 제공 예정
+    els.stats.hidden = true; // 파일 현황 대시보드는 추후 제공 예정
     buildHead();
     render();
   }
@@ -757,12 +760,12 @@
     return Boolean(view.period) && period.unit !== "all";
   }
 
-  /** 지금 보고 있는 기간의 첫날과 끝날. 전체 보기면 null. */
-  function periodRange() {
-    if (!periodActive()) return null;
-    if (period.unit === "week") {
+  /** 이번 주 / 이번 달에서 offset 만큼 옮긴 기간의 첫날과 끝날.
+      기간 보기와 대시보드가 같은 계산을 쓰도록 한 곳에 둔다. */
+  function rangeOf(unit, offset) {
+    if (unit === "week") {
       const start = mondayOf(today());
-      start.setDate(start.getDate() + period.offset * 7);
+      start.setDate(start.getDate() + offset * 7);
       const end = new Date(start);
       end.setDate(end.getDate() + 6);
       return { start, end };
@@ -770,18 +773,37 @@
     // 다음 달 0 일 = 이번 달 마지막 날. 연도 넘김도 Date 가 알아서 처리한다.
     const t = today();
     return {
-      start: new Date(t.getFullYear(), t.getMonth() + period.offset, 1),
-      end: new Date(t.getFullYear(), t.getMonth() + period.offset + 1, 0),
+      start: new Date(t.getFullYear(), t.getMonth() + offset, 1),
+      end: new Date(t.getFullYear(), t.getMonth() + offset + 1, 0),
     };
   }
 
-  function periodText({ start, end }) {
-    if (period.unit === "month") return `${start.getFullYear()}년 ${start.getMonth() + 1}월`;
-    // 같은 달 안이면 끝날은 '일' 만 적어 문구를 짧게 유지한다.
+  /** 지금 보고 있는 기간. 전체 보기면 null. */
+  function periodRange() {
+    return periodActive() ? rangeOf(period.unit, period.offset) : null;
+  }
+
+  /** 그 기간에 든 날짜만 센다. 날짜는 오름차순 문자열 배열이어야 한다. */
+  function countIn(dates, { start, end }) {
+    const from = iso(start);
+    const to = iso(end);
+    return dates.filter((d) => d >= from && d <= to).length;
+  }
+
+  function monthText({ start }) {
+    return `${start.getFullYear()}년 ${start.getMonth() + 1}월`;
+  }
+
+  /** '2026년 8월 24일 ~ 30일'. 달을 넘기면 끝날에도 월을 적는다. */
+  function weekText({ start, end }) {
     const tail = start.getMonth() === end.getMonth()
       ? `${end.getDate()}일`
       : `${end.getMonth() + 1}월 ${end.getDate()}일`;
     return `${start.getFullYear()}년 ${start.getMonth() + 1}월 ${start.getDate()}일 ~ ${tail}`;
+  }
+
+  function periodText(range) {
+    return period.unit === "month" ? monthText(range) : weekText(range);
   }
 
   /** 그 날짜가 보이려면 offset 이 얼마여야 하는지. */
@@ -873,6 +895,193 @@
 
   /** 마지막으로 그린 행 수. 기간 라벨의 '· N건' 이 이 값을 쓴다. */
   let shownCount = 0;
+
+  /** 두 날짜(YYYY-MM-DD) 사이의 일수. */
+  function daysBetween(from, to) {
+    const [y1, m1, d1] = from.split("-").map(Number);
+    const [y2, m2, d2] = to.split("-").map(Number);
+    // 서머타임으로 한 시간이 밀릴 수 있어 반올림한다.
+    return Math.round((new Date(y2, m2 - 1, d2) - new Date(y1, m1 - 1, d1)) / 86400000);
+  }
+
+  /* 업무 요청 요약. 기간 보기와 달리 항상 전체 데이터를 집계한다 — 요약 숫자가
+     표의 필터에 따라 흔들리면 지금 보는 값이 무엇인지 알기 어렵다. */
+  function requestSummary(list) {
+    // 요청일이 없는 행은 주간·월간에서 셀 수 없다. 몇 건인지는 따로 알려 준다.
+    const dates = list
+      .map((row) => String(row.requested ?? "").slice(0, 10))
+      .filter(Boolean)
+      .sort();
+
+    // 서비스명별 건수. 비워 둔 행은 어떤 서비스인지 알 수 없어 순위에서 뺀다.
+    const byService = new Map();
+    for (const row of list) {
+      const name = String(row.service ?? "").trim();
+      if (!name) continue;
+      byService.set(name, (byService.get(name) ?? 0) + 1);
+    }
+
+    /* 담당자별 건수. 한 요청에 여러 명이 붙으면 각자 한 건으로 센다 — 합계가
+       요청 수와 달라지지만, 여기서 보려는 것은 '누가 얼마나 맡고 있나' 다. */
+    const byOwner = new Map();
+    let ownerless = 0;
+    for (const row of list) {
+      const owners = row.owners ?? [];
+      if (!owners.length) ownerless += 1;
+      for (const name of owners) byOwner.set(name, (byOwner.get(name) ?? 0) + 1);
+    }
+
+    // 완료일이 적혀 있으면 완료, 비어 있으면 진행 중으로 본다.
+    const done = list.filter((row) => String(row.done ?? "").trim()).length;
+
+    /* 가장 오래 기다린 요청 — 완료일이 없는 것 중 요청일이 가장 이른 것.
+       요청일이 없으면 며칠 걸렸는지 셀 수 없어 제외한다. */
+    const now = iso(today());
+    const waiting = list
+      .filter((row) => !String(row.done ?? "").trim() && String(row.requested ?? "").slice(0, 10))
+      .sort((a, b) => a.requested.localeCompare(b.requested))[0];
+
+    /* 건수는 헤더에서 고른 기간을 따른다. 전체 보기면 셀 기간이 없으므로
+       전체 건수를 그대로 쓴다. */
+    const range = periodRange();
+    const selected = range
+      ? {
+          range,
+          count: countIn(dates, range),
+          prev: countIn(dates, rangeOf(period.unit, period.offset - 1)),
+        }
+      : { range: null, count: list.length, prev: null };
+
+    return {
+      total: list.length,
+      undated: list.length - dates.length,
+      first: dates[0] ?? "",
+      last: dates[dates.length - 1] ?? "",
+      selected,
+      // 건수 내림차순, 같으면 가나다순.
+      ranking: [...byService.entries()].sort(
+        (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ko"),
+      ),
+      owners: [...byOwner.entries()].sort(
+        (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ko"),
+      ),
+      ownerless,
+      done,
+      pending: list.length - done,
+      waiting: waiting ? { row: waiting, days: daysBetween(waiting.requested.slice(0, 10), now) } : null,
+    };
+  }
+
+  /* 요청 건수 타일. 헤더의 기간 선택을 그대로 따라간다 — 표에 보이는 행과
+     타일의 숫자가 어긋나면 어느 쪽이 맞는지 헷갈린다. */
+  function renderCountTile(s) {
+    const { range, count, prev } = s.selected;
+    $("req-count").textContent = count;
+
+    if (!range) {
+      // 전체 보기 — 견줄 직전 기간이 없으므로 증감 대신 단위만 적는다.
+      $("req-count-delta").textContent = "건";
+      $("req-count-foot").textContent = s.total === 0
+        ? "아직 등록된 요청이 없습니다"
+        : s.undated
+          ? `전체 기간 · 요청일 미입력 ${s.undated}건`
+          : `전체 기간 · ${s.first} ~ ${s.last}`;
+      return;
+    }
+
+    $("req-count-delta").textContent = deltaText(count, prev) || "건";
+    const unit = period.unit === "week" ? "주" : "달";
+    $("req-count-foot").textContent =
+      `${periodText(range)} · 지난 ${unit} ${prev}건`;
+  }
+
+  /** 지난 기간 대비 증감. 변화가 없으면 빈 문자열. */
+  function deltaText(count, prev) {
+    const diff = count - prev;
+    if (!diff) return "";
+    return `${diff > 0 ? "+" : "\u2212"}${Math.abs(diff)}`;
+  }
+
+  function renderRequestStats() {
+    els.requestStats.hidden = !view.dashboard;
+    if (!view.dashboard) return;
+    const s = requestSummary(rows);
+
+    renderCountTile(s);
+
+    // 완료율
+    const rate = s.total ? Math.round((s.done / s.total) * 100) : 0;
+    $("req-done").textContent = `${rate}%`;
+    $("req-done-bar").style.width = `${rate}%`;
+    $("req-done-foot").textContent = s.total
+      ? `완료 ${s.done} / 진행 중 ${s.pending}건`
+      : "";
+
+    // 최다 수행 서비스
+    const [top, second] = s.ranking;
+    $("req-top").textContent = top ? top[0] : "—";
+    $("req-top").title = top
+      // 5위까지는 마우스를 올려 볼 수 있게 둔다. 타일에는 한 줄만 들어간다.
+      ? s.ranking.slice(0, 5).map(([name, n], i) => `${i + 1}. ${name} ${n}건`).join("\n")
+      : "";
+    const share = top && s.total ? Math.round((top[1] / s.total) * 100) : 0;
+    $("req-top-foot").textContent = top
+      ? `${top[1]}건 · 전체의 ${share}%${second ? ` · 2위 ${second[0]} ${second[1]}건` : ""}`
+      : "서비스명이 적힌 요청이 없습니다";
+
+    // 최장 대기
+    $("req-wait").textContent = s.waiting ? `${s.waiting.days}일` : "—";
+    $("req-wait-foot").textContent = s.waiting
+      ? `${s.waiting.row.service?.trim() || rowLabel(s.waiting.row)} · ${s.waiting.row.requested} 요청`
+      : s.pending
+        ? "진행 중인 요청에 요청일이 없습니다"
+        : "진행 중인 요청이 없습니다";
+
+    renderOwnerBars(s);
+  }
+
+  /** 담당자별 건수 상위 3명. 막대는 1위를 100% 로 본 상대값이다. */
+  function renderOwnerBars(s) {
+    const list = document.getElementById("req-owners");
+    const topOwners = s.owners.slice(0, 3);
+    const max = topOwners[0]?.[1] ?? 0;
+    list.replaceChildren(
+      ...topOwners.map(([name, count]) => {
+        const li = document.createElement("li");
+        li.className = "bars__row";
+
+        const label = document.createElement("span");
+        label.className = "bars__name";
+        label.textContent = name;
+        label.title = name;
+
+        const track = document.createElement("div");
+        track.className = "bars__track";
+        const fill = document.createElement("div");
+        fill.className = "bars__fill";
+        fill.style.width = `${max ? Math.round((count / max) * 100) : 0}%`;
+        track.append(fill);
+
+        const value = document.createElement("span");
+        value.className = "bars__count";
+        value.textContent = count;
+
+        li.append(label, track, value);
+        return li;
+      }),
+    );
+    list.title = s.owners.length
+      ? s.owners.map(([name, n]) => `${name} ${n}건`).join("\n")
+      : "";
+    const rest = s.owners.length - topOwners.length;
+    $("req-owners-foot").textContent = s.owners.length
+      ? [
+          `담당자 ${s.owners.length}명`,
+          rest > 0 ? `그 외 ${rest}명` : "",
+          s.ownerless ? `미지정 ${s.ownerless}건` : "",
+        ].filter(Boolean).join(" · ")
+      : "담당자가 지정된 요청이 없습니다";
+  }
 
   function renderTable() {
     const list = visibleRows();
@@ -1364,6 +1573,7 @@
 
   function render() {
     renderStats();
+    renderRequestStats();
     renderTable();
     renderPeriod();
     syncSelectionUi();
