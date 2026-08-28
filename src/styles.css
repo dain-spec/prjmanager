@@ -843,6 +843,12 @@ body[data-col-resizing] {
 .badge--partial { background: var(--color-pending-50);   color: var(--color-orange-700); }
 .badge--neutral  { background: var(--color-surface-subtle); color: var(--color-text-subtle); }
 
+/* 업무 요청 진행상태. 대기는 아직 아무 일도 없다는 뜻이라 색을 쓰지 않는다. */
+.badge--waiting  { background: var(--color-surface-subtle); color: var(--color-text-subtle); }
+.badge--progress { background: var(--color-primary-50);     color: var(--color-blue-700); }
+.badge--hold     { background: var(--color-pending-50);     color: var(--color-orange-700); }
+.badge--done     { background: var(--color-positive-100);   color: var(--color-green-600); }
+
 .empty {
   display: flex;
   flex-direction: column;
@@ -949,6 +955,25 @@ textarea.input--cell {
   right: 0;
   border-top: 6px solid var(--color-element-primary);
   border-left: 6px solid transparent;
+}
+
+/* 메모 툴팁. 브라우저 기본 title 보다 바로 뜨고 줄바꿈이 그대로 보인다.
+   pointer-events: none 이라 툴팁이 마우스를 가로채 깜박이는 일이 없다. */
+.tip {
+  position: fixed;
+  z-index: 50;
+  max-width: 280px;
+  padding: var(--padding-4) var(--padding-5);
+  border-radius: var(--radius-xxsmall);
+  background: var(--color-surface-snackbar);
+  color: var(--color-text-basic-inverse);
+  font-size: var(--font-body5);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  box-shadow: var(--shadow-level2);
+  pointer-events: none;
 }
 
 .memo {

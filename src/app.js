@@ -83,6 +83,23 @@
     none: "해당 없음",
   };
 
+  /** 업무 요청 진행상태. 완료일만으로는 '대기' 와 '진행중' 을 가를 수 없고,
+      '보류' 는 날짜로 아예 표현되지 않아 별도 컬럼으로 둔다. */
+  const STATUS_LABEL = {
+    waiting: "대기",
+    progress: "진행중",
+    hold: "보류",
+    done: "완료",
+  };
+
+  /** 진행상태 → 배지 종류. 색으로 한눈에 가른다. */
+  const STATUS_BADGE = {
+    waiting: "waiting",
+    progress: "progress",
+    hold: "hold",
+    done: "done",
+  };
+
   /** 적용률 계산 대상 — '해당 없음'은 분모에서 제외한다. */
   const RATE_TARGET = ["applied", "missing", "partial"];
 
@@ -145,7 +162,10 @@
       sortable: true, defaultToday: true },
     { key: "requester", header: "요청자", width: "72px", type: "text", sortable: true,
       placeholder: "요청자" },
-    { key: "content", header: "요청내용", width: "300px", type: "note", required: true,
+    /* 비고와 마찬가지로 이 폭은 목표값이 아니라 하한이다. growToFill() 이 남는
+       공간을 준다. 하한이 남는 공간보다 크면 표가 컨테이너를 넘어 가로 스크롤이
+       생기므로, 진행상태 컬럼까지 넣은 뒤 남는 286px 보다 낮게 잡는다. */
+    { key: "content", header: "요청내용", width: "280px", type: "note", required: true,
       grow: true, placeholder: "요청내용 (Shift+Enter 로 줄 추가)" },
     { key: "message", header: "쪽지", width: "52px", type: "link", align: "center",
       placeholder: "쪽지 링크" },
@@ -159,9 +179,22 @@
     { key: "zeplin", header: "zep", width: "52px", type: "link", align: "center",
       placeholder: "제플린 주소" },
     { key: "owners", header: "담당자", width: "90px", type: "owners", align: "center", sortable: true },
+    /* 헤더 '진행상태' 52 + 좌우 패딩 24 = 76, '진행중' 드롭다운이 84 를 쓴다. */
+    { key: "status", header: "진행상태", width: "84px", type: "select", align: "center",
+      sortable: true, options: Object.entries(STATUS_LABEL), labels: STATUS_LABEL,
+      badge: (value) => STATUS_BADGE[value] ?? null,
+      // 가나다순이 아니라 '손볼 것이 남은 순서' 로 정렬한다.
+      rank: { waiting: 0, progress: 1, hold: 2, done: 3 } },
     // 네이티브 날짜 입력(달력 아이콘 포함)이 들어가려면 116px 가 필요하다.
     { key: "done", header: "완료일", width: "116px", type: "date", align: "center", sortable: true },
   ];
+
+  /* 진행상태 컬럼이 나중에 생겼다. 완료일이 적힌 행은 완료로, 나머지는 진행중으로
+     본다 — 손대고 있던 요청을 '대기' 로 되돌리면 사실과 어긋난다. */
+  function migrateRequestRow(row) {
+    if (row.status) return row;
+    return { ...row, status: String(row.done ?? "").trim() ? "done" : "progress" };
+  }
 
   /* 시드 데이터는 팀 현황표(프로젝트/유형/주소링크/공통 반영 버전/반영 상태/작업자/
      Figma 이관 여부/비고)를 이 테이블의 컬럼에 매핑한 것이다. 매핑 규칙:
@@ -311,6 +344,7 @@
       /* 저장 순서를 요청일 늦은 것부터로 맞춘다. 최근 요청이 지금 손볼
          일이므로 위에 둔다. 같은 날짜끼리는 넣은 순서를 지킨다. */
       order: { key: "requested", dir: "desc" },
+      migrate: migrateRequestRow,
       // 요청일 기준으로 한 주 / 한 달만 보는 기간 보기를 쓴다.
       period: true,
       // 표 위에 요약 대시보드를 띄운다.
@@ -950,14 +984,16 @@
       for (const name of owners) byOwner.set(name, (byOwner.get(name) ?? 0) + 1);
     }
 
-    // 완료일이 적혀 있으면 완료, 비어 있으면 진행 중으로 본다.
-    const done = list.filter((row) => String(row.done ?? "").trim()).length;
+    /* 완료 판정은 진행상태 컬럼을 따른다. 완료일 유무로 보면 '보류' 를 가려낼
+       수 없고, 상태와 날짜가 어긋날 때 어느 쪽이 맞는지 알 수 없다. */
+    const isDone = (row) => row.status === "done";
+    const done = list.filter(isDone).length;
 
-    /* 가장 오래 기다린 요청 — 완료일이 없는 것 중 요청일이 가장 이른 것.
-       요청일이 없으면 며칠 걸렸는지 셀 수 없어 제외한다. */
+    /* 가장 오래 기다린 요청 — 아직 완료가 아닌 것 중 요청일이 가장 이른 것.
+       보류도 여기 들어간다. 요청일이 없으면 며칠 걸렸는지 셀 수 없어 제외한다. */
     const now = iso(today());
     const waiting = list
-      .filter((row) => !String(row.done ?? "").trim() && String(row.requested ?? "").slice(0, 10))
+      .filter((row) => !isDone(row) && String(row.requested ?? "").slice(0, 10))
       .sort((a, b) => a.requested.localeCompare(b.requested))[0];
 
     /* 건수는 헤더에서 고른 기간을 따른다. 전체 보기면 셀 기간이 없으므로
@@ -1142,7 +1178,11 @@
     const memo = memoOf(row, col.key);
     if (memo) {
       td.dataset.memo = "true";
-      addTitle(td, `메모: ${memo}`);
+      /* 메모는 커스텀 툴팁으로 보여 준다. 네이티브 title 을 남겨 두면 잠시 뒤
+         브라우저 툴팁이 겹쳐 뜨므로, 원래 title 에 있던 내용까지 한 상자에
+         모으고 title 은 지운다. */
+      td.dataset.tip = td.title ? `${td.title}\n\n메모: ${memo}` : memo;
+      td.removeAttribute("title");
     }
     return td;
   }
@@ -2104,6 +2144,7 @@
     const id = tr?.querySelector("[data-check]")?.dataset.check;
     if (!id) return;
     event.preventDefault();
+    hideTip();
     menuRowId = id;
     menuColKey = event.target.closest("td")?.dataset.col ?? null;
 
@@ -2162,6 +2203,48 @@
     menuColKey = null;
   }
 
+  // ── 메모 툴팁 ─────────────────────────────────────────
+  const tip = $("memo-tip");
+  let tipTimer = 0;
+
+  /* 살짝 늦게 띄운다. 여러 행 위를 지나갈 때마다 즉시 뜨면 화면이 깜박인다. */
+  const TIP_DELAY = 140;
+
+  function showTip(td) {
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(() => {
+      tip.textContent = td.dataset.tip ?? "";
+      tip.hidden = false;
+      placeTip(td);
+    }, TIP_DELAY);
+  }
+
+  function hideTip() {
+    clearTimeout(tipTimer);
+    tip.hidden = true;
+  }
+
+  /** 칸 왼쪽 아래에 붙이고, 화면을 넘으면 안쪽으로 · 위로 접는다. */
+  function placeTip(td) {
+    const box = tip.getBoundingClientRect();
+    const cell = td.getBoundingClientRect();
+    const left = Math.max(8, Math.min(cell.left, innerWidth - box.width - 8));
+    const below = cell.bottom + 4;
+    const top = below + box.height > innerHeight - 8 ? cell.top - box.height - 4 : below;
+    tip.style.left = `${left}px`;
+    tip.style.top = `${Math.max(8, top)}px`;
+  }
+
+  els.tbody.addEventListener("mouseover", (event) => {
+    const td = event.target.closest("td[data-tip]");
+    if (td) showTip(td);
+    else hideTip();
+  });
+  els.tbody.addEventListener("mouseleave", hideTip);
+  // 표가 움직이거나 다른 팝업이 열리면 툴팁만 남아 떠 있게 된다.
+  tableWrap.addEventListener("scroll", hideTip);
+  addEventListener("resize", hideTip);
+
   // ── 칸 메모 ───────────────────────────────────────────
   const memoBox = $("memo-editor");
   const memoInput = $("memo-input");
@@ -2178,6 +2261,7 @@
     memoInput.value = memoOf(row, colKey);
     $("memo-delete").hidden = !memoInput.value;
 
+    hideTip();
     memoBox.hidden = false;
     placeMemo(anchor);
     memoInput.focus();

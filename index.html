@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 부서 업무 요청 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=a82baa0e" />
+<link rel="stylesheet" href="src/styles.css?v=3ec12ef8" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -237,6 +237,9 @@
   <button type="button" class="menu__item menu__item--danger" role="menuitem" data-menu="delete">삭제</button>
 </div>
 
+<!-- 메모 툴팁 — 마우스를 올린 칸 아래에 붙는다. -->
+<div class="tip" id="memo-tip" role="tooltip" hidden></div>
+
 <!-- 칸 메모 편집 — 표는 overflow: hidden 이라 body 에 두고 위치를 계산한다. -->
 <div class="memo" id="memo-editor" hidden>
   <p class="memo__head" id="memo-head"></p>
@@ -252,6 +255,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=d232d443"></script>
+<script src="src/app.js?v=ed54e568"></script>
 </body>
 </html>
