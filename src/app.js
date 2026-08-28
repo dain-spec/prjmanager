@@ -164,7 +164,7 @@
       placeholder: "요청자" },
     /* 비고와 마찬가지로 이 폭은 목표값이 아니라 하한이다. growToFill() 이 남는
        공간을 준다. 하한이 남는 공간보다 크면 표가 컨테이너를 넘어 가로 스크롤이
-       생기므로, 진행상태 컬럼까지 넣은 뒤 남는 286px 보다 낮게 잡는다. */
+       생기므로, 남는 폭(1352px 컨테이너에서 330px)보다 낮게 잡는다. */
     { key: "content", header: "요청내용", width: "280px", type: "note", required: true,
       grow: true, placeholder: "요청내용 (Shift+Enter 로 줄 추가)" },
     { key: "message", header: "쪽지", width: "52px", type: "link", align: "center",
@@ -179,8 +179,9 @@
     { key: "zeplin", header: "zep", width: "52px", type: "link", align: "center",
       placeholder: "제플린 주소" },
     { key: "owners", header: "담당자", width: "90px", type: "owners", align: "center", sortable: true },
-    /* 헤더 '진행상태' 52 + 좌우 패딩 24 = 76, '진행중' 드롭다운이 84 를 쓴다. */
-    { key: "status", header: "진행상태", width: "84px", type: "select", align: "center",
+    /* 폭의 하한은 헤더('상태' 35)가 아니라 편집 드롭다운이 정한다 — '진행중'
+       드롭다운이 59px 이라 좌우 패딩 24 를 더해 83px 이 하한이다. */
+    { key: "status", header: "상태", width: "84px", type: "select", align: "center",
       sortable: true, options: Object.entries(STATUS_LABEL), labels: STATUS_LABEL,
       badge: (value) => STATUS_BADGE[value] ?? null,
       // 가나다순이 아니라 '손볼 것이 남은 순서' 로 정렬한다.
@@ -374,9 +375,6 @@
   let period = { unit: "all", offset: 0 };
   let sort = { key: null, dir: "asc" };
 
-  /** 체크박스로 선택된 행 id 집합 */
-  const selected = new Set();
-
   /** 편집 중인 행 id (신규는 NEW_ID). null 이면 편집 중이 아니다. */
   let editingId = null;
   /** 편집 중 입력값. 입력 즉시 여기에 반영되므로 재렌더링에도 값이 남는다. */
@@ -390,7 +388,6 @@
     empty: $("empty"),
     emptyText: $("empty-text"),
     addFirst: $("btn-add-first"),
-    selectionCount: $("selection-count"),
     search: $("search"),
     toast: $("toast"),
     tabs: $("tabs"),
@@ -403,14 +400,6 @@
     thead: document.querySelector(".table thead"),
     headRow: document.querySelector(".table thead tr"),
   };
-
-  /* 전체 선택 체크박스는 헤더를 다시 그릴 때마다 새 th 로 옮겨 붙이므로
-     한 번만 만들어 두고 재사용한다(리스너도 한 번만 붙는다). */
-  const checkAll = document.createElement("input");
-  checkAll.type = "checkbox";
-  checkAll.className = "check";
-  checkAll.id = "check-all";
-  checkAll.setAttribute("aria-label", "전체 선택");
 
   function uid() {
     return `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
@@ -567,7 +556,6 @@
     editingId = null;
     draft = null;
     insertAfterId = null;
-    selected.clear();
     filters = {};
     period = { unit: "all", offset: 0 };
     sort = { key: null, dir: "asc" };
@@ -599,7 +587,6 @@
      가로로 스크롤된다. */
   function layout() {
     return [
-      { key: "__check", width: "44px", structural: "check" },
       { key: "__no", width: "44px", header: "No", align: "center", structural: "no" },
       ...view.columns,
       { key: "__fill", structural: "fill" },
@@ -633,13 +620,10 @@
         }
         th.scope = "col";
         const classes = [];
-        if (col.structural === "check") classes.push("cell--check");
         if (col.align === "center") classes.push("cell--center");
         if (classes.length) th.className = classes.join(" ");
 
-        if (col.structural === "check") {
-          th.append(checkAll);
-        } else if (col.sortable) {
+        if (col.sortable) {
           const btn = document.createElement("button");
           btn.type = "button";
           btn.className = "th-sort";
@@ -1158,7 +1142,7 @@
           : `조건에 맞는 ${view.noun}이 없습니다. 검색어를 조정해 보세요.`;
       els.addFirst.hidden = !noData;
     }
-    syncSelectionUi();
+    syncToolbar();
     /* 행 수가 달라지면 세로 스크롤바가 생기고 사라져 쓸 수 있는 폭도 달라진다.
        행을 다 그린 뒤에 계산해야 값이 맞는다. */
     growToFill();
@@ -1225,13 +1209,14 @@
 
   function displayRow(row, no) {
     const tr = document.createElement("tr");
+    /* 우클릭 메뉴 · hover 행 추가 · 메모 상자가 이 행이 어느 행인지 알아야 한다.
+       예전에는 체크박스의 data-check 에서 읽었고, 지금은 행 자체에 심는다. */
+    tr.dataset.id = row.id;
     tr.append(
-      checkboxCell(row.id),
       handleCell(no),
       ...view.columns.map((col) => displayCell(row, col)),
       fillCell(),
     );
-    if (selected.has(row.id)) tr.dataset.selected = "true";
     return tr;
   }
 
@@ -1261,8 +1246,6 @@
     const tr = document.createElement("tr");
     tr.dataset.editing = "true";
     tr.append(
-      // 편집 중인 행은 선택 대상이 아니므로 체크박스 없이 칸만 맞춘다.
-      cell("", "cell--check"),
       cell(editingId === NEW_ID ? "신규" : String(no), "cell--no cell--center"),
       ...view.columns.map(editCell),
       fillCell(),
@@ -1327,20 +1310,6 @@
     save();
     render();
     toast(`'${rowLabel(moved)}' 순서를 옮겼습니다.`);
-  }
-
-  /** 선택 체크박스 셀 */
-  function checkboxCell(id) {
-    const td = document.createElement("td");
-    td.className = "cell--check";
-    const box = document.createElement("input");
-    box.type = "checkbox";
-    box.className = "check";
-    box.checked = selected.has(id);
-    box.dataset.check = id;
-    box.setAttribute("aria-label", "행 선택");
-    td.append(box);
-    return td;
   }
 
   /** Figma URL 에서 사람이 식별할 수 있는 부분만 뽑는다.
@@ -1623,7 +1592,7 @@
     renderRequestStats();
     renderTable();
     renderPeriod();
-    syncSelectionUi();
+    syncToolbar();
   }
 
   // ── 편집 동작 ───────────────────────────────────────────
@@ -1748,64 +1717,18 @@
       editingId = null;
       draft = null;
     }
-    for (const id of ids) selected.delete(id);
     const count = targets.length;
     save();
     render();
     toast(`${count}건을 삭제했습니다.`);
   }
 
-  function removeSelected() {
-    removeRows(new Set(selected));
-  }
-
-  /** 체크박스 상태 → selected 집합 */
-  function toggleSelect(id, checked) {
-    if (checked) selected.add(id);
-    else selected.delete(id);
-    syncSelectionUi();
-  }
-
-  /** 헤더 체크박스 — 현재 목록(필터·검색 결과)만 전체 선택/해제한다. */
-  function toggleSelectAll(checked) {
-    const ids = visibleRows().map((r) => r.id);
-    for (const id of ids) {
-      if (checked) selected.add(id);
-      else selected.delete(id);
-    }
-    for (const box of els.tbody.querySelectorAll("[data-check]")) {
-      box.checked = selected.has(box.dataset.check);
-      box.closest("tr").toggleAttribute("data-selected", box.checked);
-    }
-    syncSelectionUi();
-  }
-
-  /** 선택 표시(행 배경·헤더 체크박스)와 헤더 버튼을 현재 상태에 맞춘다. */
-  function syncSelectionUi() {
-    for (const box of els.tbody.querySelectorAll("[data-check]")) {
-      box.closest("tr").toggleAttribute("data-selected", box.checked);
-    }
-    const visible = visibleRows().map((r) => r.id);
-    const picked = visible.filter((id) => selected.has(id)).length;
-    checkAll.checked = visible.length > 0 && picked === visible.length;
-    // 일부만 선택된 상태는 indeterminate 로 표시한다.
-    checkAll.indeterminate = picked > 0 && picked < visible.length;
-    syncToolbar();
-  }
-
-  /** 헤더 버튼 표시 — 기본 / 선택 / 편집 세 가지 상태가 있다. */
+  /** 헤더 버튼 표시 — 편집 중일 때만 저장 · 취소를 낸다. */
   function syncToolbar() {
     const editing = editingId !== null;
-    const count = selected.size;
     const show = (el, on) => el.toggleAttribute("hidden", !on);
-
-    show(els.selectionCount, !editing && count > 0);
-    show($("btn-delete-selected"), !editing && count > 0);
-
     show($("btn-save"), editing);
     show($("btn-cancel"), editing);
-
-    els.selectionCount.textContent = `${count}개 선택`;
   }
 
   // ── CSV 내보내기 ────────────────────────────────────────
@@ -1956,7 +1879,7 @@
     // 편집 중이거나 정렬·검색 중이면 '이 행 아래' 가 모호하므로 내보내지 않는다.
     if (editingId !== null || !reorderable()) return hideInsert();
     const tr = event.target.closest("tr");
-    const id = tr?.querySelector("[data-check]")?.dataset.check;
+    const id = tr?.dataset.id;
     if (!id) return;
     keepInsert();
     insertAnchorId = id;
@@ -2141,7 +2064,7 @@
   els.tbody.addEventListener("contextmenu", (event) => {
     if (editingId !== null) return; // 편집 중에는 브라우저 기본 메뉴를 그대로 둔다
     const tr = event.target.closest("tr");
-    const id = tr?.querySelector("[data-check]")?.dataset.check;
+    const id = tr?.dataset.id;
     if (!id) return;
     event.preventDefault();
     hideTip();
@@ -2179,8 +2102,7 @@
     const id = menuRowId;
     const colKey = menuColKey;
     const anchor = colKey
-      ? els.tbody.querySelector(`[data-check="${id}"]`)?.closest("tr")
-          ?.querySelector(`td[data-col="${colKey}"]`)
+      ? els.tbody.querySelector(`tr[data-id="${id}"]`)?.querySelector(`td[data-col="${colKey}"]`)
       : null;
     closeRowMenu();
     if (!id) return;
@@ -2192,8 +2114,7 @@
     } else if (item.dataset.menu === "insert-below") {
       startCreate(id);
     } else if (item.dataset.menu === "delete") {
-      // 우클릭한 행이 선택에 포함돼 있으면 선택 전체를, 아니면 그 행만 삭제한다.
-      removeRows(selected.has(id) ? new Set(selected) : new Set([id]));
+      removeRows(new Set([id]));
     }
   });
 
@@ -2295,8 +2216,7 @@
     const { id, colKey } = memoTarget ?? {};
     if (!id || !colKey) return null;
     return els.tbody
-      .querySelector(`[data-check="${id}"]`)
-      ?.closest("tr")
+      .querySelector(`tr[data-id="${id}"]`)
       ?.querySelector(`td[data-col="${colKey}"]`);
   }
 
@@ -2377,14 +2297,6 @@
     if (field.name === "platform") syncLinkedPlaceholders();
   });
 
-  // 체크박스 선택
-  els.tbody.addEventListener("change", (event) => {
-    const box = event.target.closest("[data-check]");
-    if (box) toggleSelect(box.dataset.check, box.checked);
-  });
-
-  checkAll.addEventListener("change", (event) => toggleSelectAll(event.target.checked));
-
   // ── 행 순서 변경 (No 칸을 핸들로 드래그) ────────────────
   // HTML5 drag-and-drop 대신 마우스 이벤트로 구현한다. HTML5 DnD 는 브라우저가
   // 만드는 네이티브 드래그 제스처가 필요해 자동 검증이 불가능하고, 드래그 이미지·
@@ -2397,7 +2309,7 @@
     const handle = event.target.closest(".cell--no");
     if (!handle) return;
     const tr = handle.closest("tr");
-    dragId = tr?.querySelector("[data-check]")?.dataset.check ?? null;
+    dragId = tr?.dataset.id ?? null;
     if (!dragId) return;
     tr.dataset.dragging = "true";
     document.body.dataset.reordering = "true";
@@ -2416,7 +2328,7 @@
   document.addEventListener("mouseup", (event) => {
     if (!dragId) return;
     const tr = rowAt(event.clientY);
-    const targetId = tr?.querySelector("[data-check]")?.dataset.check;
+    const targetId = tr?.dataset.id;
     const after = tr?.dataset.drop === "after";
     const moved = dragId;
     endDrag();
@@ -2453,19 +2365,6 @@
     // 링크는 원래 동작(Figma 열기)을 유지한다
     if (event.target.closest("a")) return;
 
-    // 체크박스 칸은 선택 전용. 칸의 빈 영역을 눌러도 토글되게 한다.
-    const checkCell = event.target.closest(".cell--check");
-    if (checkCell) {
-      // 체크박스를 직접 누른 경우는 change 이벤트가 처리하므로 중복 토글을 막는다
-      if (event.target.closest("[data-check]")) return;
-      const box = checkCell.querySelector("[data-check]");
-      if (box && editingId === null) {
-        box.checked = !box.checked;
-        toggleSelect(box.dataset.check, box.checked);
-      }
-      return;
-    }
-
     // No 칸은 순서 변경 핸들이므로 편집 진입에서 제외한다.
     if (event.target.closest(".cell--no")) return;
 
@@ -2483,11 +2382,10 @@
     // 다른 행을 편집 중이면 먼저 저장한다. 저장이 실패하면(필수값 누락) 이동하지 않는다.
     if (editingId !== null && !commit()) return;
 
-    const id = tr.querySelector("[data-check]")?.dataset.check;
+    const id = tr.dataset.id;
     if (id) startEdit(id, [...tr.children].indexOf(td));
   });
 
-  $("btn-delete-selected").addEventListener("click", removeSelected);
   $("btn-save").addEventListener("click", commit);
   $("btn-cancel").addEventListener("click", cancelEdit);
 

@@ -480,15 +480,6 @@ textarea {
   overflow: hidden;
 }
 
-.page-head__selection {
-  margin: 0;
-  font-size: var(--font-body4);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
 
 /* 검색 — 헤더에서 버튼만 보이고, 누르면 입력칸이 왼쪽으로 펼쳐진다. */
 .search {
@@ -702,12 +693,6 @@ body[data-reordering] {
 }
 
 /* 선택 컬럼 — 체크박스만 들어가므로 좌우 패딩을 없애고 가운데 정렬한다. */
-.cell--check,
-.table thead th.cell--check {
-  padding-inline: 0;
-  text-align: center;
-}
-
 /* hover 한 행 왼쪽(표 바깥)에 떠 있는 행 추가 버튼.
    위치는 JS 가 행 좌표를 보고 계산한다(표 밖이라 CSS 만으로는 붙일 수 없다). */
 .row-insert {
@@ -733,20 +718,7 @@ body[data-reordering] {
   color: var(--color-text-basic);
 }
 
-.check {
-  width: var(--size-3);
-  height: var(--size-3);
-  margin: 0;
-  accent-color: var(--color-element-primary);
-  cursor: pointer;
-  vertical-align: middle;
-}
-
 /* 선택된 행. :hover 규칙보다 뒤에 와야 배경이 밀리지 않는다. */
-.table tbody tr[data-selected] td {
-  background: var(--color-action-select);
-}
-
 /* input/select 은 td 의 text-align 을 상속하지 않으므로 따로 지정한다.
    그래야 보기 모드와 편집 모드의 글자 위치가 계속 일치한다. */
 .cell--center .input--cell { text-align: center; }
