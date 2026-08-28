@@ -935,6 +935,73 @@ textarea.input--cell {
 
 /* ── 우클릭 메뉴 ───────────────────────────────────────── */
 
+/* ── 칸 메모 ───────────────────────────────────────────── */
+
+/* 메모가 있는 칸은 오른쪽 위에 작은 삼각형을 둔다. 스프레드시트에서 쓰는
+   표시라 설명 없이 읽힌다. 칸 자체가 overflow: hidden 이라 삼각형이 밖으로
+   나가지 않는다. */
+.table tbody td[data-memo] { position: relative; }
+
+.table tbody td[data-memo]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  border-top: 6px solid var(--color-element-primary);
+  border-left: 6px solid transparent;
+}
+
+.memo {
+  position: fixed;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-4);
+  width: 280px;
+  padding: var(--padding-6);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-basic);
+  box-shadow: var(--shadow-level2);
+}
+
+/* 어느 행 · 어느 컬럼의 메모인지 — 표에서 떼어 놓고 열리므로 이 줄이 없으면
+   무엇에 쓰는 메모인지 알 수 없다. */
+.memo__head {
+  margin: 0;
+  font-size: var(--font-body5);
+  color: var(--color-text-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memo__input {
+  width: 100%;
+  padding: var(--padding-4) var(--padding-5);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-xxsmall);
+  background: var(--color-surface-basic);
+  color: var(--color-text-basic);
+  font: inherit;
+  font-size: var(--font-body4);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.memo__input:focus-visible {
+  outline: none;
+  border-color: var(--color-input-border-focus);
+}
+
+.memo__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-3);
+}
+
+.memo__spacer { flex: 1; }
+
 .menu {
   position: fixed;
   z-index: 40;

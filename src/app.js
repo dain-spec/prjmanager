@@ -693,6 +693,23 @@
   // ── 파생 데이터 ─────────────────────────────────────────
 
   /** 토스트·삭제 확인에 쓰는 행 이름. 요청내용처럼 길 수 있으므로 줄여 쓴다. */
+  /* 칸 메모 — 행의 memos 에 { 컬럼키: 글 } 로 담는다. 값을 담는 컬럼과 따로
+     두어야 '무엇이 적혀 있나' 와 '왜 그런가' 가 섞이지 않는다. */
+
+  function memoOf(row, key) {
+    return String(row?.memos?.[key] ?? "");
+  }
+
+  /** 빈 글은 키째로 지운다. 빈 문자열이 남으면 메모 표시가 계속 붙는다. */
+  function setMemo(row, key, text) {
+    const value = String(text ?? "").trim();
+    const memos = { ...(row.memos ?? {}) };
+    if (value) memos[key] = value;
+    else delete memos[key];
+    if (Object.keys(memos).length) row.memos = memos;
+    else delete row.memos;
+  }
+
   function rowLabel(row) {
     const raw = String(row?.[view.nameKey] ?? "").replace(/\s+/g, " ").trim();
     if (!raw) return "이름 없는 항목";
@@ -725,6 +742,8 @@
       else parts.push(col.labels?.[value] ?? value ?? "");
       // 화면에는 디코딩된 파일명이 보이는데 저장값은 퍼센트 인코딩 상태다.
       if (col.type === "path" && value) parts.push(figmaLabel(value)?.name ?? "");
+      // 메모는 화면에 접혀 있어도 찾을 수 있어야 한다.
+      parts.push(memoOf(row, col.key));
     }
     return parts.join(" ").toLowerCase();
   }
@@ -1113,14 +1132,24 @@
   function displayCell(row, col) {
     const { value, derived } = effective(row, col);
     const td = buildDisplayCell(value, col);
+    // 우클릭 메뉴가 어느 컬럼인지 알아야 메모를 붙일 자리를 정할 수 있다.
+    td.dataset.col = col.key;
     if (derived) {
       // 이 행에 적힌 값이 아니라 파일 현황에서 가져온 값이라는 표시.
       td.dataset.derived = "true";
-      td.title = td.title
-        ? `${td.title}\n\n파일 현황에서 가져온 값입니다.`
-        : "파일 현황에서 가져온 값입니다.";
+      addTitle(td, "파일 현황에서 가져온 값입니다.");
+    }
+    const memo = memoOf(row, col.key);
+    if (memo) {
+      td.dataset.memo = "true";
+      addTitle(td, `메모: ${memo}`);
     }
     return td;
+  }
+
+  /** 이미 붙어 있는 툴팁을 지우지 않고 한 단락 덧붙인다. */
+  function addTitle(td, text) {
+    td.title = td.title ? `${td.title}\n\n${text}` : text;
   }
 
   function buildDisplayCell(value, col) {
@@ -2060,10 +2089,14 @@
 
   tableWrap.addEventListener("scroll", placePicker);
   addEventListener("resize", placePicker);
+  tableWrap.addEventListener("scroll", () => replaceMemo());
+  addEventListener("resize", () => replaceMemo());
 
   // ── 행 우클릭 메뉴 ────────────────────────────────────
   const rowMenu = $("row-menu");
   let menuRowId = null;
+  /** 우클릭한 칸의 컬럼키. 선택·No·여백 칸이면 null 이라 메모를 붙일 수 없다. */
+  let menuColKey = null;
 
   els.tbody.addEventListener("contextmenu", (event) => {
     if (editingId !== null) return; // 편집 중에는 브라우저 기본 메뉴를 그대로 둔다
@@ -2072,6 +2105,16 @@
     if (!id) return;
     event.preventDefault();
     menuRowId = id;
+    menuColKey = event.target.closest("td")?.dataset.col ?? null;
+
+    /* 메모는 값을 담는 칸에만 붙는다. 이미 있으면 '수정' 으로 바꿔 지금 무엇이
+       일어날지 알려 주고, 삭제 항목도 그때만 낸다. */
+    const row = rows.find((r) => r.id === id);
+    const hasMemo = Boolean(menuColKey && memoOf(row, menuColKey));
+    $("menu-memo").hidden = !menuColKey;
+    $("menu-memo").textContent = hasMemo ? "메모 수정" : "메모 추가";
+    $("menu-memo-delete").hidden = !hasMemo;
+    $("menu-memo-divider").hidden = !menuColKey;
 
     // '아래에 행 추가' 는 표시 순서와 저장 순서가 같을 때만 의미가 있다.
     // 삭제는 순서와 무관하므로 정렬·검색 중에도 쓸 수 있게 둔다.
@@ -2089,11 +2132,23 @@
   rowMenu.addEventListener("click", (event) => {
     const item = event.target.closest("[data-menu]");
     if (!item) return;
+    /* 이 클릭이 document 까지 올라가면 방금 연 메모 상자를 '밖을 눌렀다' 로 보고
+       바로 닫아 버린다. 메뉴는 아래에서 직접 닫으므로 여기서 끊는다. */
+    event.stopPropagation();
     const id = menuRowId;
+    const colKey = menuColKey;
+    const anchor = colKey
+      ? els.tbody.querySelector(`[data-check="${id}"]`)?.closest("tr")
+          ?.querySelector(`td[data-col="${colKey}"]`)
+      : null;
     closeRowMenu();
     if (!id) return;
 
-    if (item.dataset.menu === "insert-below") {
+    if (item.dataset.menu === "memo") {
+      openMemo(id, colKey, anchor);
+    } else if (item.dataset.menu === "memo-delete") {
+      saveMemo(id, colKey, "");
+    } else if (item.dataset.menu === "insert-below") {
       startCreate(id);
     } else if (item.dataset.menu === "delete") {
       // 우클릭한 행이 선택에 포함돼 있으면 선택 전체를, 아니면 그 행만 삭제한다.
@@ -2104,14 +2159,110 @@
   function closeRowMenu() {
     rowMenu.hidden = true;
     menuRowId = null;
+    menuColKey = null;
   }
+
+  // ── 칸 메모 ───────────────────────────────────────────
+  const memoBox = $("memo-editor");
+  const memoInput = $("memo-input");
+  let memoTarget = null; // { id, colKey }
+
+  function openMemo(id, colKey, anchor) {
+    const row = rows.find((r) => r.id === id);
+    if (!row || !colKey) return;
+    const col = view.columns.find((c) => c.key === colKey);
+    memoTarget = { id, colKey };
+
+    $("memo-head").textContent = `${col?.header ?? colKey} · ${rowLabel(row)}`;
+    $("memo-head").title = $("memo-head").textContent;
+    memoInput.value = memoOf(row, colKey);
+    $("memo-delete").hidden = !memoInput.value;
+
+    memoBox.hidden = false;
+    placeMemo(anchor);
+    memoInput.focus();
+    // 이어 적는 경우가 많아 커서를 끝에 둔다.
+    memoInput.setSelectionRange(memoInput.value.length, memoInput.value.length);
+  }
+
+  /** 메모 상자를 그 칸 아래에 붙인다. 화면 밖으로 나가면 위나 안쪽으로 접는다. */
+  function placeMemo(anchor) {
+    const box = memoBox.getBoundingClientRect();
+    const cell = anchor?.getBoundingClientRect();
+    const left = cell ? cell.left : (innerWidth - box.width) / 2;
+    const top = cell ? cell.bottom + 4 : (innerHeight - box.height) / 2;
+    memoBox.style.left = `${Math.max(8, Math.min(left, innerWidth - box.width - 8))}px`;
+    memoBox.style.top = `${Math.max(8, Math.min(top, innerHeight - box.height - 8))}px`;
+  }
+
+  function closeMemo() {
+    memoBox.hidden = true;
+    memoTarget = null;
+  }
+
+  /* 표를 스크롤하거나 창 크기가 바뀌면 상자가 칸에서 떨어진다. 적던 글을 잃지
+     않도록 닫지 않고 위치만 다시 잡는다. */
+  function replaceMemo() {
+    if (memoBox.hidden || !memoTarget) return;
+    placeMemo(memoAnchor());
+  }
+
+  function memoAnchor() {
+    const { id, colKey } = memoTarget ?? {};
+    if (!id || !colKey) return null;
+    return els.tbody
+      .querySelector(`[data-check="${id}"]`)
+      ?.closest("tr")
+      ?.querySelector(`td[data-col="${colKey}"]`);
+  }
+
+  function saveMemo(id, colKey, text) {
+    const row = rows.find((r) => r.id === id);
+    if (!row || !colKey) return;
+    const had = Boolean(memoOf(row, colKey));
+    setMemo(row, colKey, text);
+    const has = Boolean(memoOf(row, colKey));
+    save();
+    render();
+    if (has) toast(had ? "메모를 수정했습니다." : "메모를 추가했습니다.");
+    else if (had) toast("메모를 삭제했습니다.");
+  }
+
+  memoBox.addEventListener("click", (event) => {
+    const action = event.target.closest("[data-memo-action]")?.dataset.memoAction;
+    if (!action || !memoTarget) return;
+    const { id, colKey } = memoTarget;
+    if (action === "cancel") return closeMemo();
+    closeMemo();
+    saveMemo(id, colKey, action === "delete" ? "" : memoInput.value);
+  });
+
+  /* Enter 는 줄바꿈이고 ⌘/Ctrl+Enter 가 저장이다. 메모는 여러 줄로 적는 글이라
+     Enter 를 저장으로 쓰면 줄을 나눌 방법이 없다. */
+  memoInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      const { id, colKey } = memoTarget ?? {};
+      closeMemo();
+      saveMemo(id, colKey, memoInput.value);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeMemo();
+    }
+  });
 
   // 메뉴 밖 클릭 / Esc / 표 스크롤 시 닫는다.
   document.addEventListener("click", (event) => {
     if (!rowMenu.hidden && !event.target.closest("#row-menu")) closeRowMenu();
+    // 메모는 적다가 밖을 누를 수 있어 닫기만 하고 글은 버린다(저장은 명시적으로).
+    if (!memoBox.hidden && !event.target.closest("#memo-editor")) closeMemo();
   });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closeRowMenu();
+    if (event.key === "Escape") {
+      closeRowMenu();
+      closeMemo();
+    }
   });
   tableWrap.addEventListener("scroll", closeRowMenu);
 

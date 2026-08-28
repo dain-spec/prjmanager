@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 부서 업무 요청 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=4ec0313a" />
+<link rel="stylesheet" href="src/styles.css?v=a82baa0e" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -228,13 +228,30 @@
 
 <!-- 행 우클릭 메뉴. .panel 은 overflow: hidden 이라 잘리므로 body 레벨에 둔다. -->
 <div class="menu" id="row-menu" role="menu" hidden>
+  <!-- 메모는 행이 아니라 우클릭한 '칸' 에 붙는다. -->
+  <button type="button" class="menu__item" role="menuitem" data-menu="memo" id="menu-memo">메모 추가</button>
+  <button type="button" class="menu__item" role="menuitem" data-menu="memo-delete" id="menu-memo-delete">메모 삭제</button>
+  <div class="menu__divider" id="menu-memo-divider"></div>
   <button type="button" class="menu__item" role="menuitem" data-menu="insert-below" id="menu-insert">아래에 행 추가</button>
   <div class="menu__divider" id="menu-divider"></div>
   <button type="button" class="menu__item menu__item--danger" role="menuitem" data-menu="delete">삭제</button>
 </div>
 
+<!-- 칸 메모 편집 — 표는 overflow: hidden 이라 body 에 두고 위치를 계산한다. -->
+<div class="memo" id="memo-editor" hidden>
+  <p class="memo__head" id="memo-head"></p>
+  <textarea class="memo__input" id="memo-input" rows="4"
+            placeholder="메모 (Enter 로 줄 추가, ⌘/Ctrl+Enter 로 저장)" maxlength="1000"></textarea>
+  <div class="memo__actions">
+    <button type="button" class="btn btn--ghost btn--small" data-memo-action="delete" id="memo-delete">삭제</button>
+    <span class="memo__spacer"></span>
+    <button type="button" class="btn btn--ghost btn--small" data-memo-action="cancel">취소</button>
+    <button type="button" class="btn btn--primary btn--small" data-memo-action="save">저장</button>
+  </div>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=bd80605c"></script>
+<script src="src/app.js?v=d232d443"></script>
 </body>
 </html>
