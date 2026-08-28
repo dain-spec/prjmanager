@@ -69,14 +69,21 @@ textarea {
 /* ── 헤더 ──────────────────────────────────────────────── */
 
 .page-head {
+  /* 위: 제목 + 탭 + 버튼 한 줄, 아래: 매일 하는 업무 한 줄. */
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-5);
+  padding-bottom: var(--padding-6);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.page-head__bar {
   display: flex;
   /* 왼쪽은 제목 + 탭, 오른쪽은 검색·테마 버튼. 둘 다 36px 짜리 요소가
      기준선을 잡으므로 세로 중앙에서 맞춘다. */
   align-items: center;
   justify-content: space-between;
   gap: var(--gap-6);
-  padding-bottom: var(--padding-6);
-  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .page-head__lead {
@@ -106,6 +113,102 @@ textarea {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--gap-4);
+}
+
+/* ── 매일 하는 업무 ────────────────────────────────────── */
+
+/* 두 탭이 함께 보는 상시 목록이라 본문이 아니라 헤더에 둔다. 표가 화면
+   대부분을 써야 하므로 한 줄(28px)만 차지한다. 진행 표시(체크)는 두지
+   않는다 — 잊지 않으려고 적어 두는 목록이고, 진행 관리는 업무 요청 표가
+   맡는다. */
+.daily {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-5);
+  min-height: var(--size-6);
+}
+
+.daily__label {
+  flex: none;
+  margin: 0;
+  font-size: var(--font-body5);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+}
+
+.daily__date {
+  color: var(--color-text-subtler);
+  font-weight: var(--font-weight-regular);
+}
+
+.daily__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.daily__item { display: flex; }
+
+/* 보기와 편집이 같은 자리에서 같은 크기여야 눌렀을 때 줄이 흔들리지 않는다. */
+.daily__text,
+.daily__input {
+  height: var(--size-6);
+  padding-inline: var(--padding-5);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-max);
+  font-size: var(--font-body5);
+  color: var(--color-text-basic);
+  white-space: nowrap;
+}
+
+.daily__text {
+  background: var(--color-surface-subtler);
+  cursor: pointer;
+}
+
+.daily__text:hover {
+  border-color: var(--color-border-bolder);
+}
+
+.daily__input {
+  min-width: 180px;
+  background: var(--color-input-field);
+}
+
+.daily__input:focus {
+  outline: none;
+  border-color: var(--color-input-border-focus);
+}
+
+/* 아직 없는 것을 더하는 자리라 실선 대신 점선으로 둔다. */
+.daily__add {
+  flex: none;
+  height: var(--size-6);
+  padding-inline: var(--padding-5);
+  border: 1px dashed var(--color-border-basic);
+  border-radius: var(--radius-max);
+  background: none;
+  font-size: var(--font-body5);
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.daily__add:hover {
+  border-color: var(--color-border-bolder);
+  color: var(--color-text-basic);
+}
+
+.daily__empty {
+  margin: 0;
+  font-size: var(--font-body5);
+  color: var(--color-text-subtler);
 }
 
 /* ── 탭 ────────────────────────────────────────────────── */

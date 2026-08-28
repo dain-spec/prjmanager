@@ -2336,5 +2336,141 @@
   if (savedTheme) document.documentElement.dataset.theme = savedTheme;
   else document.documentElement.removeAttribute("data-theme");
 
+  // ── 매일 하는 업무 ────────────────────────────────────
+  /* 두 탭이 함께 보는 목록이라 탭 데이터와 따로 저장한다. 체크는 두지 않는다
+     — 잊지 않으려고 적어 두는 목록이고, 진행 관리는 업무 요청 표가 맡는다. */
+  const DAILY_KEY = "wehago-prj-manager/daily/v1";
+  const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
+
+  let daily = loadDaily();
+  /** 수정 중인 항목 번호. 목록 길이와 같으면 새 항목이다. null 이면 수정 중이 아니다. */
+  let dailyEditing = null;
+
+  function loadDaily() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(DAILY_KEY) ?? "null");
+      if (Array.isArray(parsed)) return parsed.filter((v) => typeof v === "string" && v.trim());
+    } catch {
+      /* 저장값이 손상된 경우 빈 목록으로 시작한다 */
+    }
+    return [];
+  }
+
+  function saveDaily() {
+    try {
+      localStorage.setItem(DAILY_KEY, JSON.stringify(daily));
+    } catch {
+      toast("브라우저 저장 공간에 기록하지 못했습니다.");
+    }
+  }
+
+  function dailyInput(value) {
+    const input = document.createElement("input");
+    input.className = "daily__input";
+    input.value = value;
+    input.maxLength = 60;
+    input.placeholder = "매일 하는 업무";
+    input.setAttribute("aria-label", "매일 하는 업무");
+    // 렌더 직후에는 아직 문서에 붙기 전이라 다음 프레임에 포커스한다.
+    requestAnimationFrame(() => {
+      input.focus();
+      input.select();
+    });
+    return input;
+  }
+
+  function renderDaily() {
+    const now = new Date();
+    $("daily-date").textContent =
+      `${now.getMonth() + 1}월 ${now.getDate()}일 (${DAY_NAMES[now.getDay()]})`;
+
+    const items = daily.map((text, index) => {
+      const li = document.createElement("li");
+      li.className = "daily__item";
+      if (index === dailyEditing) {
+        li.append(dailyInput(text));
+      } else {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "daily__text";
+        btn.dataset.daily = index;
+        btn.textContent = text;
+        btn.title = "클릭해서 수정 (비우고 저장하면 삭제)";
+        li.append(btn);
+      }
+      return li;
+    });
+
+    if (dailyEditing === daily.length) {
+      const li = document.createElement("li");
+      li.className = "daily__item";
+      li.append(dailyInput(""));
+      items.push(li);
+    }
+
+    $("daily-list").replaceChildren(...items);
+    $("daily-empty").hidden = items.length > 0;
+    $("daily-add").hidden = dailyEditing !== null;
+  }
+
+  function startDailyEdit(index) {
+    dailyEditing = index;
+    renderDaily();
+  }
+
+  /** save 가 false 면 입력을 버린다. 빈 값으로 저장하면 그 항목을 지운다. */
+  function commitDaily(save) {
+    const input = $("daily-list").querySelector(".daily__input");
+    const index = dailyEditing;
+    if (!input || index === null) return;
+    dailyEditing = null;
+
+    if (save) {
+      const text = input.value.trim();
+      if (index === daily.length) {
+        if (text) daily.push(text);
+      } else if (text) {
+        daily[index] = text;
+      } else {
+        daily.splice(index, 1);
+      }
+      saveDaily();
+    }
+    renderDaily();
+  }
+
+  /* mousedown 에서 기본 동작(포커스 이동)을 막아 blur 가 끼어들지 않게 한다.
+     그러지 않으면 blur 로 저장하며 목록을 다시 그리는 사이에 눌린 요소가
+     사라져 click 이 아예 오지 않는다. */
+  $("daily").addEventListener("mousedown", (event) => {
+    const chip = event.target.closest("[data-daily]");
+    const add = event.target.closest("#daily-add");
+    if (!chip && !add) return;
+    event.preventDefault();
+
+    const before = daily.length;
+    if (dailyEditing !== null) commitDaily(true);
+    // 저장하면서 항목이 늘거나 줄면 번호가 밀리므로, 그때는 저장만 하고 멈춘다.
+    if (daily.length !== before) return;
+    startDailyEdit(add ? daily.length : Number(chip.dataset.daily));
+  });
+
+  // 목록 밖을 누르면(포커스가 빠지면) 저장하고 닫는다.
+  $("daily").addEventListener("focusout", (event) => {
+    if (event.target.classList.contains("daily__input")) commitDaily(true);
+  });
+
+  $("daily").addEventListener("keydown", (event) => {
+    if (dailyEditing === null) return;
+    // 한글 조합 중의 Enter 는 조합을 확정하는 키라 가로채면 마지막 글자가 날아간다.
+    if (event.isComposing || event.keyCode === 229) return;
+    if (event.key !== "Enter" && event.key !== "Escape") return;
+    event.preventDefault();
+    event.stopPropagation(); // 표 편집의 Enter/Esc 처리로 번지지 않게 한다
+    commitDaily(event.key === "Enter");
+  });
+
+  renderDaily();
+
   useView(localStorage.getItem(VIEW_KEY) ?? VIEWS[0].id);
 })();

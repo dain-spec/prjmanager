@@ -74,6 +74,7 @@ python3 tools/build-tokens.py   # wehago.token.json → src/tokens.css, src/favi
 | 기능 | 설명 |
 | --- | --- |
 | 탭 전환 | 파일 현황 ↔ 업무 요청. 마지막으로 본 탭을 기억한다 |
+| 매일 하는 업무 | 헤더 아래 한 줄. 두 탭에서 늘 같은 자리에 보인다. 칩을 눌러 수정하고, 비우고 저장하면 지워진다 |
 | 요청일 정렬 | **업무 요청** 은 요청일이 늦은 것부터 정렬해 저장한다. 같은 날짜끼리는 넣은 순서를 지키고, 순서 변경도 같은 날짜 안에서만 된다 |
 | 서비스 묶기 | **파일 현황** 은 같은 서비스명 행을 붙여 저장하고, 묶음이 바뀌는 자리에 굵은 구분선을 그린다. 순서 변경은 서비스명이 같은 행끼리만 된다 |
 | 파일 현황 연결 | **업무 요청** 의 유형 · 파일 경로 · zep 은 비어 있으면 파일 현황에서 가져와 흐리게 보여 준다(조회 키: 서비스명 + OS). 직접 적으면 그 값이 이긴다 |
@@ -127,6 +128,7 @@ python3 tools/build-tokens.py   # wehago.token.json → src/tokens.css, src/favi
 | `wehago-prj-manager/rows/v2` | 파일 현황. 저장값이 없으면 예시 데이터가 로드된다 |
 | `wehago-prj-manager/requests/v1` | 업무 요청. 시드가 없어 처음에는 빈 표로 시작한다 |
 | `wehago-prj-manager/cols/v2` | 탭별 컬럼 폭 |
+| `wehago-prj-manager/daily/v1` | 매일 하는 업무. 두 탭이 함께 쓰므로 탭 데이터와 따로 둔다 |
 | `wehago-prj-manager/view` · `/theme` | 마지막으로 본 탭 · 라이트/다크 선택 |
 
 > 브라우저 로컬 저장이므로 **팀원 간 데이터 공유는 되지 않습니다.** 공유가 필요하면

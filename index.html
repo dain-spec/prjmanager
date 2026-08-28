@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 부서 업무 요청 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=b266117c" />
+<link rel="stylesheet" href="src/styles.css?v=4ec0313a" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -15,8 +15,9 @@
 <div class="app">
   <!-- ── 헤더 ───────────────────────────────────────────── -->
   <header class="page-head">
-    <!-- 제목은 탭과 무관하게 고정이다. 지금 보고 있는 표는 바로 옆 탭이 알려 준다. -->
-    <div class="page-head__lead">
+    <div class="page-head__bar">
+      <!-- 제목은 탭과 무관하게 고정이다. 지금 보고 있는 표는 바로 옆 탭이 알려 준다. -->
+      <div class="page-head__lead">
       <div class="page-head__titles">
         <h1 class="page-head__title">업무 현황</h1>
       </div>
@@ -78,7 +79,18 @@
           <path d="M8 1v1.6M8 13.4V15M1 8h1.6M13.4 8H15M3.05 3.05l1.13 1.13M11.82 11.82l1.13 1.13M12.95 3.05l-1.13 1.13M4.18 11.82l-1.13 1.13" />
         </svg>
       </button>
+      </div>
     </div>
+
+    <!-- 매일 하는 업무 — 두 탭이 함께 보는 상시 목록. 항목은 JS 가 채운다.
+         표가 화면 대부분을 써야 하므로 헤더 안(제목 줄 아래, 구분선 위)에
+         한 줄로 둔다. 본문에 두면 업무 요청 탭의 대시보드와 세로로 겹쳐 쌓인다. -->
+    <section class="daily" id="daily" aria-label="매일 하는 업무">
+      <p class="daily__label">매일 <span class="daily__date" id="daily-date"></span></p>
+      <ul class="daily__list" id="daily-list"></ul>
+      <p class="daily__empty" id="daily-empty" hidden>매일 챙겨야 하는 업무를 적어 두세요.</p>
+      <button type="button" class="daily__add" id="daily-add">+ 추가</button>
+    </section>
   </header>
 
   <main class="content" id="content">
@@ -223,6 +235,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=67a51c78"></script>
+<script src="src/app.js?v=bd80605c"></script>
 </body>
 </html>
