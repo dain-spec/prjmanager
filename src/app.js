@@ -958,6 +958,13 @@
       `적용 ${applied} / 대상 ${target.length}건 (해당 없음 ${rows.length - target.length}건 제외)`;
   }
 
+  /** 타일 각주 — 한 줄로 잘리므로 전체 글은 title 로도 남긴다. */
+  function setFoot(id, text) {
+    const el = $(id);
+    el.textContent = text;
+    el.title = text;
+  }
+
   /** 마지막으로 그린 행 수. 기간 라벨의 '· N건' 이 이 값을 쓴다. */
   let shownCount = 0;
 
@@ -1076,18 +1083,17 @@
     if (!range) {
       // 전체 보기 — 견줄 직전 기간이 없으므로 증감 대신 단위만 적는다.
       $("req-count-delta").textContent = "건";
-      $("req-count-foot").textContent = s.total === 0
+      setFoot("req-count-foot", s.total === 0
         ? "아직 등록된 업무가 없습니다"
         : s.undated
           ? `전체 기간 · 시작일 미입력 ${s.undated}건${split}`
-          : `전체 기간 · ${s.first} ~ ${s.last}${split}`;
+          : `전체 기간 · ${s.first} ~ ${s.last}${split}`);
       return;
     }
 
     $("req-count-delta").textContent = deltaText(count, prev) || "건";
     const unit = period.unit === "week" ? "주" : "달";
-    $("req-count-foot").textContent =
-      `${periodText(range)} · 지난 ${unit} ${prev}건${split}`;
+    setFoot("req-count-foot", `${periodText(range)} · 지난 ${unit} ${prev}건${split}`);
   }
 
   /** 지난 기간 대비 증감. 변화가 없으면 빈 문자열. */
@@ -1108,11 +1114,11 @@
     const rate = s.rated ? Math.round((s.done / s.rated) * 100) : 0;
     $("req-done").textContent = `${rate}%`;
     $("req-done-bar").style.width = `${rate}%`;
-    $("req-done-foot").textContent = s.rated
+    setFoot("req-done-foot", s.rated
       ? `완료 ${s.done} / 진행 중 ${s.pending}건${s.standing ? ` (상시 ${s.standing}건 제외)` : ""}`
       : s.standing
         ? `상시 ${s.standing}건뿐이라 셀 대상이 없습니다`
-        : "";
+        : "");
 
     // 최다 수행 서비스
     const [top, second] = s.ranking;
@@ -1122,20 +1128,20 @@
       ? s.ranking.slice(0, 5).map(([name, n], i) => `${i + 1}. ${name} ${n}건`).join("\n")
       : "";
     const share = top && s.total ? Math.round((top[1] / s.total) * 100) : 0;
-    $("req-top-foot").textContent = top
+    setFoot("req-top-foot", top
       ? `${top[1]}건 · 전체의 ${share}%${second ? ` · 2위 ${second[0]} ${second[1]}건` : ""}`
-      : "서비스명이 적힌 요청이 없습니다";
+      : "서비스명이 적힌 요청이 없습니다");
 
     // 최장 대기
     $("req-wait").textContent = s.waiting ? `${s.waiting.days}일` : "—";
-    $("req-wait-foot").textContent = s.waiting
+    setFoot("req-wait-foot", s.waiting
       ? `${s.waiting.row.service?.trim() || rowLabel(s.waiting.row)} · ${s.waiting.row.started} 시작`
       : s.pending
         ? "진행 중인 업무에 시작일이 없습니다"
         : s.standing
           // 상시업무는 대기 대상이 아니라 늘 빠진다. 그 사실을 알려 준다.
           ? "상시업무만 있어 대기 중인 업무가 없습니다"
-          : "진행 중인 업무가 없습니다";
+          : "진행 중인 업무가 없습니다");
 
     renderOwnerLine(s);
   }
@@ -1152,13 +1158,13 @@
       : "";
 
     const rest = s.owners.length - top.length;
-    $("req-owners-foot").textContent = s.owners.length
+    setFoot("req-owners-foot", s.owners.length
       ? [
           `담당자 ${s.owners.length}명`,
           rest > 0 ? `그 외 ${rest}명` : "",
           s.ownerless ? `미지정 ${s.ownerless}건` : "",
         ].filter(Boolean).join(" · ")
-      : "담당자가 지정된 요청이 없습니다";
+      : "담당자가 지정된 요청이 없습니다");
   }
 
   function renderTable() {
