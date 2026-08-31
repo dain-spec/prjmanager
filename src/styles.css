@@ -94,12 +94,6 @@ textarea {
   gap: var(--gap-6);
 }
 
-.page-head__titles {
-  /* 제목 왼쪽의 파란 강조 바 */
-  padding-left: var(--padding-6);
-  border-left: 4px solid var(--color-element-primary);
-}
-
 .page-head__title {
   margin: 0;
   font-size: var(--font-heading4);
