@@ -211,6 +211,10 @@ textarea {
   align-items: flex-start;
   height: var(--size-7);
   gap: var(--gap-7);
+  /* .content 의 세로 간격 20px 은 대시보드 ↔ 표 사이에 맞춘 값이다. 탭은 밑줄이
+     경계선 역할을 하므로 그만큼 띄우면 아래 내용과 떨어져 보인다. 8px 당겨
+     12px 로 만든다(대시보드 ↔ 표 간격은 20px 그대로). */
+  margin-bottom: calc(-1 * var(--gap-4));
 }
 
 .tab {
