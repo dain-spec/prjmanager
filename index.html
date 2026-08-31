@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 부서 업무 요청 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=a95d0d93" />
+<link rel="stylesheet" href="src/styles.css?v=b25a3bfe" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -16,16 +16,7 @@
   <!-- ── 헤더 ───────────────────────────────────────────── -->
   <header class="page-head">
     <div class="page-head__bar">
-      <!-- 제목은 탭과 무관하게 고정이다. 지금 보고 있는 표는 바로 옆 탭이 알려 준다. -->
-      <div class="page-head__lead">
       <h1 class="page-head__title">업무 현황</h1>
-
-      <!-- 표 두 개(파일 현황 · 업무 요청)를 오가는 탭 -->
-      <nav class="tabs" id="tabs" role="tablist" aria-label="현황 종류">
-        <button type="button" class="tab" role="tab" data-view="works" aria-selected="true">파일 현황</button>
-        <button type="button" class="tab" role="tab" data-view="requests" aria-selected="false">업무 요청</button>
-      </nav>
-    </div>
 
     <div class="page-head__actions">
       <!-- 편집 상태 -->
@@ -88,6 +79,13 @@
   </header>
 
   <main class="content" id="content">
+    <!-- 표 두 개(파일 현황 · 업무 요청)를 오가는 탭. 바꾸는 대상(요약 · 표) 바로
+         위에 둔다 — 대시보드도 탭에 따라 달라지므로 그 위가 맞는 자리다. -->
+    <nav class="tabs" id="tabs" role="tablist" aria-label="현황 종류">
+      <button type="button" class="tab" role="tab" data-view="works" aria-selected="true">파일 현황</button>
+      <button type="button" class="tab" role="tab" data-view="requests" aria-selected="false">업무 요청</button>
+    </nav>
+
     <!-- ── 요약 통계 ─────────────────────────────────────── -->
     <!-- 대시보드는 추후 제공 예정. JS 가 항상 hidden 으로 둔다. -->
     <section class="stats" id="stats" aria-label="현황 요약" hidden>
