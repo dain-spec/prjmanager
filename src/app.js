@@ -83,6 +83,13 @@
     none: "해당 없음",
   };
 
+  /** 업무 구분. 상시업무는 요청받아 시작하는 일이 아니라 계속 맡고 있는 일이라
+      끝나지 않는다 — 완료율 분모와 최장 대기에서 빼야 숫자가 사실과 맞는다. */
+  const KIND_LABEL = {
+    request: "요청",
+    standing: "상시",
+  };
+
   /** 업무 요청 진행상태. 완료일만으로는 '대기' 와 '진행중' 을 가를 수 없고,
       '보류' 는 날짜로 아예 표현되지 않아 별도 컬럼으로 둔다. */
   const STATUS_LABEL = {
@@ -157,15 +164,24 @@
   ];
 
   const REQUEST_COLUMNS = [
-    // 요청이 들어온 날. 새 행은 오늘로 채워 두고 다른 날이면 고치게 한다.
-    { key: "requested", header: "요청일", width: "116px", type: "date", align: "center",
+    /* 요청 · 상시 두 종류를 가른다. 흔한 쪽(요청)은 흐린 글자로 두고 상시만
+       배지로 띄운다 — 모든 행에 배지가 붙으면 어느 쪽이 특별한지 안 보인다.
+       폭은 '요청/상시' 드롭다운 43 + 좌우 패딩 24 = 67 이 하한이다. */
+    { key: "kind", header: "구분", width: "68px", type: "select", align: "center",
+      sortable: true, options: Object.entries(KIND_LABEL), labels: KIND_LABEL,
+      badge: (value) => (value === "standing" ? "standing" : null),
+      mutedValues: ["request"], rank: { request: 0, standing: 1 } },
+    /* 요청 업무는 요청이 들어온 날, 상시 업무는 맡기 시작한 날. 두 종류가 한
+       컬럼을 나눠 쓰므로 정렬 · 기간 보기 · 주별 집계가 그대로 동작한다.
+       새 행은 오늘로 채워 두고 다른 날이면 고치게 한다. */
+    { key: "started", header: "시작일", width: "116px", type: "date", align: "center",
       sortable: true, defaultToday: true },
     { key: "requester", header: "요청자", width: "72px", type: "text", sortable: true,
       placeholder: "요청자" },
     /* 비고와 마찬가지로 이 폭은 목표값이 아니라 하한이다. growToFill() 이 남는
        공간을 준다. 하한이 남는 공간보다 크면 표가 컨테이너를 넘어 가로 스크롤이
-       생기므로, 남는 폭(1352px 컨테이너에서 330px)보다 낮게 잡는다. */
-    { key: "content", header: "요청내용", width: "280px", type: "note", required: true,
+       생기므로, 남는 폭(1352px 컨테이너에서 262px)보다 낮게 잡는다. */
+    { key: "content", header: "요청내용", width: "240px", type: "note", required: true,
       grow: true, placeholder: "요청내용 (Shift+Enter 로 줄 추가)" },
     { key: "message", header: "쪽지", width: "52px", type: "link", align: "center",
       placeholder: "쪽지 링크" },
@@ -190,11 +206,19 @@
     { key: "done", header: "완료일", width: "116px", type: "date", align: "center", sortable: true },
   ];
 
-  /* 진행상태 컬럼이 나중에 생겼다. 완료일이 적힌 행은 완료로, 나머지는 진행중으로
-     본다 — 손대고 있던 요청을 '대기' 로 되돌리면 사실과 어긋난다. */
-  function migrateRequestRow(row) {
-    if (row.status) return row;
-    return { ...row, status: String(row.done ?? "").trim() ? "done" : "progress" };
+  /* 컬럼이 나중에 생길 때마다 저장 키를 올려 데이터를 버리는 대신 옛 필드를 옮긴다.
+       status  완료일이 적힌 행은 완료로, 나머지는 진행중으로 본다 — 손대고 있던
+               요청을 '대기' 로 되돌리면 사실과 어긋난다.
+       kind    예전 행은 모두 요청 업무다.
+       started 예전 이름은 requested 였다. 상시업무까지 담게 되면서 '요청한 날' 이
+               아니라 '시작한 날' 이 되어 이름을 바꿨다. */
+  function migrateRequestRow({ requested, ...row }) {
+    return {
+      ...row,
+      started: row.started ?? requested ?? "",
+      kind: row.kind ?? "request",
+      status: row.status ?? (String(row.done ?? "").trim() ? "done" : "progress"),
+    };
   }
 
   /* 시드 데이터는 팀 현황표(프로젝트/유형/주소링크/공통 반영 버전/반영 상태/작업자/
@@ -332,10 +356,10 @@
     {
       id: "requests",
       label: "업무 요청",
-      noun: "업무 요청",
+      noun: "업무",
       nameKey: "content",
       storageKey: "wehago-prj-manager/requests/v1",
-      searchHint: "요청일, 요청자, 요청내용, 서비스명, OS, 유형, 담당자 검색",
+      searchHint: "시작일, 요청자, 요청내용, 서비스명, OS, 유형, 담당자 검색",
       csvName: "wehago-일일-업무.csv",
       /* 이 컬럼들은 비어 있으면 파일 현황(서비스명 + OS)에서 가져와 보여 준다.
          직접 적은 값이 있으면 그 값이 이긴다 — 요청은 서비스 대표 파일이 아니라
@@ -344,7 +368,7 @@
       linked: ["tool", "path", "zeplin"],
       /* 저장 순서를 요청일 늦은 것부터로 맞춘다. 최근 요청이 지금 손볼
          일이므로 위에 둔다. 같은 날짜끼리는 넣은 순서를 지킨다. */
-      order: { key: "requested", dir: "desc" },
+      order: { key: "started", dir: "desc" },
       migrate: migrateRequestRow,
       // 매일 하는 업무 줄은 이 탭에서만 쓴다.
       daily: true,
@@ -782,7 +806,9 @@
   const iso = (d) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-  function today() {
+  /* 기간 계산용 '오늘' — 날짜 문자열을 주는 today() 와 달리 Date 를 준다.
+     이름이 겹치면 나중 선언이 이겨 다른 쪽이 조용히 깨진다. */
+  function todayDate() {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
@@ -804,14 +830,14 @@
       기간 보기와 대시보드가 같은 계산을 쓰도록 한 곳에 둔다. */
   function rangeOf(unit, offset) {
     if (unit === "week") {
-      const start = mondayOf(today());
+      const start = mondayOf(todayDate());
       start.setDate(start.getDate() + offset * 7);
       const end = new Date(start);
       end.setDate(end.getDate() + 6);
       return { start, end };
     }
     // 다음 달 0 일 = 이번 달 마지막 날. 연도 넘김도 Date 가 알아서 처리한다.
-    const t = today();
+    const t = todayDate();
     return {
       start: new Date(t.getFullYear(), t.getMonth() + offset, 1),
       end: new Date(t.getFullYear(), t.getMonth() + offset + 1, 0),
@@ -849,7 +875,7 @@
   /** 그 날짜가 보이려면 offset 이 얼마여야 하는지. */
   function offsetFor(value) {
     const [y, m, d] = value.split("-").map(Number);
-    const t = today();
+    const t = todayDate();
     if (period.unit === "month") return (y - t.getFullYear()) * 12 + (m - 1 - t.getMonth());
     // 서머타임으로 한 시간이 밀릴 수 있어 반올림한다.
     return Math.round((mondayOf(new Date(y, m - 1, d)) - mondayOf(t)) / (7 * 86400000));
@@ -859,7 +885,7 @@
       저장했는데 목록에서 사라지면 지워진 줄 알기 때문이다. */
   function revealInPeriod(row) {
     if (!periodActive()) return;
-    const value = String(row?.requested ?? "").slice(0, 10);
+    const value = String(row?.started ?? "").slice(0, 10);
     if (!value) {
       toast("요청일이 비어 있어 기간 보기에서는 보이지 않습니다.");
       return;
@@ -881,7 +907,7 @@
       // 편집 중인 행은 필터/검색으로 사라지지 않게 항상 남긴다.
       if (row.id === editingId) return true;
       if (range) {
-        const value = String(row.requested ?? "").slice(0, 10);
+        const value = String(row.started ?? "").slice(0, 10);
         if (!value || value < iso(range.start) || value > iso(range.end)) return false;
       }
       for (const [key, value] of Object.entries(filters)) {
@@ -949,7 +975,7 @@
   function requestSummary(list) {
     // 요청일이 없는 행은 주간·월간에서 셀 수 없다. 몇 건인지는 따로 알려 준다.
     const dates = list
-      .map((row) => String(row.requested ?? "").slice(0, 10))
+      .map((row) => String(row.started ?? "").slice(0, 10))
       .filter(Boolean)
       .sort();
 
@@ -972,27 +998,51 @@
     }
 
     /* 완료 판정은 진행상태 컬럼을 따른다. 완료일 유무로 보면 '보류' 를 가려낼
-       수 없고, 상태와 날짜가 어긋날 때 어느 쪽이 맞는지 알 수 없다. */
-    const isDone = (row) => row.status === "done";
-    const done = list.filter(isDone).length;
+       수 없고, 상태와 날짜가 어긋날 때 어느 쪽이 맞는지 알 수 없다.
 
-    /* 가장 오래 기다린 요청 — 아직 완료가 아닌 것 중 요청일이 가장 이른 것.
-       보류도 여기 들어간다. 요청일이 없으면 며칠 걸렸는지 셀 수 없어 제외한다. */
-    const now = iso(today());
+       상시업무는 끝나는 일이 아니라 계속 맡는 일이므로 완료율의 분모에서 뺀다.
+       넣어 두면 완료율이 영원히 낮게 나온다. WHDS 적용률에서 '해당 없음' 을
+       분모에서 빼는 것과 같은 처리다. */
+    const isStanding = (row) => row.kind === "standing";
+    const isDone = (row) => row.status === "done";
+    const rated = list.filter((row) => !isStanding(row));
+    const done = rated.filter(isDone).length;
+
+    /* 가장 오래 기다린 업무 — 아직 완료가 아닌 것 중 시작일이 가장 이른 것.
+       보류도 여기 들어간다. 상시업무는 '기다리는' 일이 아니라 계속 하는 일이라
+       빼지 않으면 오래된 상시업무가 늘 1 위를 차지한다.
+       시작일이 없으면 며칠 걸렸는지 셀 수 없어 제외한다. */
+    const now = today();
     const waiting = list
-      .filter((row) => !isDone(row) && String(row.requested ?? "").slice(0, 10))
-      .sort((a, b) => a.requested.localeCompare(b.requested))[0];
+      .filter((row) => !isStanding(row) && !isDone(row) && String(row.started ?? "").slice(0, 10))
+      .sort((a, b) => a.started.localeCompare(b.started))[0];
 
     /* 건수는 헤더에서 고른 기간을 따른다. 전체 보기면 셀 기간이 없으므로
        전체 건수를 그대로 쓴다. */
     const range = periodRange();
+    /* 요청과 상시를 나눠 세어 각주에 적는다. 타일의 큰 숫자는 둘을 합한 값이라
+       표에 보이는 행 수와 어긋나지 않는다. */
+    const inPeriod = (row) => {
+      if (!range) return true;
+      const value = String(row.started ?? "").slice(0, 10);
+      return value >= iso(range.start) && value <= iso(range.end);
+    };
+    const picked = list.filter(inPeriod);
     const selected = range
       ? {
           range,
           count: countIn(dates, range),
           prev: countIn(dates, rangeOf(period.unit, period.offset - 1)),
+          request: picked.filter((row) => row.kind !== "standing").length,
+          standing: picked.filter((row) => row.kind === "standing").length,
         }
-      : { range: null, count: list.length, prev: null };
+      : {
+          range: null,
+          count: list.length,
+          prev: null,
+          request: list.filter((row) => row.kind !== "standing").length,
+          standing: list.filter((row) => row.kind === "standing").length,
+        };
 
     return {
       total: list.length,
@@ -1000,6 +1050,8 @@
       first: dates[0] ?? "",
       last: dates[dates.length - 1] ?? "",
       selected,
+      standing: list.filter(isStanding).length,
+      rated: rated.length,
       // 건수 내림차순, 같으면 가나다순.
       ranking: [...byService.entries()].sort(
         (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ko"),
@@ -1009,32 +1061,34 @@
       ),
       ownerless,
       done,
-      pending: list.length - done,
-      waiting: waiting ? { row: waiting, days: daysBetween(waiting.requested.slice(0, 10), now) } : null,
+      pending: rated.length - done,
+      waiting: waiting ? { row: waiting, days: daysBetween(waiting.started.slice(0, 10), now) } : null,
     };
   }
 
   /* 요청 건수 타일. 헤더의 기간 선택을 그대로 따라간다 — 표에 보이는 행과
      타일의 숫자가 어긋나면 어느 쪽이 맞는지 헷갈린다. */
   function renderCountTile(s) {
-    const { range, count, prev } = s.selected;
+    const { range, count, prev, request, standing } = s.selected;
     $("req-count").textContent = count;
+    // 상시업무가 하나도 없으면 굳이 나눠 적지 않는다.
+    const split = standing ? ` · 요청 ${request} · 상시 ${standing}` : "";
 
     if (!range) {
       // 전체 보기 — 견줄 직전 기간이 없으므로 증감 대신 단위만 적는다.
       $("req-count-delta").textContent = "건";
       $("req-count-foot").textContent = s.total === 0
-        ? "아직 등록된 요청이 없습니다"
+        ? "아직 등록된 업무가 없습니다"
         : s.undated
-          ? `전체 기간 · 요청일 미입력 ${s.undated}건`
-          : `전체 기간 · ${s.first} ~ ${s.last}`;
+          ? `전체 기간 · 시작일 미입력 ${s.undated}건${split}`
+          : `전체 기간 · ${s.first} ~ ${s.last}${split}`;
       return;
     }
 
     $("req-count-delta").textContent = deltaText(count, prev) || "건";
     const unit = period.unit === "week" ? "주" : "달";
     $("req-count-foot").textContent =
-      `${periodText(range)} · 지난 ${unit} ${prev}건`;
+      `${periodText(range)} · 지난 ${unit} ${prev}건${split}`;
   }
 
   /** 지난 기간 대비 증감. 변화가 없으면 빈 문자열. */
@@ -1051,13 +1105,15 @@
 
     renderCountTile(s);
 
-    // 완료율
-    const rate = s.total ? Math.round((s.done / s.total) * 100) : 0;
+    // 완료율 — 상시업무는 분모에서 뺀다.
+    const rate = s.rated ? Math.round((s.done / s.rated) * 100) : 0;
     $("req-done").textContent = `${rate}%`;
     $("req-done-bar").style.width = `${rate}%`;
-    $("req-done-foot").textContent = s.total
-      ? `완료 ${s.done} / 진행 중 ${s.pending}건`
-      : "";
+    $("req-done-foot").textContent = s.rated
+      ? `완료 ${s.done} / 진행 중 ${s.pending}건${s.standing ? ` (상시 ${s.standing}건 제외)` : ""}`
+      : s.standing
+        ? `상시 ${s.standing}건뿐이라 셀 대상이 없습니다`
+        : "";
 
     // 최다 수행 서비스
     const [top, second] = s.ranking;
@@ -1074,10 +1130,13 @@
     // 최장 대기
     $("req-wait").textContent = s.waiting ? `${s.waiting.days}일` : "—";
     $("req-wait-foot").textContent = s.waiting
-      ? `${s.waiting.row.service?.trim() || rowLabel(s.waiting.row)} · ${s.waiting.row.requested} 요청`
+      ? `${s.waiting.row.service?.trim() || rowLabel(s.waiting.row)} · ${s.waiting.row.started} 시작`
       : s.pending
-        ? "진행 중인 요청에 요청일이 없습니다"
-        : "진행 중인 요청이 없습니다";
+        ? "진행 중인 업무에 시작일이 없습니다"
+        : s.standing
+          // 상시업무는 대기 대상이 아니라 늘 빠진다. 그 사실을 알려 준다.
+          ? "상시업무만 있어 대기 중인 업무가 없습니다"
+          : "진행 중인 업무가 없습니다";
 
     renderOwnerLine(s);
   }

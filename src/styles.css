@@ -809,6 +809,10 @@ body[data-col-resizing] {
 .badge--partial { background: var(--color-pending-50);   color: var(--color-orange-700); }
 .badge--neutral  { background: var(--color-surface-subtle); color: var(--color-text-subtle); }
 
+/* 상시업무 표시. 진행상태(파랑·주황·초록)와 다른 축이라 색을 겹치지 않게
+   중립색을 쓴다. 흔한 쪽인 '요청' 은 배지 없이 흐린 글자로 둔다. */
+.badge--standing { background: var(--color-secondary-50); color: var(--color-gray-700); }
+
 /* 업무 요청 진행상태. 대기는 아직 아무 일도 없다는 뜻이라 색을 쓰지 않는다. */
 .badge--waiting  { background: var(--color-surface-subtle); color: var(--color-text-subtle); }
 .badge--progress { background: var(--color-primary-50);     color: var(--color-blue-700); }
