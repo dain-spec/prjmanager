@@ -951,6 +951,16 @@ textarea.input--cell {
 
 /* ── 칸 메모 ───────────────────────────────────────────── */
 
+/* 편집 중이 아닐 때 '지금 이 칸에 있다' 를 알려 주는 표시. Enter 를 한 번 더
+   누르면 여기가 편집으로 열리므로 어디인지 보여야 한다. outline 은 칸 크기를
+   바꾸지 않아 표가 흔들리지 않는다(border 로 하면 1px 씩 밀린다). */
+.table tbody td[data-picked],
+.table tbody td[data-picked]:focus,
+.table tbody td[data-picked]:focus-visible {
+  outline: 2px solid var(--color-element-primary);
+  outline-offset: -2px;
+}
+
 /* 메모가 있는 칸은 오른쪽 위에 작은 삼각형을 둔다. 스프레드시트에서 쓰는
    표시라 설명 없이 읽힌다. 칸 자체가 overflow: hidden 이라 삼각형이 밖으로
    나가지 않는다. */

@@ -404,6 +404,11 @@
   let editingId = null;
   /** 편집 중 입력값. 입력 즉시 여기에 반영되므로 재렌더링에도 값이 남는다. */
   let draft = null;
+  /* 편집 중이 아닐 때 '어디에 있는지' 를 가리키는 칸. Enter 로 저장하고 다음
+     칸으로 넘어가면 아직 고치는 중이 아니므로, 한 번 더 Enter 를 눌러 편집으로
+     들어갈 대상을 여기에 담아 둔다. { id, colIndex } */
+  let picked = null;
+
   /** 신규 행을 이 id 의 행 바로 뒤에 넣는다. null 이면 목록 끝에 붙인다. */
   let insertAfterId = null;
 
@@ -1209,6 +1214,7 @@
           : `조건에 맞는 ${view.noun}이 없습니다. 검색어를 조정해 보세요.`;
       els.addFirst.hidden = !noData;
     }
+    paintPicked();
     /* 행 수가 달라지면 세로 스크롤바가 생기고 사라져 쓸 수 있는 폭도 달라진다.
        행을 다 그린 뒤에 계산해야 값이 맞는다. */
     growToFill();
@@ -1663,12 +1669,49 @@
   // ── 편집 동작 ───────────────────────────────────────────
 
   /** columnIndex 를 주면 그 칸의 입력 컨트롤로 바로 포커스한다(셀 클릭 진입). */
+  function cellAt(id, colIndex) {
+    return els.tbody.querySelector(`tr[data-id="${id}"]`)?.children[colIndex] ?? null;
+  }
+
+  /** 선택 표시를 지금 상태에 맞춘다. 표를 다시 그릴 때마다 불린다. */
+  function paintPicked() {
+    for (const td of els.tbody.querySelectorAll("td[data-picked]")) {
+      delete td.dataset.picked;
+      td.removeAttribute("tabindex");
+    }
+    if (!picked || editingId !== null) return;
+    const td = cellAt(picked.id, picked.colIndex);
+    // 검색·기간 보기로 그 행이 화면에서 빠졌으면 선택도 놓는다.
+    if (!td) {
+      picked = null;
+      return;
+    }
+    td.dataset.picked = "true";
+    /* 키 입력을 이 칸에서 받아야 한다. tabindex -1 은 Tab 순서에는 넣지 않고
+       프로그램 포커스만 허용한다. */
+    td.tabIndex = -1;
+    td.focus({ preventScroll: true });
+    td.scrollIntoView({ block: "nearest" });
+  }
+
+  function pick(id, colIndex) {
+    picked = { id, colIndex };
+    paintPicked();
+  }
+
+  function clearPick() {
+    picked = null;
+    paintPicked();
+  }
+
   /** open: false 면 드롭다운·달력을 자동으로 펼치지 않는다(방향키 이동용). */
   function startEdit(id, columnIndex, options) {
     const row = rows.find((r) => r.id === id);
     if (!row) return;
     editingId = id;
     draft = normalize(row);
+    // 편집을 끝냈을 때 어느 칸에 있었는지 알아야 Enter 가 아래 칸으로 갈 수 있다.
+    picked = { id, colIndex: columnIndex ?? 1 };
     renderTable();
     focusCell(columnIndex, options);
   }
@@ -2468,9 +2511,10 @@
      body 레벨 팝업(담당자 · 메모 · 우클릭 메뉴)은 편집의 일부라 제외한다.
      표 안의 클릭은 tbody 핸들러가 이미 다룬다. */
   document.addEventListener("mousedown", (event) => {
-    if (editingId === null) return;
+    if (editingId === null && !picked) return;
     if (event.target.closest("#tbody, #owner-picker, #memo-editor, #row-menu, #row-insert")) return;
-    commit();
+    if (editingId !== null) commit();
+    clearPick();
   });
 
   /* ── 방향키로 칸 이동 ─────────────────────────────────
@@ -2515,6 +2559,26 @@
     return true;
   }
 
+  /** 선택(편집 아님) 칸을 한 칸 옮긴다. 옮겼으면 true. */
+  function movePicked(key) {
+    const [rowStep, colStep] = ARROW_STEP[key];
+    const list = [...els.tbody.children];
+    const at = list.findIndex((tr) => tr.dataset.id === picked.id);
+    if (at < 0) return false;
+
+    if (colStep) {
+      const next = picked.colIndex + colStep;
+      // 값을 담는 칸만 오간다. 0 은 No, 마지막은 여백 칸이다.
+      if (next < 1 || next > view.columns.length) return false;
+      pick(picked.id, next);
+      return true;
+    }
+    const id = list[at + rowStep]?.dataset.id;
+    if (!id) return false;
+    pick(id, picked.colIndex);
+    return true;
+  }
+
   /** 편집 칸을 한 칸 옮긴다. 옮겼으면 true. */
   function moveEditing(key) {
     const [rowStep, colStep] = ARROW_STEP[key];
@@ -2533,6 +2597,7 @@
       const next = colIndex + colStep;
       if (next < 1 || next > view.columns.length) return false;
       closeOwnerPicker();
+      picked = { id: tr.dataset.id, colIndex: next };
       focusCell(next, { open: false });
       return true;
     }
@@ -2549,20 +2614,32 @@
   }
 
   document.addEventListener("keydown", (event) => {
-    if (editingId === null || !ARROW_STEP[event.key]) return;
+    if (!ARROW_STEP[event.key]) return;
     // 조합 중에는 방향키가 글자를 고르는 키다.
     if (event.isComposing || event.keyCode === 229) return;
     // Shift+방향키는 글자 선택, 나머지 조합키는 브라우저 단축키로 남긴다.
     if (event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return;
+
+    if (editingId === null) {
+      // 선택 상태 — 고칠 글이 없으니 방향키를 그대로 이동에 쓴다.
+      if (picked && movePicked(event.key)) event.preventDefault();
+      return;
+    }
     const field = event.target.closest?.("[name], [data-owner-pick]");
     if (!arrowFree(field, event.key)) return;
     if (moveEditing(event.key)) event.preventDefault();
   });
 
-  // Enter 저장 / Esc 취소. 담당자 팝업은 body 레벨에 있어 tbody 로 이벤트가
-  // 올라오지 않으므로 document 에서 듣는다.
+  /* Enter · Esc. 담당자 팝업은 body 레벨에 있어 tbody 로 이벤트가 올라오지
+     않으므로 document 에서 듣는다.
+
+     Enter 는 두 상태를 번갈아 오간다.
+       편집 중 → 저장하고 아래 칸으로. 이때는 아직 고치는 중이 아니라 '거기 있다' 만
+                 표시한다(선택).
+       선택 → 그 칸을 편집으로 연다.
+     스프레드시트에서 한 열을 위에서 아래로 채울 때 쓰는 흐름이다. */
   document.addEventListener("keydown", (event) => {
-    if (!editingId) return;
+    if (editingId === null && !picked) return;
 
     /* 한글 입력 중(IME 조합 중)의 Enter 는 조합을 확정하는 키다. 이때 저장으로
        가로채면 preventDefault 가 조합 확정을 막아 마지막 글자가 날아가고,
@@ -2572,17 +2649,40 @@
     if (event.key === "Escape") {
       event.preventDefault();
       // 팝업이 열려 있으면 먼저 팝업만 닫고, 편집은 유지한다.
-      if (!ownerPicker.hidden) closeOwnerPicker();
-      else cancelEdit();
+      if (!ownerPicker.hidden) return closeOwnerPicker();
+      if (editingId !== null) {
+        /* 편집만 되돌리고 그 칸은 선택 상태로 남긴다 — 어디에 있었는지 잃지 않게. */
+        const at = picked;
+        cancelEdit();
+        if (at) pick(at.id, at.colIndex);
+        return;
+      }
+      clearPick();
       return;
     }
 
     if (event.key !== "Enter") return;
     // 여러 줄 칸에서 Shift+Enter 는 저장이 아니라 줄바꿈이다(기본 동작을 그대로 둔다).
     if (event.shiftKey && event.target.tagName === "TEXTAREA") return;
-    // 담당자 팝업의 체크박스에서 Enter 는 저장으로 본다(체크는 Space 로 한다).
     event.preventDefault();
-    commit();
+
+    if (editingId === null) {
+      // 선택된 칸을 편집으로 연다.
+      startEdit(picked.id, picked.colIndex);
+      return;
+    }
+
+    /* 편집 중 — 저장하고 아래 칸을 선택한다. 옮겨 갈 행의 id 를 저장 전에 집어
+       두므로 정렬이 걸려 행이 자리를 옮겨도 맞는 행으로 간다. */
+    const tr = els.tbody.querySelector("tr[data-editing]");
+    const list = [...els.tbody.children];
+    const colIndex = picked?.colIndex ?? 1;
+    const below = list[list.indexOf(tr) + 1]?.dataset.id;
+    const stay = tr?.dataset.id ?? picked?.id;
+    if (!commit()) return;
+    // 마지막 행이면 옮길 곳이 없으므로 그 칸에 머문다.
+    const target = below ?? stay;
+    if (target) pick(target, colIndex);
   });
 
   // ── 검색 (헤더 버튼) ──────────────────────────────────
