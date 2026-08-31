@@ -2192,12 +2192,19 @@
   /* 살짝 늦게 띄운다. 여러 행 위를 지나갈 때마다 즉시 뜨면 화면이 깜박인다. */
   const TIP_DELAY = 140;
 
+  /* 툴팁을 띄울 자리 — 마지막으로 알고 있는 마우스 위치. 칸 모서리에 붙이면
+     메모 표시(오른쪽 위 삼각형)를 가리키고 있어도 툴팁이 엉뚱한 데서 열린다. */
+  let tipPoint = { x: 0, y: 0 };
+
+  /** 커서와 툴팁 사이 간격. 이보다 가까우면 툴팁이 커서 밑에 깔린다. */
+  const TIP_GAP = 14;
+
   function showTip(td) {
     clearTimeout(tipTimer);
     tipTimer = setTimeout(() => {
       tip.textContent = td.dataset.tip ?? "";
       tip.hidden = false;
-      placeTip(td);
+      placeTip();
     }, TIP_DELAY);
   }
 
@@ -2206,21 +2213,29 @@
     tip.hidden = true;
   }
 
-  /** 칸 왼쪽 아래에 붙이고, 화면을 넘으면 안쪽으로 · 위로 접는다. */
-  function placeTip(td) {
+  /** 커서 오른쪽 아래에 띄우고, 화면을 넘으면 반대쪽으로 접는다. */
+  function placeTip() {
     const box = tip.getBoundingClientRect();
-    const cell = td.getBoundingClientRect();
-    const left = Math.max(8, Math.min(cell.left, innerWidth - box.width - 8));
-    const below = cell.bottom + 4;
-    const top = below + box.height > innerHeight - 8 ? cell.top - box.height - 4 : below;
-    tip.style.left = `${left}px`;
+    let left = tipPoint.x + TIP_GAP;
+    let top = tipPoint.y + TIP_GAP;
+    if (left + box.width > innerWidth - 8) left = tipPoint.x - box.width - TIP_GAP;
+    if (top + box.height > innerHeight - 8) top = tipPoint.y - box.height - TIP_GAP;
+    tip.style.left = `${Math.max(8, left)}px`;
     tip.style.top = `${Math.max(8, top)}px`;
   }
 
+  /* 뜨기까지 조금 기다리므로 그 사이 움직인 위치까지 따라간다. 이미 떠 있는
+     동안에는 옮기지 않는다 — 글을 읽는 중에 상자가 따라다니면 읽기 어렵다. */
+  els.tbody.addEventListener("mousemove", (event) => {
+    if (!tip.hidden) return;
+    tipPoint = { x: event.clientX, y: event.clientY };
+  });
+
   els.tbody.addEventListener("mouseover", (event) => {
     const td = event.target.closest("td[data-tip]");
-    if (td) showTip(td);
-    else hideTip();
+    if (!td) return hideTip();
+    tipPoint = { x: event.clientX, y: event.clientY };
+    showTip(td);
   });
   els.tbody.addEventListener("mouseleave", hideTip);
   // 표가 움직이거나 다른 팝업이 열리면 툴팁만 남아 떠 있게 된다.
