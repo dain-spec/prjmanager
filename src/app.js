@@ -164,12 +164,11 @@
   ];
 
   const REQUEST_COLUMNS = [
-    /* 요청 · 상시 두 종류를 가른다. 흔한 쪽(요청)은 흐린 글자로 두고 상시만
-       배지로 띄운다 — 모든 행에 배지가 붙으면 어느 쪽이 특별한지 안 보인다.
+    /* 요청 · 상시 두 종류를 가른다. 배지 없이 글자로만 두되 흔한 쪽(요청)을
+       흐리게 해 상시가 눈에 들어오게 한다.
        폭은 '요청/상시' 드롭다운 43 + 좌우 패딩 24 = 67 이 하한이다. */
     { key: "kind", header: "구분", width: "68px", type: "select", align: "center",
       sortable: true, options: Object.entries(KIND_LABEL), labels: KIND_LABEL,
-      badge: (value) => (value === "standing" ? "standing" : null),
       mutedValues: ["request"], rank: { request: 0, standing: 1 } },
     /* 요청 업무는 요청이 들어온 날, 상시 업무는 맡기 시작한 날. 두 종류가 한
        컬럼을 나눠 쓰므로 정렬 · 기간 보기 · 주별 집계가 그대로 동작한다.
