@@ -1665,14 +1665,15 @@
   // ── 편집 동작 ───────────────────────────────────────────
 
   /** columnIndex 를 주면 그 칸의 입력 컨트롤로 바로 포커스한다(셀 클릭 진입). */
-  function startEdit(id, columnIndex) {
+  /** open: false 면 드롭다운·달력을 자동으로 펼치지 않는다(방향키 이동용). */
+  function startEdit(id, columnIndex, options) {
     const row = rows.find((r) => r.id === id);
     if (!row) return;
     editingId = id;
     draft = normalize(row);
     renderTable();
     syncToolbar();
-    focusCell(columnIndex);
+    focusCell(columnIndex, options);
   }
 
   function startCreate(afterId) {
@@ -1691,7 +1692,7 @@
   }
 
   /** 편집 행에서 columnIndex 번째 칸에 포커스한다. 없으면 첫 입력 칸으로. */
-  function focusCell(columnIndex) {
+  function focusCell(columnIndex, { open = true } = {}) {
     const tr = els.tbody.querySelector("tr[data-editing]");
     if (!tr) return;
     const SELECTOR = "[name], [data-owner-pick]";
@@ -1701,6 +1702,13 @@
     if (!field) return;
     field.focus();
     tr.scrollIntoView({ block: "nearest" });
+
+    if (!open) {
+      /* 방향키로 지나가는 중이다. 칸마다 목록이 펼쳐지면 이동을 막는다.
+         글자 칸은 전체 선택만 해 둔다(타이핑하면 대체된다). */
+      if (field.select) field.select();
+      return;
+    }
 
     if (field.dataset.ownerPick) {
       // 담당자 칸은 커스텀 팝업이라 바로 펼친다.
@@ -2470,6 +2478,92 @@
 
   $("btn-save").addEventListener("click", commit);
   $("btn-cancel").addEventListener("click", cancelEdit);
+
+  /* ── 방향키로 칸 이동 ─────────────────────────────────
+     표를 채울 때 손을 마우스로 옮기지 않아도 되게 편집 중 방향키로 옆 칸 ·
+     위아래 행으로 옮긴다.
+
+     컨트롤이 그 키를 써야 하는 상황에는 넘겨준다. 캐럿이 글자 사이에 있는데
+     좌우를 가로채면 글을 고칠 수 없고, 여러 줄 칸에서 위아래를 가로채면 줄
+     사이를 오갈 수 없다. 그래서 '더 갈 곳이 없을 때' 만 이동으로 쓴다. */
+  const ARROW_STEP = {
+    ArrowUp: [-1, 0],
+    ArrowDown: [1, 0],
+    ArrowLeft: [0, -1],
+    ArrowRight: [0, 1],
+  };
+
+  /** 이 컨트롤에서 그 방향키를 칸 이동에 써도 되는지. */
+  function arrowFree(field, key) {
+    if (!field) return true;
+    // 드롭다운 · 달력 · 담당자 버튼은 캐럿이 없다. 펼쳐져 있으면 브라우저가
+    // 방향키를 먼저 먹으므로 여기까지 오지 않는다.
+    if (field.tagName === "SELECT" || field.type === "date" || field.dataset.ownerPick) return true;
+
+    const start = field.selectionStart;
+    const end = field.selectionEnd;
+    if (start === null || start === undefined) return true;
+
+    /* 칸에 들어오면 글자가 전체 선택된 상태다(타이핑하면 대체되도록). 이때는
+       아직 글을 고치는 중이 아니므로 방향키를 이동에 쓴다. 그러지 않으면
+       칸에 들어온 직후에는 좌우로 옮길 수가 없다. */
+    if (start === 0 && end === field.value.length && field.value.length > 0) return true;
+
+    const collapsed = start === end;
+    if (key === "ArrowLeft") return collapsed && start === 0;
+    if (key === "ArrowRight") return collapsed && end === field.value.length;
+    if (field.tagName === "TEXTAREA") {
+      // 첫 줄에서 위, 마지막 줄에서 아래일 때만 칸을 옮긴다.
+      return key === "ArrowUp"
+        ? !field.value.slice(0, start).includes("\n")
+        : !field.value.slice(end).includes("\n");
+    }
+    return true;
+  }
+
+  /** 편집 칸을 한 칸 옮긴다. 옮겼으면 true. */
+  function moveEditing(key) {
+    const [rowStep, colStep] = ARROW_STEP[key];
+    const tr = els.tbody.querySelector("tr[data-editing]");
+    if (!tr) return false;
+    const cell = document.activeElement?.closest?.("td");
+    // 담당자 팝업에서 눌렀을 수도 있다. 그때는 그 칸을 기준으로 삼는다.
+    const from = cell && tr.contains(cell)
+      ? [...tr.children].indexOf(cell)
+      : [...tr.children].findIndex((td) => td.querySelector("[data-owner-pick]:focus"));
+    const colIndex = from >= 0 ? from : 1;
+
+    if (colStep) {
+      /* 같은 행 안이라 저장할 필요가 없다 — draft 는 입력할 때마다 갱신된다.
+         값을 담는 칸(1 ~ 컬럼 수)만 오간다. 0 은 No, 마지막은 여백 칸이다. */
+      const next = colIndex + colStep;
+      if (next < 1 || next > view.columns.length) return false;
+      closeOwnerPicker();
+      focusCell(next, { open: false });
+      return true;
+    }
+
+    /* 위아래 — 화면에 보이는 순서로 옮긴다. 저장을 먼저 하므로 정렬이 걸려 행이
+       자리를 옮겨도 문제없다. 옮겨 갈 행의 id 를 저장 전에 집어 두기 때문이다. */
+    const list = [...els.tbody.children];
+    const targetId = list[list.indexOf(tr) + rowStep]?.dataset.id;
+    if (!targetId) return false;
+    // 필수값이 비어 저장이 막히면 그 자리에 머문다.
+    if (!commit()) return false;
+    startEdit(targetId, colIndex, { open: false });
+    return true;
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (editingId === null || !ARROW_STEP[event.key]) return;
+    // 조합 중에는 방향키가 글자를 고르는 키다.
+    if (event.isComposing || event.keyCode === 229) return;
+    // Shift+방향키는 글자 선택, 나머지 조합키는 브라우저 단축키로 남긴다.
+    if (event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return;
+    const field = event.target.closest?.("[name], [data-owner-pick]");
+    if (!arrowFree(field, event.key)) return;
+    if (moveEditing(event.key)) event.preventDefault();
+  });
 
   // Enter 저장 / Esc 취소. 담당자 팝업은 body 레벨에 있어 tbody 로 이벤트가
   // 올라오지 않으므로 document 에서 듣는다.
