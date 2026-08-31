@@ -346,6 +346,8 @@
          일이므로 위에 둔다. 같은 날짜끼리는 넣은 순서를 지킨다. */
       order: { key: "requested", dir: "desc" },
       migrate: migrateRequestRow,
+      // 매일 하는 업무 줄은 이 탭에서만 쓴다.
+      daily: true,
       // 요청일 기준으로 한 주 / 한 달만 보는 기간 보기를 쓴다.
       period: true,
       // 표 위에 요약 대시보드를 띄운다.
@@ -568,6 +570,7 @@
     for (const tab of els.tabs.querySelectorAll("[data-view]")) {
       tab.setAttribute("aria-selected", String(tab.dataset.view === view.id));
     }
+    renderDaily();
     els.search.placeholder = view.searchHint;
     els.stats.hidden = true; // 파일 현황 대시보드는 추후 제공 예정
     buildHead();
@@ -2513,6 +2516,11 @@
   }
 
   function renderDaily() {
+    /* 매일 하는 업무는 '오늘 무엇을 챙기나' 라서 업무 요청 탭에만 둔다.
+       파일 현황은 하루 단위로 보는 표가 아니다. */
+    $("daily").hidden = !view.daily;
+    if (!view.daily) return;
+
     const now = new Date();
     $("daily-date").textContent =
       `${now.getMonth() + 1}월 ${now.getDate()}일 (${DAY_NAMES[now.getDay()]})`;
