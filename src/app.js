@@ -1209,7 +1209,6 @@
           : `조건에 맞는 ${view.noun}이 없습니다. 검색어를 조정해 보세요.`;
       els.addFirst.hidden = !noData;
     }
-    syncToolbar();
     /* 행 수가 달라지면 세로 스크롤바가 생기고 사라져 쓸 수 있는 폭도 달라진다.
        행을 다 그린 뒤에 계산해야 값이 맞는다. */
     growToFill();
@@ -1659,7 +1658,6 @@
     renderRequestStats();
     renderTable();
     renderPeriod();
-    syncToolbar();
   }
 
   // ── 편집 동작 ───────────────────────────────────────────
@@ -1672,7 +1670,6 @@
     editingId = id;
     draft = normalize(row);
     renderTable();
-    syncToolbar();
     focusCell(columnIndex, options);
   }
 
@@ -1687,7 +1684,6 @@
       else draft[col.key] = "";
     }
     renderTable();
-    syncToolbar();
     focusCell();
   }
 
@@ -1775,7 +1771,6 @@
     draft = null;
     insertAfterId = null;
     renderTable();
-    syncToolbar();
   }
 
   /** 주어진 id 들의 행을 삭제한다. 헤더 삭제와 우클릭 삭제가 함께 쓴다. */
@@ -1796,14 +1791,6 @@
     save();
     render();
     toast(`${count}건을 삭제했습니다.`);
-  }
-
-  /** 헤더 버튼 표시 — 편집 중일 때만 저장 · 취소를 낸다. */
-  function syncToolbar() {
-    const editing = editingId !== null;
-    const show = (el, on) => el.toggleAttribute("hidden", !on);
-    show($("btn-save"), editing);
-    show($("btn-cancel"), editing);
   }
 
   // ── CSV 내보내기 ────────────────────────────────────────
@@ -2476,8 +2463,15 @@
     if (id) startEdit(id, [...tr.children].indexOf(td));
   });
 
-  $("btn-save").addEventListener("click", commit);
-  $("btn-cancel").addEventListener("click", cancelEdit);
+  /* 표 밖을 누르면 저장한다. 저장 · 취소 버튼이 없으므로 이것까지 없으면 편집을
+     시작한 뒤 다른 곳을 눌렀을 때 빠져나올 방법이 Enter · Esc 뿐이다.
+     body 레벨 팝업(담당자 · 메모 · 우클릭 메뉴)은 편집의 일부라 제외한다.
+     표 안의 클릭은 tbody 핸들러가 이미 다룬다. */
+  document.addEventListener("mousedown", (event) => {
+    if (editingId === null) return;
+    if (event.target.closest("#tbody, #owner-picker, #memo-editor, #row-menu, #row-insert")) return;
+    commit();
+  });
 
   /* ── 방향키로 칸 이동 ─────────────────────────────────
      표를 채울 때 손을 마우스로 옮기지 않아도 되게 편집 중 방향키로 옆 칸 ·
