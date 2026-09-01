@@ -66,10 +66,24 @@ textarea {
 }
 .skip-link:focus-visible { top: var(--gap-6); }
 
+/* 화면에는 안 보이지만 스크린 리더에는 읽히는 글. 제목 줄을 탭이 대신하면서
+   갈 곳이 없어진 h1 에 쓴다 — 페이지에 h1 이 하나도 없으면 문서 구조가 사라진다. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
 /* ── 헤더 ──────────────────────────────────────────────── */
 
 .page-head {
-  /* 위: 제목 + 탭 + 버튼 한 줄, 아래: 매일 하는 업무 한 줄. */
+  /* 위: 탭 + 버튼 한 줄, 아래: 매일 하는 업무 한 줄. */
   display: flex;
   flex-direction: column;
   gap: var(--gap-5);
@@ -77,20 +91,14 @@ textarea {
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
+/* 왼쪽은 보고 있는 표를 고르는 탭, 오른쪽은 그 표에 걸리는 기간 보기 · 검색과
+   테마. 아래를 기준으로 맞춰(align-items: flex-end) 탭(32px)의 밑줄과 오른쪽
+   컨트롤(36px)의 아래변이 한 선에 놓인다. */
 .page-head__bar {
   display: flex;
-  /* 왼쪽은 제목, 오른쪽은 검색·테마 버튼. 오른쪽 36px 버튼에 맞춰 세로
-     중앙에서 정렬한다. */
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--gap-6);
-}
-
-.page-head__title {
-  margin: 0;
-  font-size: var(--font-heading4);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-bolder);
 }
 
 .page-head__actions {
@@ -197,35 +205,11 @@ textarea {
   color: var(--color-text-subtler);
 }
 
-/* ── 표를 고르는 줄 ─────────────────────────────────────── */
-
-/* 왼쪽은 탭, 오른쪽은 그 표에 걸리는 기간 보기와 검색. 아래를 기준으로 맞춰 탭의
-   밑줄과 오른쪽 컨트롤의 아래변이 한 선에 놓이게 한다.
-
-   .content 의 세로 간격 20px 은 대시보드 ↔ 표 사이에 맞춘 값이다. 탭은 밑줄이
-   경계선 역할을 하므로 그만큼 띄우면 아래 내용과 떨어져 보인다. 8px 당겨 12px 로
-   만든다(대시보드 ↔ 표 간격은 20px 그대로). */
-.viewbar {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--gap-6);
-  margin-bottom: calc(-1 * var(--gap-4));
-}
-
-/* 기간 보기와 검색은 둘 다 아래 표를 거르므로 한 덩어리로 묶어 오른쪽에 둔다.
-   검색을 오른쪽 끝에 두어야 기간 보기가 없는 파일 현황 탭에서도 아이콘이 같은
-   자리에 있다. 입력칸은 왼쪽으로 펼쳐지므로 그때만 기간 보기가 밀린다. */
-.viewbar__tools {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-6);
-}
-
 /* ── 탭 ────────────────────────────────────────────────── */
 
-/* 디자인 시스템의 TabBorder(Type=Default) 를 그대로 옮겼다. 배경도 테두리도
-   없는 글자 탭이고, 고른 탭 밑에만 굵은 밑줄이 깔린다.
+/* 제목 자리에 서지만 글자는 키우지 않는다 — 디자인 시스템의
+   TabBorder(Type=Default) 를 그대로 옮겼다. 배경도 테두리도 없는 글자 탭이고,
+   고른 탭 밑에만 굵은 밑줄이 깔린다.
      탭 높이 32, 글자 16px / 자간 -0.5 / 행간 24
      고른 탭  #333 Bold + 밑줄 2px #4a4a4a
      안 고른 탭 #777 Regular

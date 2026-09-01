@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 부서 업무 요청 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=051958e7" />
+<link rel="stylesheet" href="src/styles.css?v=0d8d0d51" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -15,47 +15,23 @@
 <div class="app">
   <!-- ── 헤더 ───────────────────────────────────────────── -->
   <header class="page-head">
+    <!-- 제목 줄. 왼쪽은 보고 있는 표를 고르는 탭, 오른쪽은 그 표에 걸리는
+         기간 보기 · 검색과 테마. -->
     <div class="page-head__bar">
-      <h1 class="page-head__title">업무 현황</h1>
+      <!-- '업무 현황' 은 이 줄의 탭이 대신한다 — 보고 있는 표 이름이 곧 이 화면의
+           제목이라 같은 뜻을 두 줄에 걸쳐 적을 자리가 아깝다. 문서 제목은
+           <title> 과 화면에 보이지 않는 h1 로 남는다. -->
+      <h1 class="visually-hidden">업무 현황</h1>
 
-    <div class="page-head__actions">
-      <!-- CSV 내보내기는 추후 제공 예정. hidden 만 제거하면 다시 노출된다. -->
-      <button type="button" class="btn btn--secondary" id="btn-export" hidden>CSV 내보내기</button>
-
-      <button type="button" class="btn btn--ghost btn--icon" id="btn-theme" aria-label="라이트/다크 모드 전환" title="라이트 / 다크 모드 전환">
-        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
-          <circle cx="8" cy="8" r="3.1" />
-          <path d="M8 1v1.6M8 13.4V15M1 8h1.6M13.4 8H15M3.05 3.05l1.13 1.13M11.82 11.82l1.13 1.13M12.95 3.05l-1.13 1.13M4.18 11.82l-1.13 1.13" />
-        </svg>
-      </button>
-      </div>
-    </div>
-
-    <!-- 매일 하는 업무 — 두 탭이 함께 보는 상시 목록. 항목은 JS 가 채운다.
-         표가 화면 대부분을 써야 하므로 헤더 안(제목 줄 아래, 구분선 위)에
-         한 줄로 둔다. 본문에 두면 업무 요청 탭의 대시보드와 세로로 겹쳐 쌓인다. -->
-    <section class="daily" id="daily" aria-label="매일 하는 업무">
-      <p class="daily__label">매일 <span class="daily__date" id="daily-date"></span></p>
-      <ul class="daily__list" id="daily-list"></ul>
-      <p class="daily__empty" id="daily-empty" hidden>매일 챙겨야 하는 업무를 적어 두세요.</p>
-      <button type="button" class="daily__add" id="daily-add">+ 추가</button>
-    </section>
-  </header>
-
-  <main class="content" id="content">
-    <!-- 표를 고르는 줄. 왼쪽은 탭, 오른쪽은 그 표에 걸리는 기간 보기와 검색이다.
-         바꾸는 대상(요약 · 표) 바로 위에 둔다 — 대시보드도 탭에 따라 달라진다. -->
-    <div class="viewbar">
       <nav class="tabs" id="tabs" role="tablist" aria-label="현황 종류">
         <button type="button" class="tab" role="tab" data-view="works" aria-selected="true">파일 현황</button>
         <button type="button" class="tab" role="tab" data-view="requests" aria-selected="false">업무 요청</button>
       </nav>
 
-      <!-- 탭 오른쪽 도구 — 기간 보기와 검색. 둘 다 아래 표를 거르므로 표 바로 위,
-           보는 표를 고르는 탭 맞은편에 나란히 둔다. 검색은 두 탭 모두에서 쓰지만
-           기간 보기는 업무 요청 탭에만 있으므로, 검색을 오른쪽 끝에 붙여 탭을
-           오갈 때 검색 아이콘이 제자리에 머물게 한다. -->
-      <div class="viewbar__tools">
+      <div class="page-head__actions">
+        <!-- CSV 내보내기는 추후 제공 예정. hidden 만 제거하면 다시 노출된다. -->
+        <button type="button" class="btn btn--secondary" id="btn-export" hidden>CSV 내보내기</button>
+
         <!-- 기간 보기 — 업무 요청 탭에서만 쓴다. 시작일이 고른 기간에 든 행만 남긴다. -->
         <div class="period" id="period" hidden>
           <div class="period__units" role="group" aria-label="기간 단위">
@@ -87,9 +63,28 @@
             </svg>
           </button>
         </div>
+
+        <button type="button" class="btn btn--ghost btn--icon" id="btn-theme" aria-label="라이트/다크 모드 전환" title="라이트 / 다크 모드 전환">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="8" cy="8" r="3.1" />
+            <path d="M8 1v1.6M8 13.4V15M1 8h1.6M13.4 8H15M3.05 3.05l1.13 1.13M11.82 11.82l1.13 1.13M12.95 3.05l-1.13 1.13M4.18 11.82l-1.13 1.13" />
+          </svg>
+        </button>
       </div>
     </div>
 
+    <!-- 매일 하는 업무 — 두 탭이 함께 보는 상시 목록. 항목은 JS 가 채운다.
+         표가 화면 대부분을 써야 하므로 헤더 안(제목 줄 아래, 구분선 위)에
+         한 줄로 둔다. 본문에 두면 업무 요청 탭의 대시보드와 세로로 겹쳐 쌓인다. -->
+    <section class="daily" id="daily" aria-label="매일 하는 업무">
+      <p class="daily__label">매일 <span class="daily__date" id="daily-date"></span></p>
+      <ul class="daily__list" id="daily-list"></ul>
+      <p class="daily__empty" id="daily-empty" hidden>매일 챙겨야 하는 업무를 적어 두세요.</p>
+      <button type="button" class="daily__add" id="daily-add">+ 추가</button>
+    </section>
+  </header>
+
+  <main class="content" id="content">
     <!-- ── 요약 통계 ─────────────────────────────────────── -->
     <!-- 대시보드는 추후 제공 예정. JS 가 항상 hidden 으로 둔다. -->
     <section class="stats" id="stats" aria-label="현황 요약" hidden>
