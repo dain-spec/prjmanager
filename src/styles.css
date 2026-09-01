@@ -248,42 +248,61 @@ textarea {
   border-bottom-color: var(--color-border-bolder);
 }
 
-/* 기간 단위(전체 · 주 · 월)는 탭과 달리 세그먼트 컨트롤로 둔다. 탭은 보는 표를
-   바꾸고 단위는 같은 표를 거르므로, 생김새가 같으면 어느 쪽이 화면을 바꾸는지
-   헷갈린다. 높이는 헤더 오른쪽 .btn 과 맞춘다(36px 안에 보더 2 + 패딩 4). */
-.period__units {
-  display: inline-flex;
-  height: var(--size-8);
-  gap: var(--gap-1);
-  padding: var(--padding-1);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-small);
-  background: var(--color-surface-subtler);
-}
+/* 기간 단위(전체 · 주 · 월) — 디자인 시스템의 Select(State=Default) 를 그대로
+   옮겼다. 테두리도 배경도 없이 고른 값과 아래 화살표만 적는다.
+     글자 14px / 자간 -0.5 / 행간 21, 화살표 12px, 둘 사이 2px
+   셋 중 하나만 고르는 값이라 세 칸을 늘 펼쳐 두는 세그먼트보다 맞고, 폭도
+   덜 쓴다. 고른 값만 보이지만 바로 옆 기간 라벨(8월 31일 ~ 9월 6일)이 함께
+   읽히므로 '주' 한 글자로도 무엇을 보고 있는지 알 수 있다.
 
-.period__unit {
-  height: 100%;
-  padding-inline: var(--padding-6);
+   노션의 필터 바처럼 두 얼굴을 갖는다. 기본값(전체)일 때는 거르는 게 없으므로
+   연한 글씨로 '기간' 이라고만 적어 무엇을 고르는 자리인지만 알린다. 주 · 월을
+   고르면 '기간: 주' 를 옅은 파란 칩으로 세운다 — 노션이 걸린 필터를 칩으로
+   보여 주는 것과 같다. 어느 주인지는 바로 옆 기간 라벨이 말한다.
+
+   높이는 28px 로 옆의 36px 컨트롤보다 낮게 둔다. 칩이 헤더 버튼만큼 커지면
+   누르는 버튼처럼 보이고, 노션의 필터 칩도 툴바보다 한 단 작다. */
+.period__pick {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-1);
+  height: var(--size-6);
+  padding: 0;
   border: 0;
-  border-radius: var(--radius-xxsmall);
+  border-radius: var(--radius-max);
   background: none;
   color: var(--color-text-subtle);
-  font-size: var(--font-body4);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-body3);
+  letter-spacing: -0.5px;
+  line-height: 21px;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition: color 120ms ease, background-color 120ms ease;
 }
 
-.period__unit:hover { color: var(--color-text-basic); }
+.period__pick:hover { color: var(--color-text-basic); }
 
-.period__unit[aria-pressed="true"] {
-  background: var(--color-surface-basic);
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-bold);
-  box-shadow: var(--shadow-level1);
+/* 걸린 필터. 색은 진행 상태 배지(.badge--progress)와 같은 짝을 쓴다 — 이 화면의
+   색 있는 칩은 다크 모드에서도 밝은 칩 그대로여서, 필터 칩만 뒤집히면 겉돈다.
+   :hover 와 같은 무게라 뒤에 두어야 덮어쓴다 — 걸어 둔 필터가 마우스를 올렸다고
+   회색으로 돌아가면 안 된다. */
+.period__pick[data-active] {
+  padding-inline: var(--padding-4);
+  background: var(--color-primary-50);
+  color: var(--color-blue-700);
+  font-weight: var(--font-weight-medium);
 }
 
+.period__pick .icon {
+  width: var(--size-2);
+  height: var(--size-2);
+  transition: transform 120ms ease;
+}
+
+/* 펼친 동안 화살표를 뒤집는다 — 목록이 열려 있는 것을 버튼에서도 알 수 있다. */
+.period__pick[aria-expanded="true"] .icon {
+  transform: rotate(180deg);
+}
 
 /* ── 기간 보기 ─────────────────────────────────────────── */
 
@@ -1088,10 +1107,22 @@ textarea.input--cell {
   background: var(--color-surface-error-subtler);
 }
 
+/* 지금 고른 항목 — 목록을 열었을 때 어디에 있는지 바로 보이게 한다. */
+.menu__item[aria-checked="true"] {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-bold);
+}
+
 .menu__divider {
   height: 1px;
   margin: var(--padding-1) var(--padding-2);
   background: var(--color-border-subtler);
+}
+
+/* 기간 단위 목록 — 항목이 '전체 · 주 · 월' 뿐이라 우클릭 메뉴의 148px 는
+   너무 넓다. 여는 버튼(약 40px)보다는 넉넉하되 그만큼만 쓴다. */
+.menu--units {
+  min-width: 88px;
 }
 
 /* ── 담당자 복수 선택 팝업 ─────────────────────────────── */

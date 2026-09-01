@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 부서 업무 요청 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=0d8d0d51" />
+<link rel="stylesheet" href="src/styles.css?v=1b2c4ba7" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -34,11 +34,14 @@
 
         <!-- 기간 보기 — 업무 요청 탭에서만 쓴다. 시작일이 고른 기간에 든 행만 남긴다. -->
         <div class="period" id="period" hidden>
-          <div class="period__units" role="group" aria-label="기간 단위">
-            <button type="button" class="period__unit" data-unit="all" aria-pressed="true">전체</button>
-            <button type="button" class="period__unit" data-unit="week" aria-pressed="false">주</button>
-            <button type="button" class="period__unit" data-unit="month" aria-pressed="false">월</button>
-          </div>
+          <!-- 단위는 셋 중 하나만 고르므로 세그먼트 대신 드롭다운으로 둔다.
+               디자인 시스템의 Select — 테두리 · 배경 없이 고른 값과 화살표만
+               적는다. 목록은 body 의 #period-menu 가 연다. -->
+          <button type="button" class="period__pick" id="period-pick"
+                  aria-haspopup="menu" aria-expanded="false" aria-label="기간 단위: 전체">
+            <span id="period-unit">기간</span>
+            <svg class="icon" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.25 4.3 6 7.7 9.75 4.3" /></svg>
+          </button>
 
           <!-- 전체를 보고 있을 때는 오갈 기간이 없으므로 숨긴다. -->
           <div class="period__nav" id="period-nav" hidden>
@@ -218,6 +221,14 @@
 <div class="menu menu--picker" id="owner-picker" role="dialog" aria-label="담당자 선택" hidden></div>
 
 <!-- 행 우클릭 메뉴. .panel 은 overflow: hidden 이라 잘리므로 body 레벨에 둔다. -->
+<!-- 기간 단위 목록 — 헤더의 드롭다운이 연다. 헤더 안에 두면 열릴 때 옆
+     컨트롤을 밀어내므로 다른 팝업처럼 body 에 두고 위치를 계산한다. -->
+<div class="menu menu--units" id="period-menu" role="menu" aria-label="기간 단위" hidden>
+  <button type="button" class="menu__item" role="menuitemradio" data-unit="all" aria-checked="true">전체</button>
+  <button type="button" class="menu__item" role="menuitemradio" data-unit="week" aria-checked="false">주</button>
+  <button type="button" class="menu__item" role="menuitemradio" data-unit="month" aria-checked="false">월</button>
+</div>
+
 <div class="menu" id="row-menu" role="menu" hidden>
   <!-- 메모는 행이 아니라 우클릭한 '칸' 에 붙는다. -->
   <button type="button" class="menu__item" role="menuitem" data-menu="memo" id="menu-memo">메모 추가</button>
@@ -246,6 +257,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=5d6db18f"></script>
+<script src="src/app.js?v=3c2e7531"></script>
 </body>
 </html>

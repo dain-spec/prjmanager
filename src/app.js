@@ -398,6 +398,9 @@
      지난 달이다. 새로고침하면 전체로 돌아간다. 저장해 두면 다음에 열었을 때
      '지난 주' 를 보고 있는데 그 사실을 모르는 상태가 되기 때문이다. */
   let period = { unit: "all", offset: 0 };
+
+  /** 기간 단위 이름 — 드롭다운 버튼과 목록이 같은 말을 쓰도록 한 곳에 둔다. */
+  const UNIT_LABELS = { all: "전체", week: "주", month: "월" };
   let sort = { key: null, dir: "asc" };
 
   /** 편집 중인 행 id (신규는 NEW_ID). null 이면 편집 중이 아니다. */
@@ -424,6 +427,9 @@
     stats: $("stats"),
     requestStats: $("request-stats"),
     period: $("period"),
+    periodPick: $("period-pick"),
+    periodUnit: $("period-unit"),
+    periodMenu: $("period-menu"),
     periodNav: $("period-nav"),
     periodLabel: $("period-label"),
     colgroup: document.querySelector(".table colgroup"),
@@ -1650,9 +1656,17 @@
   /** 기간 컨트롤 — 단위 선택 상태와 지금 보고 있는 기간을 화면에 맞춘다. */
   function renderPeriod() {
     els.period.hidden = !view.period;
-    if (!view.period) return;
-    for (const button of els.period.querySelectorAll("[data-unit]")) {
-      button.setAttribute("aria-pressed", String(button.dataset.unit === period.unit));
+    // 기간 보기가 없는 탭으로 옮기면 열려 있던 목록도 함께 닫는다.
+    if (!view.period) return closePeriodMenu();
+    /* 노션의 필터처럼, 걸린 게 없으면 값 대신 무엇을 고르는 자리인지를 적는다.
+       '전체' 는 고른 값이 아니라 안 걸린 상태이므로 굳이 값으로 내보이지 않는다. */
+    const filtered = period.unit !== "all";
+    els.periodUnit.textContent = filtered ? `기간: ${UNIT_LABELS[period.unit]}` : "기간";
+    els.periodPick.toggleAttribute("data-active", filtered);
+    // 버튼 이름에는 고른 값을 그대로 넣는다. aria-label 은 안의 글자를 덮어쓴다.
+    els.periodPick.setAttribute("aria-label", `기간 단위: ${UNIT_LABELS[period.unit]}`);
+    for (const item of els.periodMenu.querySelectorAll("[data-unit]")) {
+      item.setAttribute("aria-checked", String(item.dataset.unit === period.unit));
     }
     const range = periodRange();
     els.periodNav.hidden = !range;
@@ -1775,6 +1789,10 @@
       else next[col.key] = (raw ?? "").trim();
     }
 
+    /* 편집 이벤트를 타지 않고 값이 들어오는 경로도 있으므로 저장 직전에 한 번 더
+       맞춘다. 완료일이 있으면 상태는 완료다. */
+    if (next.done && "status" in next) next.status = "done";
+
     const missing = view.columns.find((col) => col.required && !next[col.key]);
     if (missing) {
       toast(`${missing.header}을(를) 입력해 주세요.`);
@@ -1883,12 +1901,40 @@
 
   // ── 기간 보기 ─────────────────────────────────────────
   els.period.addEventListener("click", (event) => {
-    const unit = event.target.closest("[data-unit]");
-    // 단위를 바꾸면 기준이 달라지므로 항상 이번 주 / 이번 달부터 다시 시작한다.
-    if (unit) return setPeriod(unit.dataset.unit, 0);
     const step = event.target.closest("[data-step]");
     if (step) setPeriod(period.unit, period.offset + Number(step.dataset.step));
   });
+
+  /* 단위 목록은 다른 팝업과 같이 body 에 두고 버튼 아래에 붙인다. 화면 밖으로
+     나가지 않게 오른쪽 끝을 8px 남긴다 — 버튼이 헤더 오른쪽에 있어 목록이 더
+     넓으면 그냥 붙였을 때 잘린다. */
+  els.periodPick.addEventListener("click", () => {
+    if (!els.periodMenu.hidden) return closePeriodMenu();
+    els.periodMenu.hidden = false;
+    els.periodPick.setAttribute("aria-expanded", "true");
+    const anchor = els.periodPick.getBoundingClientRect();
+    const box = els.periodMenu.getBoundingClientRect();
+    els.periodMenu.style.left = `${Math.min(anchor.left, innerWidth - box.width - 8)}px`;
+    els.periodMenu.style.top = `${anchor.bottom + 4}px`;
+  });
+
+  els.periodMenu.addEventListener("click", (event) => {
+    const item = event.target.closest("[data-unit]");
+    if (!item) return;
+    closePeriodMenu();
+    // 방금 누른 항목이 사라지므로 포커스를 버튼으로 돌려 놓는다.
+    els.periodPick.focus();
+    // 단위를 바꾸면 기준이 달라지므로 항상 이번 주 / 이번 달부터 다시 시작한다.
+    setPeriod(item.dataset.unit, 0);
+  });
+
+  function closePeriodMenu() {
+    els.periodMenu.hidden = true;
+    els.periodPick.setAttribute("aria-expanded", "false");
+  }
+
+  // 창 크기가 바뀌면 버튼이 움직이므로 붙여 둔 자리가 어긋난다.
+  addEventListener("resize", closePeriodMenu);
 
   // ── 탭 ────────────────────────────────────────────────
   els.tabs.addEventListener("click", (event) => {
@@ -2379,12 +2425,16 @@
   // 메뉴 밖 클릭 / Esc / 표 스크롤 시 닫는다.
   document.addEventListener("click", (event) => {
     if (!rowMenu.hidden && !event.target.closest("#row-menu")) closeRowMenu();
+    /* 여는 버튼을 다시 누른 경우는 그 핸들러가 이미 닫았다. 여기서 또 닫으면
+       열자마자 닫히므로 버튼 위 클릭은 지나친다. */
+    if (!event.target.closest("#period-menu, #period-pick")) closePeriodMenu();
     // 메모는 적다가 밖을 누를 수 있어 닫기만 하고 글은 버린다(저장은 명시적으로).
     if (!memoBox.hidden && !event.target.closest("#memo-editor")) closeMemo();
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeRowMenu();
+      closePeriodMenu();
       closeMemo();
     }
   });
@@ -2401,6 +2451,7 @@
     const field = event.target.closest("[name]");
     if (!field || !draft) return;
     draft[field.name] = field.value;
+    if (field.name === "done") syncDoneStatus();
     if (field.tagName === "TEXTAREA") autoGrow(field);
     // 서비스가 바뀌면 제안할 메뉴명도, 파일 현황에서 가져올 값도 달라진다.
     if (field.name === "service") {
@@ -2413,6 +2464,7 @@
     const field = event.target.closest("[name]");
     if (!field || !draft) return;
     draft[field.name] = field.value;
+    if (field.name === "done") syncDoneStatus();
     // OS 도 파일 현황 행을 고르는 키다.
     if (field.name === "platform") syncLinkedPlaceholders();
   });
@@ -2557,6 +2609,18 @@
         : !field.value.slice(end).includes("\n");
     }
     return true;
+  }
+
+  /* 완료일이 적히면 상태는 완료다. 두 값을 따로 두면 '완료일은 있는데 진행중' 처럼
+     서로 어긋난 행이 생기고, 완료율 · 최장 대기가 어느 쪽을 믿어야 할지 알 수 없다.
+     편집 중에 바로 반영해 화면에서도 상태가 완료로 바뀌는 것이 보이게 한다. */
+  function syncDoneStatus() {
+    if (!draft || !view.columns.some((col) => col.key === "status")) return;
+    if (!String(draft.done ?? "").trim()) return;
+    if (draft.status === "done") return;
+    draft.status = "done";
+    const select = els.tbody.querySelector("tr[data-editing] select[name=status]");
+    if (select) select.value = "done";
   }
 
   /** 선택(편집 아님) 칸을 한 칸 옮긴다. 옮겼으면 true. */
