@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 부서 업무 요청 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=f4a8450b" />
+<link rel="stylesheet" href="src/styles.css?v=051958e7" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -21,18 +21,6 @@
     <div class="page-head__actions">
       <!-- CSV 내보내기는 추후 제공 예정. hidden 만 제거하면 다시 노출된다. -->
       <button type="button" class="btn btn--secondary" id="btn-export" hidden>CSV 내보내기</button>
-
-      <!-- 평소엔 버튼만 보이고, 누르면 입력칸이 펼쳐진다. -->
-      <div class="search" id="search-box">
-        <input type="search" id="search" class="search__input"
-               placeholder="검색" aria-label="목록 검색" hidden />
-        <button type="button" class="btn btn--ghost btn--icon" id="btn-search"
-                aria-label="검색" aria-expanded="false" title="검색">
-          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
-            <circle cx="7" cy="7" r="4.6" /><path d="M10.4 10.4 14 14" />
-          </svg>
-        </button>
-      </div>
 
       <button type="button" class="btn btn--ghost btn--icon" id="btn-theme" aria-label="라이트/다크 모드 전환" title="라이트 / 다크 모드 전환">
         <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
@@ -55,7 +43,7 @@
   </header>
 
   <main class="content" id="content">
-    <!-- 표를 고르는 줄. 왼쪽은 탭, 오른쪽은 그 표에 걸리는 기간 보기다.
+    <!-- 표를 고르는 줄. 왼쪽은 탭, 오른쪽은 그 표에 걸리는 기간 보기와 검색이다.
          바꾸는 대상(요약 · 표) 바로 위에 둔다 — 대시보드도 탭에 따라 달라진다. -->
     <div class="viewbar">
       <nav class="tabs" id="tabs" role="tablist" aria-label="현황 종류">
@@ -63,22 +51,40 @@
         <button type="button" class="tab" role="tab" data-view="requests" aria-selected="false">업무 요청</button>
       </nav>
 
-      <!-- 기간 보기 — 업무 요청 탭에서만 쓴다. 시작일이 고른 기간에 든 행만 남긴다. -->
-      <div class="period" id="period" hidden>
-        <div class="period__units" role="group" aria-label="기간 단위">
-          <button type="button" class="period__unit" data-unit="all" aria-pressed="true">전체</button>
-          <button type="button" class="period__unit" data-unit="week" aria-pressed="false">주</button>
-          <button type="button" class="period__unit" data-unit="month" aria-pressed="false">월</button>
+      <!-- 탭 오른쪽 도구 — 기간 보기와 검색. 둘 다 아래 표를 거르므로 표 바로 위,
+           보는 표를 고르는 탭 맞은편에 나란히 둔다. 검색은 두 탭 모두에서 쓰지만
+           기간 보기는 업무 요청 탭에만 있으므로, 검색을 오른쪽 끝에 붙여 탭을
+           오갈 때 검색 아이콘이 제자리에 머물게 한다. -->
+      <div class="viewbar__tools">
+        <!-- 기간 보기 — 업무 요청 탭에서만 쓴다. 시작일이 고른 기간에 든 행만 남긴다. -->
+        <div class="period" id="period" hidden>
+          <div class="period__units" role="group" aria-label="기간 단위">
+            <button type="button" class="period__unit" data-unit="all" aria-pressed="true">전체</button>
+            <button type="button" class="period__unit" data-unit="week" aria-pressed="false">주</button>
+            <button type="button" class="period__unit" data-unit="month" aria-pressed="false">월</button>
+          </div>
+
+          <!-- 전체를 보고 있을 때는 오갈 기간이 없으므로 숨긴다. -->
+          <div class="period__nav" id="period-nav" hidden>
+            <button type="button" class="btn btn--ghost btn--icon" data-step="-1" aria-label="이전 기간">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5" /></svg>
+            </button>
+            <span class="period__label" id="period-label" aria-live="polite"></span>
+            <button type="button" class="btn btn--ghost btn--icon" data-step="1" aria-label="다음 기간">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
+            </button>
+          </div>
         </div>
 
-        <!-- 전체를 보고 있을 때는 오갈 기간이 없으므로 숨긴다. -->
-        <div class="period__nav" id="period-nav" hidden>
-          <button type="button" class="btn btn--ghost btn--icon" data-step="-1" aria-label="이전 기간">
-            <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5" /></svg>
-          </button>
-          <span class="period__label" id="period-label" aria-live="polite"></span>
-          <button type="button" class="btn btn--ghost btn--icon" data-step="1" aria-label="다음 기간">
-            <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
+        <!-- 평소엔 버튼만 보이고, 누르면 입력칸이 왼쪽으로 펼쳐진다. -->
+        <div class="search" id="search-box">
+          <input type="search" id="search" class="search__input"
+                 placeholder="검색" aria-label="목록 검색" hidden />
+          <button type="button" class="btn btn--ghost btn--icon" id="btn-search"
+                  aria-label="검색" aria-expanded="false" title="검색">
+            <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="7" cy="7" r="4.6" /><path d="M10.4 10.4 14 14" />
+            </svg>
           </button>
         </div>
       </div>
@@ -245,6 +251,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=c1edcc61"></script>
+<script src="src/app.js?v=5d6db18f"></script>
 </body>
 </html>
