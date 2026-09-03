@@ -866,16 +866,26 @@
     return dates.filter((d) => d >= from && d <= to).length;
   }
 
-  function monthText({ start }) {
-    return `${start.getFullYear()}년 ${start.getMonth() + 1}월`;
+  /* 올해면 연도를 적지 않는다. 거의 늘 올해를 보므로 '2026년' 이 붙어 있으면
+     라벨만 길어지고 알려 주는 것은 없다. 다른 해로 넘어가면 그때만 적는다. */
+  function sameYear(...dates) {
+    const now = todayDate().getFullYear();
+    return dates.every((d) => d.getFullYear() === now);
   }
 
-  /** '2026년 8월 24일 ~ 30일'. 달을 넘기면 끝날에도 월을 적는다. */
+  function monthText({ start }) {
+    const month = `${start.getMonth() + 1}월`;
+    return sameYear(start) ? month : `${start.getFullYear()}년 ${month}`;
+  }
+
+  /* 주는 '8.31 ~ 9.6' 처럼 숫자로 적는다. '8월 31일 ~ 9월 6일' 은 같은 뜻에
+     47px 를 더 쓰는데, 좌우 화살표 사이에 든 짧은 구간 표시라 숫자로도 읽힌다.
+     한 달 안이면 끝쪽 월은 생략한다(8.24 ~ 30). */
   function weekText({ start, end }) {
-    const tail = start.getMonth() === end.getMonth()
-      ? `${end.getDate()}일`
-      : `${end.getMonth() + 1}월 ${end.getDate()}일`;
-    return `${start.getFullYear()}년 ${start.getMonth() + 1}월 ${start.getDate()}일 ~ ${tail}`;
+    const span = start.getMonth() === end.getMonth()
+      ? `${start.getMonth() + 1}.${start.getDate()} ~ ${end.getDate()}`
+      : `${start.getMonth() + 1}.${start.getDate()} ~ ${end.getMonth() + 1}.${end.getDate()}`;
+    return sameYear(start, end) ? span : `${start.getFullYear()}.${span}`;
   }
 
   function periodText(range) {
@@ -975,9 +985,6 @@
     el.textContent = text;
     el.title = text;
   }
-
-  /** 마지막으로 그린 행 수. 기간 라벨의 '· N건' 이 이 값을 쓴다. */
-  let shownCount = 0;
 
   /** 두 날짜(YYYY-MM-DD) 사이의 일수. */
   function daysBetween(from, to) {
@@ -1180,7 +1187,6 @@
 
   function renderTable() {
     const list = visibleRows();
-    shownCount = list.length;
     // 신규 행은 아직 rows 에 없으므로 화면에서만 끼워 넣는다.
     let display = list;
     if (editingId === NEW_ID) {
@@ -1670,7 +1676,9 @@
     }
     const range = periodRange();
     els.periodNav.hidden = !range;
-    if (range) els.periodLabel.textContent = `${periodText(range)} · ${shownCount}건`;
+    /* 건수는 붙이지 않는다. 바로 아래 '업무 건수' 타일이 같은 기간의 건수를
+       세고 있어 같은 값을 두 군데 적을 자리가 아니다. */
+    if (range) els.periodLabel.textContent = periodText(range);
   }
 
   function render() {
