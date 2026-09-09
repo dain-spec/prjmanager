@@ -1241,23 +1241,19 @@
     if (derived) {
       // 이 행에 적힌 값이 아니라 파일 현황에서 가져온 값이라는 표시.
       td.dataset.derived = "true";
-      addTitle(td, "파일 현황에서 가져온 값입니다.");
+      addTip(td, "파일 현황에서 가져온 값입니다.");
     }
     const memo = memoOf(row, col.key);
     if (memo) {
       td.dataset.memo = "true";
-      /* 메모는 커스텀 툴팁으로 보여 준다. 네이티브 title 을 남겨 두면 잠시 뒤
-         브라우저 툴팁이 겹쳐 뜨므로, 원래 title 에 있던 내용까지 한 상자에
-         모으고 title 은 지운다. */
-      td.dataset.tip = td.title ? `${td.title}\n\n메모: ${memo}` : memo;
-      td.removeAttribute("title");
+      addTip(td, `메모: ${memo}`);
     }
     return td;
   }
 
   /** 이미 붙어 있는 툴팁을 지우지 않고 한 단락 덧붙인다. */
-  function addTitle(td, text) {
-    td.title = td.title ? `${td.title}\n\n${text}` : text;
+  function addTip(td, text) {
+    td.dataset.tip = td.dataset.tip ? `${td.dataset.tip}\n\n${text}` : text;
   }
 
   function buildDisplayCell(value, col) {
@@ -1421,7 +1417,7 @@
 
     const td = document.createElement("td");
     td.className = `${base} cell--path`.trim();
-    td.title = value; // 전체 URL 은 마우스 오버로 확인한다
+    td.dataset.tip = value; // 전체 URL 은 마우스 오버로 확인한다
     const a = document.createElement("a");
     a.href = value;
     a.target = "_blank";
@@ -1452,7 +1448,7 @@
 
     const td = document.createElement("td");
     td.className = `${base} cell--zeplin`.trim();
-    td.title = url;
+    td.dataset.tip = url;
     const a = document.createElement("a");
     a.href = url;
     a.textContent = "열기";
@@ -1462,11 +1458,12 @@
     return td;
   }
 
-  function cell(text, className, title) {
+  function cell(text, className, tip) {
     const td = document.createElement("td");
     if (className) td.className = className;
-    // 한 줄로 잘리는 칸은 전체 내용을 title 로 남긴다.
-    if (title) td.title = title;
+    /* 한 줄로 잘리는 칸은 전체 내용을 남겨 둔다. 네이티브 title 이 아니라
+       data-tip 에 담는다 — 커스텀 툴팁과 브라우저 툴팁이 겹쳐 뜨지 않게. */
+    if (tip) td.dataset.tip = tip;
     td.textContent = text;
     return td;
   }
@@ -2283,7 +2280,7 @@
     menuColKey = null;
   }
 
-  // ── 메모 툴팁 ─────────────────────────────────────────
+  // ── 칸 툴팁 ───────────────────────────────────────────
   const tip = $("memo-tip");
   let tipTimer = 0;
 
@@ -2297,13 +2294,27 @@
   /** 커서와 툴팁 사이 간격. 이보다 가까우면 툴팁이 커서 밑에 깔린다. */
   const TIP_GAP = 14;
 
-  function showTip(td) {
+  function showTip(text) {
     clearTimeout(tipTimer);
     tipTimer = setTimeout(() => {
-      tip.textContent = td.dataset.tip ?? "";
+      tip.textContent = text;
       tip.hidden = false;
       placeTip();
     }, TIP_DELAY);
+  }
+
+  /* 이 칸에 띄울 글. 없으면 빈 문자열.
+       말줄임으로 잘린 칸        → 전체 내용을 보여 준다
+       보이는 글보다 더 알려 줄 것이 있는 칸 → 그 내용을 보여 준다
+         (전체 URL · 메모 · '파일 현황에서 가져온 값' 표시)
+     보이는 글과 똑같은 내용을, 잘리지도 않은 칸에 또 띄우면 방해만 된다. */
+  function tipTextOf(td) {
+    const tip = (td.dataset.tip ?? "").trim();
+    const shown = td.textContent.trim();
+    if (tip && tip !== shown) return tip;
+    // 1px 은 소수점 반올림 오차를 넘기기 위한 여유다.
+    const clipped = td.scrollWidth > td.clientWidth + 1;
+    return clipped ? tip || shown : "";
   }
 
   function hideTip() {
@@ -2330,10 +2341,12 @@
   });
 
   els.tbody.addEventListener("mouseover", (event) => {
-    const td = event.target.closest("td[data-tip]");
+    const td = event.target.closest("td");
     if (!td) return hideTip();
+    const text = tipTextOf(td);
+    if (!text) return hideTip();
     tipPoint = { x: event.clientX, y: event.clientY };
-    showTip(td);
+    showTip(text);
   });
   els.tbody.addEventListener("mouseleave", hideTip);
   // 표가 움직이거나 다른 팝업이 열리면 툴팁만 남아 떠 있게 된다.
