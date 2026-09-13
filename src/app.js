@@ -510,6 +510,49 @@
     }
   }
 
+  /* 되돌리기 — 값이 바뀌기 직전의 목록을 통째로 담아 둔다.
+     고치기 · 추가 · 삭제 · 순서 바꾸기 · 메모가 서로 달라 동작마다 '반대 동작' 을
+     따로 만들면 경우마다 맞춰야 하고 빠뜨리기 쉽다. 목록이 수십 줄이라 통째로
+     담아도 부담이 없다.
+
+     표마다 따로 쌓는다. 파일 현황에서 한 일을 업무 요청 탭에서 ⌘Z 로 되돌리면
+     보이지도 않는 표가 바뀐다. */
+  const UNDO_LIMIT = 30;
+  const undoStacks = new Map();
+
+  function undoStack() {
+    if (!undoStacks.has(view.id)) undoStacks.set(view.id, []);
+    return undoStacks.get(view.id);
+  }
+
+  /** 목록을 바꾸기 직전에 부른다. */
+  function snapshot() {
+    const stack = undoStack();
+    stack.push(JSON.stringify(rows));
+    // 오래된 것부터 버린다. 무한정 쌓으면 메모리만 먹는다.
+    if (stack.length > UNDO_LIMIT) stack.shift();
+  }
+
+  function undo() {
+    const previous = undoStack().pop();
+    if (previous === undefined) {
+      toast("되돌릴 것이 없습니다.");
+      return;
+    }
+    /* 편집 · 선택 · 팝업은 지금 목록을 가리키고 있으므로 함께 정리한다.
+       되돌린 목록에 없는 행을 가리킨 채로 두면 빈 곳을 편집하게 된다. */
+    closeOwnerPicker();
+    closeMemo();
+    editingId = null;
+    draft = null;
+    insertAfterId = null;
+    picked = null;
+    setRows(JSON.parse(previous));
+    save();
+    render();
+    toast("되돌렸습니다.");
+  }
+
   /** rows 를 통째로 갈아끼울 때 store 와 어긋나지 않게 한 곳에서 처리한다. */
   function setRows(list) {
     rows = list;
@@ -1379,11 +1422,13 @@
       return;
     }
 
+    snapshot();
     const [moved] = rows.splice(from, 1);
     // splice 로 배열이 줄었으므로 target 위치를 다시 찾는다.
     const to = rows.findIndex((r) => r.id === targetId);
     if (to < 0) {
       rows.splice(from, 0, moved); // 되돌린다
+      undoStack().pop(); // 바뀐 것이 없으므로 되돌리기 목록에도 남기지 않는다
       return;
     }
     rows.splice(to + (after ? 1 : 0), 0, moved);
@@ -1805,6 +1850,9 @@
       return false;
     }
 
+    // 여기서부터 목록이 바뀐다. 검증을 통과한 뒤라야 헛되이 쌓이지 않는다.
+    snapshot();
+
     let saved;
     if (editingId === NEW_ID) {
       saved = { id: uid(), ...next };
@@ -1848,6 +1896,7 @@
       targets.length === 1 ? `'${rowLabel(targets[0])}' 항목을` : `선택한 ${targets.length}건을`;
     if (!confirm(`${label} 삭제할까요?`)) return;
 
+    snapshot();
     setRows(rows.filter((r) => !ids.has(r.id)));
     if (editingId && ids.has(editingId)) {
       editingId = null;
@@ -2411,6 +2460,7 @@
     const row = rows.find((r) => r.id === id);
     if (!row || !colKey) return;
     const had = Boolean(memoOf(row, colKey));
+    snapshot();
     setMemo(row, colKey, text);
     const has = Boolean(memoOf(row, colKey));
     save();
@@ -2588,6 +2638,23 @@
     if (event.target.closest("#tbody, #owner-picker, #memo-editor, #row-menu, #row-insert")) return;
     if (editingId !== null) commit();
     clearPick();
+  });
+
+  /* ⌘Z(윈도 Ctrl+Z)로 방금 한 일을 되돌린다.
+
+     편집 중에는 넘긴다 — 그때의 ⌘Z 는 입력칸 안에서 글자를 되돌리는 키이고,
+     브라우저가 하는 일을 가로채면 오히려 고치던 글을 잃는다. 저장을 마친 뒤
+     (편집 중이 아닐 때)부터 이 되돌리기가 작동한다. */
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "z" && event.key !== "Z") return;
+    if (!event.metaKey && !event.ctrlKey) return;
+    if (event.shiftKey) return; // ⌘⇧Z(다시 실행)는 아직 없다
+    if (editingId !== null) return;
+    // 검색칸 같은 표 밖 입력칸에서도 글자 되돌리기를 남겨 둔다.
+    const tag = document.activeElement?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+    event.preventDefault();
+    undo();
   });
 
   /* ── 방향키로 칸 이동 ─────────────────────────────────
