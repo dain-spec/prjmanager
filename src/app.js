@@ -153,8 +153,10 @@
       rank: { applied: 0, partial: 1, missing: 2, none: 3 } },
     { key: "path", header: "파일 경로", width: "266px", type: "path",
       placeholder: "피그마 주소 또는 XD 경로" },
+    /* 헤더가 'zep' 두 글자뿐이라 무엇을 적는 칸인지 드러나지 않는다. 마우스를
+       올리면 규칙을 알려 준다. */
     { key: "zeplin", header: "zep", width: "52px", type: "link", align: "center",
-      placeholder: "제플린 주소" },
+      hint: "대표경로 1개만", placeholder: "제플린 주소" },
     { key: "owners", header: "담당자", width: "90px", type: "owners", align: "center", sortable: true },
     /* 이 폭은 목표값이 아니라 하한이다. growToFill() 이 남는 공간을 줘서 실제로는
        더 넓어진다. 하한이 남는 공간보다 크면 표가 컨테이너를 넘어 가로 스크롤이
@@ -191,8 +193,10 @@
     TOOL_COLUMN,
     { key: "path", header: "파일 경로", width: "140px", type: "path",
       placeholder: "피그마 주소 또는 XD 경로" },
+    /* 헤더가 'zep' 두 글자뿐이라 무엇을 적는 칸인지 드러나지 않는다. 마우스를
+       올리면 규칙을 알려 준다. */
     { key: "zeplin", header: "zep", width: "52px", type: "link", align: "center",
-      placeholder: "제플린 주소" },
+      hint: "대표경로 1개만", placeholder: "제플린 주소" },
     { key: "owners", header: "담당자", width: "90px", type: "owners", align: "center", sortable: true },
     /* 폭의 하한은 헤더('상태' 35)가 아니라 편집 드롭다운이 정한다 — '진행중'
        드롭다운이 59px 이라 좌우 패딩 24 를 더해 83px 이 하한이다. */
@@ -702,6 +706,8 @@
         const classes = [];
         if (col.align === "center") classes.push("cell--center");
         if (classes.length) th.className = classes.join(" ");
+        // 이 컬럼에 무엇을 적는지 알려 줄 것이 있으면 마우스를 올렸을 때 보여 준다.
+        if (col.hint) th.dataset.tip = col.hint;
 
         if (col.sortable) {
           const btn = document.createElement("button");
@@ -2397,6 +2403,17 @@
     tipPoint = { x: event.clientX, y: event.clientY };
     showTip(text);
   });
+
+  /* 헤더도 같은 규칙으로 띄운다 — 안내 문구가 붙은 컬럼과, 이름이 잘린 컬럼. */
+  els.thead.addEventListener("mouseover", (event) => {
+    const th = event.target.closest("th");
+    if (!th) return hideTip();
+    const text = tipTextOf(th);
+    if (!text) return hideTip();
+    tipPoint = { x: event.clientX, y: event.clientY };
+    showTip(text);
+  });
+  els.thead.addEventListener("mouseleave", hideTip);
   els.tbody.addEventListener("mouseleave", hideTip);
   // 표가 움직이거나 다른 팝업이 열리면 툴팁만 남아 떠 있게 된다.
   tableWrap.addEventListener("scroll", hideTip);
