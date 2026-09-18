@@ -2540,6 +2540,7 @@
     if (!field || !draft) return;
     draft[field.name] = field.value;
     if (field.name === "done") syncDoneStatus();
+    if (field.name === "message") syncMessageSender();
     if (field.tagName === "TEXTAREA") autoGrow(field);
     // 서비스가 바뀌면 제안할 메뉴명도, 파일 현황에서 가져올 값도 달라진다.
     if (field.name === "service") {
@@ -2553,6 +2554,7 @@
     if (!field || !draft) return;
     draft[field.name] = field.value;
     if (field.name === "done") syncDoneStatus();
+    if (field.name === "message") syncMessageSender();
     // OS 도 파일 현황 행을 고르는 키다.
     if (field.name === "platform") syncLinkedPlaceholders();
   });
@@ -2714,6 +2716,73 @@
         : !field.value.slice(end).includes("\n");
     }
     return true;
+  }
+
+  /* 쪽지 링크의 title 파라미터에는 링크를 복사할 때 쓴 제목이 base64 로 들어 있다.
+     복사창에서 아무것도 입력하지 않으면 '보낸사람 직위/직급 날짜 시각' 이 기본값으로
+     들어가므로, 링크 하나에서 요청자와 요청일을 함께 얻을 수 있다. 제목을 직접 써
+     넣은 링크는 이 형식이 아니고, 그때는 아무것도 읽어 내지 않는다. */
+  const MESSAGE_TITLE = /^(.+?)(?:\s+\S+\/\S+)?\s+(\d{4})\.(\d{1,2})\.(\d{1,2})\s+\d{1,2}:\d{2}$/;
+
+  function messageTitle(url) {
+    /* 쪽지 주소는 해시(#) 뒤에 질의문자열이 오는 형태라 URL.searchParams 로는
+       읽히지 않는다. 또 '+' 는 여기서 공백이 아니라 base64 문자이므로 폼 디코딩을
+       쓰면 안 된다. */
+    const encoded = /[?&]title=([^&#]+)/.exec(url)?.[1];
+    if (!encoded) return "";
+    try {
+      const bytes = Uint8Array.from(atob(decodeURIComponent(encoded)), (ch) => ch.charCodeAt(0));
+      return new TextDecoder().decode(bytes);
+    } catch {
+      // 제목이 없는 링크 · 다른 서비스 주소 · 깨진 값. 읽을 게 없을 뿐 오류는 아니다.
+      return "";
+    }
+  }
+
+  /* 목적격 조사는 앞 글자의 받침으로 갈린다 — '요청자를', '시작일을'. 채운 칸이
+     무엇이냐에 따라 달라지므로 한쪽으로 고정할 수 없다. */
+  function objectOf(word) {
+    const code = word.charCodeAt(word.length - 1) - 0xac00;
+    const hasFinal = code >= 0 && code <= 11171 && code % 28 !== 0;
+    return `${word}${hasFinal ? "을" : "를"}`;
+  }
+
+  /** 쪽지 링크에서 읽어 낸 보낸사람과 보낸 날짜. 기본 제목 형식이 아니면 null. */
+  function messageSender(url) {
+    const found = MESSAGE_TITLE.exec(messageTitle(url).trim());
+    if (!found) return null;
+    const [, name, year, month, day] = found;
+    const pad = (n) => String(n).padStart(2, "0");
+    return { name: name.trim(), date: `${year}-${pad(month)}-${pad(day)}` };
+  }
+
+  /* 쪽지 링크를 붙여넣으면 요청자와 시작일을 대신 채운다. 손으로 적어 둔 값은
+     덮지 않는다. 다만 시작일은 새 행에 오늘이 미리 들어가 있어 '비어 있음' 과
+     구별되지 않으므로, 아직 손대지 않은 오늘 날짜까지만 쪽지 날짜로 바꾼다. */
+  function syncMessageSender() {
+    if (!draft) return;
+    const has = (key) => view.columns.some((col) => col.key === key);
+    const sender = messageSender(String(draft.message ?? ""));
+    if (!sender) return;
+
+    const tr = els.tbody.querySelector("tr[data-editing]");
+    const put = (key, value) => {
+      draft[key] = value;
+      const field = tr?.querySelector(`[name="${key}"]`);
+      if (field) field.value = value;
+    };
+    const filled = [];
+
+    if (has("requester") && !String(draft.requester ?? "").trim()) {
+      put("requester", sender.name);
+      filled.push("요청자");
+    }
+    const started = String(draft.started ?? "").trim();
+    if (has("started") && (!started || started === today()) && started !== sender.date) {
+      put("started", sender.date);
+      filled.push("시작일");
+    }
+    if (filled.length) toast(`쪽지에서 ${objectOf(filled.join(" · "))} 채웠습니다.`);
   }
 
   /* 완료일이 적히면 상태는 완료다. 두 값을 따로 두면 '완료일은 있는데 진행중' 처럼
