@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 부서 업무 요청 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=fe46e6ee" />
+<link rel="stylesheet" href="src/styles.css?v=e6be89b6" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -124,10 +124,14 @@
     <div class="dash" id="dash" hidden>
       <!-- 매일 하는 업무 — 항목은 JS 가 채운다. -->
       <section class="daily" id="daily" aria-label="매일 하는 업무">
-        <p class="daily__label">매일 <span class="daily__date" id="daily-date"></span></p>
+        <!-- 날짜와 추가 버튼이 한 줄을 나눠 쓴다. 버튼을 목록 아래 따로 두면
+             그 줄만큼 상자가 두꺼워져 표가 밀린다. -->
+        <div class="daily__head">
+          <p class="daily__label">매일 <span class="daily__date" id="daily-date"></span></p>
+          <button type="button" class="daily__add" id="daily-add">+ 추가</button>
+        </div>
         <ul class="daily__list" id="daily-list"></ul>
         <p class="daily__empty" id="daily-empty" hidden>매일 챙겨야 하는 업무를 적어 두세요.</p>
-        <button type="button" class="daily__add" id="daily-add">+ 추가</button>
       </section>
 
       <!-- 요청일 기준 건수와 가장 많이 손댄 서비스. 표 위에 있는 기간 보기와
