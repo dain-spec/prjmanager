@@ -7,6 +7,10 @@
 (() => {
   "use strict";
 
+  /* 이 파일이 실린 주소. 문서가 가리키는 판과 지금 도는 판을 견주는 데 쓴다.
+     currentScript 는 실행 중에만 값이 있으므로 맨 위에서 받아 둔다. */
+  const SCRIPT_SRC = document.currentScript?.src ?? "";
+
   const THEME_KEY = "wehago-prj-manager/theme";
   const VIEW_KEY = "wehago-prj-manager/view";
   const COL_KEY = "wehago-prj-manager/cols/v2";
@@ -3189,4 +3193,58 @@
   renderDaily();
 
   useView(localStorage.getItem(VIEW_KEY) ?? VIEWS[0].id);
+
+  /* ── 문서 캐시 따라잡기 ─────────────────────────────────
+     정적 호스팅이라 index.html 만은 주소에 버전을 붙일 수 없다. 브라우저가 옛
+     문서를 십 분쯤 들고 있으면 그 안에 적힌 옛 스크립트가 계속 돌아, 새로 올린
+     것이 반영되지 않는다.
+
+     문서를 캐시를 건너뛰고 한 번 받아 보고, 그 문서가 가리키는 스크립트가 지금
+     도는 것과 다르면 다시 읽는다. cache: "reload" 로 받는 순간 브라우저의 캐시도
+     새 문서로 바뀌므로, 다시 읽을 때는 새것이 온다.
+
+     같은 판을 두고 두 번 되풀이하지 않는다 — 판단이 어긋나면 끝없이 새로고침
+     한다. 화면을 다 그린 뒤에 조용히 확인만 하므로 첫 화면이 늦지 않는다. */
+  const RELOAD_KEY = "wehago-prj-manager/reloaded";
+
+  function reloadMark(value) {
+    try {
+      if (value === null) sessionStorage.removeItem(RELOAD_KEY);
+      else sessionStorage.setItem(RELOAD_KEY, value);
+      return null;
+    } catch {
+      // 세션 저장소를 못 쓰면 되풀이를 막을 길이 없으므로 아예 다시 읽지 않는다.
+      return false;
+    }
+  }
+
+  function reloadMarked() {
+    try {
+      return sessionStorage.getItem(RELOAD_KEY);
+    } catch {
+      return false;
+    }
+  }
+
+  async function catchUpDocument() {
+    const mine = new URL(SCRIPT_SRC, location.href).searchParams.get("v");
+    if (!mine || reloadMarked() === false) return;
+    try {
+      const res = await fetch(location.pathname, { cache: "reload" });
+      if (!res.ok) return;
+      const served = /app\.js\?v=([\w.-]+)/.exec(await res.text())?.[1];
+      if (!served) return;
+      if (served === mine) {
+        reloadMark(null);
+        return;
+      }
+      if (reloadMarked() === served) return;
+      if (reloadMark(served) === false) return;
+      location.reload();
+    } catch {
+      /* 오프라인이거나 문서를 못 받아 오면 지금 것을 그대로 쓴다. */
+    }
+  }
+
+  catchUpDocument();
 })();
