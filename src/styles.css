@@ -502,13 +502,15 @@ textarea {
 .dash {
   display: flex;
   align-items: stretch;
-  gap: var(--gap-6);
+  gap: var(--gap-5);
 }
 
 .stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--gap-6);
+  /* 한 줄에 선 상자들 사이. 매일 하는 업무와 타일 사이(.dash)도 같은 값이라야
+     줄 전체가 고른 간격으로 읽힌다. */
+  gap: var(--gap-5);
 }
 
 /* 남는 가로를 요약 타일이 모두 쓴다. */
