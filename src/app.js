@@ -3009,6 +3009,16 @@
     return Boolean(item.doneOn) && item.doneOn === today();
   }
 
+  /* 끝낸 것은 아래로 내린다 — 남은 것이 위에 모여야 무엇을 더 해야 하는지 한눈에
+     보인다. 저장 순서는 건드리지 않고 그릴 때만 가른다. 날이 바뀌어 체크가 풀리면
+     적어 둔 순서로 저절로 돌아간다. sort 는 같은 값끼리 순서를 지키므로 끝낸 것들
+     사이, 남은 것들 사이의 차례는 그대로다. */
+  function dailyOrder() {
+    return daily
+      .map((item, index) => ({ item, index }))
+      .sort((a, b) => Number(dailyDone(a.item)) - Number(dailyDone(b.item)));
+  }
+
   function saveDaily() {
     try {
       localStorage.setItem(DAILY_KEY, JSON.stringify(daily));
@@ -3048,7 +3058,7 @@
     $("daily-date").textContent =
       `${now.getMonth() + 1}월 ${now.getDate()}일 (${DAY_NAMES[now.getDay()]})`;
 
-    const items = daily.map((item, index) => {
+    const items = dailyOrder().map(({ item, index }) => {
       const li = document.createElement("li");
       li.className = "daily__item";
       if (index === dailyEditing) {
