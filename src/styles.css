@@ -120,10 +120,14 @@ textarea {
    (--color-border-outline 이 6% 검정이라) 상자로 읽히지 않는다. */
 .daily {
   display: flex;
-  align-items: center;
-  gap: var(--gap-5);
-  min-height: var(--size-6);
-  padding: var(--padding-4) var(--padding-5);
+  /* 체크가 달린 목록이라 한 줄로 늘어놓기보다 위에서 아래로 훑는 편이 읽기 쉽다.
+     날짜 · 목록 · 추가 버튼이 차례로 쌓인다. */
+  flex-direction: column;
+  align-items: flex-start;
+  /* .dash 안에서 내용 폭만 차지하고, 남는 가로는 대시보드가 쓴다. */
+  flex: none;
+  gap: var(--gap-4);
+  padding: var(--padding-5);
   border: 1px solid var(--color-border-outline);
   border-radius: var(--radius-medium);
   background: var(--color-surface-subtler);
@@ -145,10 +149,12 @@ textarea {
 
 .daily__list {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--gap-3);
-  min-width: 0;
+  /* 고칠 때 들어오는 입력칸이 180px 라 평소에도 그만큼 잡아 둔다. 그러지 않으면
+     항목을 누르는 순간 상자가 옆으로 벌어진다. */
+  min-width: 180px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -477,10 +483,25 @@ textarea {
 
 /* ── 요약 통계 ─────────────────────────────────────────── */
 
+/* 매일 하는 업무와 요약 타일을 한 줄에 세운다. 위아래로 쌓으면 표가 그만큼
+   밀리므로 헤더에서 빼내 여기에 나란히 뒀다. 높이는 각자 내용만큼만 쓴다 —
+   stretch 로 두면 타일이 목록 높이까지 늘어나 속이 비어 보인다. */
+.dash {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gap-6);
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--gap-6);
+}
+
+/* 남는 가로를 요약 타일이 모두 쓴다. */
+.dash .stats {
+  flex: 1;
+  min-width: 0;
 }
 
 /* 업무 요청 요약은 타일이 다섯 개다. 두 줄로 접히면 표가 그만큼 밀려 내려가므로

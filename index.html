@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 부서 업무 요청 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=281dc1f5" />
+<link rel="stylesheet" href="src/styles.css?v=fe46e6ee" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -76,15 +76,6 @@
       </div>
     </div>
 
-    <!-- 매일 하는 업무 — 두 탭이 함께 보는 상시 목록. 항목은 JS 가 채운다.
-         표가 화면 대부분을 써야 하므로 헤더 안(제목 줄 아래, 구분선 위)에
-         한 줄로 둔다. 본문에 두면 업무 요청 탭의 대시보드와 세로로 겹쳐 쌓인다. -->
-    <section class="daily" id="daily" aria-label="매일 하는 업무">
-      <p class="daily__label">매일 <span class="daily__date" id="daily-date"></span></p>
-      <ul class="daily__list" id="daily-list"></ul>
-      <p class="daily__empty" id="daily-empty" hidden>매일 챙겨야 하는 업무를 적어 두세요.</p>
-      <button type="button" class="daily__add" id="daily-add">+ 추가</button>
-    </section>
   </header>
 
   <main class="content" id="content">
@@ -127,11 +118,22 @@
       </article>
     </section>
 
-    <!-- ── 대시보드 (업무 요청) ──────────────────────────── -->
-    <!-- 요청일 기준 건수와 가장 많이 손댄 서비스. 표 위에 있는 기간 보기와
-         무관하게 항상 전체 데이터를 집계한다 — 요약이 필터에 따라 흔들리면
-         지금 보는 숫자가 무엇인지 알기 어렵다. -->
-    <section class="stats stats--5" id="request-stats" aria-label="업무 요청 요약" hidden>
+    <!-- ── 매일 하는 업무 + 대시보드 (업무 요청) ────────── -->
+    <!-- 둘을 한 줄에 나란히 둔다. 세로로 쌓으면 표가 그만큼 밀려 내려간다.
+         두 영역 모두 업무 요청 탭에서만 쓰므로 묶어서 함께 감춘다. -->
+    <div class="dash" id="dash" hidden>
+      <!-- 매일 하는 업무 — 항목은 JS 가 채운다. -->
+      <section class="daily" id="daily" aria-label="매일 하는 업무">
+        <p class="daily__label">매일 <span class="daily__date" id="daily-date"></span></p>
+        <ul class="daily__list" id="daily-list"></ul>
+        <p class="daily__empty" id="daily-empty" hidden>매일 챙겨야 하는 업무를 적어 두세요.</p>
+        <button type="button" class="daily__add" id="daily-add">+ 추가</button>
+      </section>
+
+      <!-- 요청일 기준 건수와 가장 많이 손댄 서비스. 표 위에 있는 기간 보기와
+           무관하게 항상 전체 데이터를 집계한다 — 요약이 필터에 따라 흔들리면
+           지금 보는 숫자가 무엇인지 알기 어렵다. -->
+      <section class="stats stats--5" id="request-stats" aria-label="업무 요청 요약" hidden>
       <!-- 건수만 헤더의 기간 선택(전체 · 주 · 월)을 따라간다. 나머지 타일은
            항상 전체 데이터를 집계한다 — 요약이 전부 필터에 따라 흔들리면 지금
            보는 숫자가 무엇인지 알기 어렵다. -->
@@ -180,7 +182,8 @@
         </div>
         <p class="stat__foot" id="req-owners-foot"></p>
       </article>
-    </section>
+      </section>
+    </div>
 
     <!-- ── 현황 테이블 ───────────────────────────────────── -->
     <section class="panel" aria-label="현황 목록">
@@ -257,6 +260,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=ec1eb0c1"></script>
+<script src="src/app.js?v=510103ba"></script>
 </body>
 </html>
