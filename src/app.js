@@ -3036,8 +3036,11 @@
     /* 매일 하는 업무는 '오늘 무엇을 챙기나' 라서 업무 요청 탭에만 둔다.
        파일 현황은 하루 단위로 보는 표가 아니다. */
     /* 매일 하는 업무와 대시보드는 한 줄에 나란히 서고 둘 다 업무 요청 탭에서만
-       쓴다. 감쌌던 줄까지 같이 감춰야 파일 현황에서 빈 간격이 남지 않는다. */
-    $("dash").hidden = !view.daily && !view.dashboard;
+       쓴다. 감쌌던 줄까지 같이 감춰야 파일 현황에서 빈 간격이 남지 않는다.
+       index.html 은 주소에 버전이 붙지 않아 새 스크립트가 옛 문서와 만날 수 있다.
+       그때 여기서 멈추면 표까지 그려지지 않으므로 없으면 넘어간다. */
+    const dash = $("dash");
+    if (dash) dash.hidden = !view.daily && !view.dashboard;
     $("daily").hidden = !view.daily;
     if (!view.daily) return;
 
