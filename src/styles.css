@@ -147,32 +147,85 @@ textarea {
   list-style: none;
 }
 
-.daily__item { display: flex; }
+.daily__item {
+  display: flex;
+  align-items: center;
+}
 
-/* 보기와 편집이 같은 자리에서 같은 크기여야 눌렀을 때 줄이 흔들리지 않는다. */
-.daily__text,
-.daily__input {
+/* 체크와 글자가 알약 하나로 보이도록 테두리는 항목이 갖는다. 수정 중인 항목은
+   입력칸이 스스로 알약이 되므로 이 클래스를 붙이지 않는다. 보기와 수정이 같은
+   자리에서 같은 크기여야 눌렀을 때 줄이 흔들리지 않는다. */
+.daily__item--task {
+  gap: var(--gap-2);
   height: var(--size-6);
-  padding-inline: var(--padding-5);
+  padding-inline: var(--padding-4);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-max);
-  font-size: var(--font-body5);
-  color: var(--color-text-basic);
-  white-space: nowrap;
-}
-
-.daily__text {
   background: var(--color-surface-subtler);
-  cursor: pointer;
 }
 
-.daily__text:hover {
+.daily__item--task:hover {
   border-color: var(--color-border-bolder);
 }
 
-.daily__input {
-  min-width: 180px;
+/* 네모 칸과 체크 표시를 직접 그린다 — 네이티브 체크박스는 이 크기에서 브라우저마다
+   다르게 그려지고 색도 맞추기 어렵다. */
+.daily__check {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  padding: 0;
+  border: 1px solid var(--color-border-basic);
+  border-radius: var(--radius-xxsmall);
   background: var(--color-input-field);
+  cursor: pointer;
+}
+
+.daily__check[aria-checked="true"] {
+  border-color: var(--color-element-primary);
+  background: var(--color-element-primary);
+}
+
+.daily__check::after {
+  content: "";
+  display: block;
+  width: 3px;
+  height: 6px;
+  margin: 0 auto 2px;
+  border: solid #fff;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+  opacity: 0;
+}
+
+.daily__check[aria-checked="true"]::after { opacity: 1; }
+
+.daily__text {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--font-body5);
+  color: var(--color-text-basic);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* 오늘 몫을 끝낸 항목 — 남은 것과 한눈에 갈리도록 긋고 흐리게 둔다. */
+.daily__text[data-done] {
+  color: var(--color-text-subtle);
+  text-decoration: line-through;
+}
+
+.daily__input {
+  height: var(--size-6);
+  min-width: 180px;
+  padding-inline: var(--padding-5);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-max);
+  background: var(--color-input-field);
+  font-size: var(--font-body5);
+  color: var(--color-text-basic);
+  white-space: nowrap;
 }
 
 .daily__input:focus {

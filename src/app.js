@@ -2990,11 +2990,23 @@
   function loadDaily() {
     try {
       const parsed = JSON.parse(localStorage.getItem(DAILY_KEY) ?? "null");
-      if (Array.isArray(parsed)) return parsed.filter((v) => typeof v === "string" && v.trim());
+      if (Array.isArray(parsed)) return parsed.map(dailyItem).filter((item) => item.text);
     } catch {
       /* 저장값이 손상된 경우 빈 목록으로 시작한다 */
     }
     return [];
+  }
+
+  /* 예전에는 글자만 담았다. 체크가 생기면서 항목이 객체가 되었으므로 옛 값을 옮긴다.
+     doneOn 은 '체크한 날' 이다 — 매일 다시 하는 일이라 참/거짓으로 두면 다음 날에도
+     지워진 채로 뜬다. 날짜로 두면 날이 바뀌는 것만으로 저절로 풀린다. */
+  function dailyItem(value) {
+    if (typeof value === "string") return { text: value.trim(), doneOn: "" };
+    return { text: String(value?.text ?? "").trim(), doneOn: String(value?.doneOn ?? "") };
+  }
+
+  function dailyDone(item) {
+    return Boolean(item.doneOn) && item.doneOn === today();
   }
 
   function saveDaily() {
@@ -3030,19 +3042,36 @@
     $("daily-date").textContent =
       `${now.getMonth() + 1}월 ${now.getDate()}일 (${DAY_NAMES[now.getDay()]})`;
 
-    const items = daily.map((text, index) => {
+    const items = daily.map((item, index) => {
       const li = document.createElement("li");
       li.className = "daily__item";
       if (index === dailyEditing) {
-        li.append(dailyInput(text));
+        li.append(dailyInput(item.text));
       } else {
+        // 체크와 글자가 알약 하나로 보이게 테두리는 항목이 맡는다.
+        li.classList.add("daily__item--task");
+        const done = dailyDone(item);
+
+        /* 네이티브 체크박스가 아니라 버튼이다. 체크박스는 click 에서 값이 바뀌는데,
+           다른 항목을 고치던 중에 누르면 blur → 저장 → 다시 그리기가 먼저 일어나
+           눌린 요소가 사라져 click 이 아예 오지 않는다. */
+        const check = document.createElement("button");
+        check.type = "button";
+        check.className = "daily__check";
+        check.dataset.dailyCheck = index;
+        check.setAttribute("role", "checkbox");
+        check.setAttribute("aria-checked", String(done));
+        check.setAttribute("aria-label", `${item.text} 완료`);
+
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "daily__text";
         btn.dataset.daily = index;
-        btn.textContent = text;
+        btn.textContent = item.text;
         btn.title = "클릭해서 수정 (비우고 저장하면 삭제)";
-        li.append(btn);
+        if (done) btn.dataset.done = "";
+
+        li.append(check, btn);
       }
       return li;
     });
@@ -3074,14 +3103,24 @@
     if (save) {
       const text = input.value.trim();
       if (index === daily.length) {
-        if (text) daily.push(text);
+        if (text) daily.push({ text, doneOn: "" });
       } else if (text) {
-        daily[index] = text;
+        // 글자만 고친다 — 오늘 체크해 둔 것이 수정했다고 풀리면 곤란하다.
+        daily[index].text = text;
       } else {
         daily.splice(index, 1);
       }
       saveDaily();
     }
+    renderDaily();
+  }
+
+  /** 체크를 켜고 끈다. 오늘 날짜를 적어 두므로 날이 바뀌면 저절로 풀린다. */
+  function toggleDaily(index) {
+    const item = daily[index];
+    if (!item) return;
+    item.doneOn = dailyDone(item) ? "" : today();
+    saveDaily();
     renderDaily();
   }
 
@@ -3091,14 +3130,29 @@
   $("daily").addEventListener("mousedown", (event) => {
     const chip = event.target.closest("[data-daily]");
     const add = event.target.closest("#daily-add");
-    if (!chip && !add) return;
+    const check = event.target.closest("[data-daily-check]");
+    if (!chip && !add && !check) return;
     event.preventDefault();
 
     const before = daily.length;
     if (dailyEditing !== null) commitDaily(true);
     // 저장하면서 항목이 늘거나 줄면 번호가 밀리므로, 그때는 저장만 하고 멈춘다.
     if (daily.length !== before) return;
+    if (check) {
+      toggleDaily(Number(check.dataset.dailyCheck));
+      return;
+    }
     startDailyEdit(add ? daily.length : Number(chip.dataset.daily));
+  });
+
+  /* 마우스는 위 mousedown 이 처리하므로 체크 버튼은 키보드만 따로 받는다.
+     click 까지 들으면 마우스로 누를 때 두 번 뒤집힌다. */
+  $("daily").addEventListener("keydown", (event) => {
+    if (event.key !== " " && event.key !== "Enter") return;
+    const check = event.target.closest("[data-daily-check]");
+    if (!check) return;
+    event.preventDefault();
+    toggleDaily(Number(check.dataset.dailyCheck));
   });
 
   // 목록 밖을 누르면(포커스가 빠지면) 저장하고 닫는다.
