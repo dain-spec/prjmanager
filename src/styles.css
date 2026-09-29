@@ -126,7 +126,9 @@ textarea {
   /* .dash 안에서 내용 폭만 차지하고, 남는 가로는 대시보드가 쓴다. */
   flex: none;
   gap: var(--gap-4);
-  padding: var(--padding-5);
+  /* 아래는 비우지 않는다 — 목록이 상자 끝까지 닿아야 잘린 줄이 안개에 묻히며
+     이어진다는 느낌이 산다. 여백을 두면 안개가 빈자리를 덮게 된다. */
+  padding: var(--padding-5) var(--padding-5) 0;
   border: 1px solid var(--color-border-outline);
   border-radius: var(--radius-medium);
   background: var(--color-surface-subtler);
