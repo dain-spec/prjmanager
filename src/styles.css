@@ -120,8 +120,7 @@ textarea {
    (--color-border-outline 이 6% 검정이라) 상자로 읽히지 않는다. */
 .daily {
   display: flex;
-  /* 체크가 달린 목록이라 한 줄로 늘어놓기보다 위에서 아래로 훑는 편이 읽기 쉽다.
-     날짜 · 목록 · 추가 버튼이 차례로 쌓인다. */
+  /* 날짜 · 목록이 차례로 쌓인다. */
   flex-direction: column;
   align-items: flex-start;
   /* .dash 안에서 내용 폭만 차지하고, 남는 가로는 대시보드가 쓴다. */
@@ -131,16 +130,20 @@ textarea {
   border: 1px solid var(--color-border-outline);
   border-radius: var(--radius-medium);
   background: var(--color-surface-subtler);
+  /* 아래 안개를 상자 기준으로 놓는다. */
+  position: relative;
 }
 
-/* 날짜와 추가 버튼이 한 줄을 나눠 쓴다. 상자 폭은 아래 목록이 정하므로 이 줄은
-   그 폭을 그대로 받아 양끝으로 벌린다. */
-.daily__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--gap-5);
-  width: 100%;
+/* 목록이 잘려 있을 때만 상자 밑을 옅게 덮는다. 스크롤바는 평소 숨어 있어
+   더 있다는 것을 알릴 길이 이것뿐이다. */
+.daily[data-fog]::after {
+  content: "";
+  position: absolute;
+  inset: auto 1px 1px;
+  height: 20px;
+  border-radius: 0 0 var(--radius-medium) var(--radius-medium);
+  background: linear-gradient(to top, var(--color-surface-subtler), transparent);
+  pointer-events: none;
 }
 
 .daily__label {
@@ -160,17 +163,16 @@ textarea {
 .daily__list {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--gap-2);
-  /* 고칠 때 들어오는 입력칸이 180px 라 평소에도 그만큼 잡아 둔다. 그러지 않으면
-     항목을 누르는 순간 상자가 옆으로 벌어진다. */
+  align-items: stretch;
+  gap: var(--gap-1);
+  /* 글자를 적을 만한 폭을 늘 잡아 둔다. 그러지 않으면 짧은 항목만 있을 때
+     상자가 좁아졌다가 긴 글을 적는 순간 벌어진다. */
   min-width: 180px;
   /* 항목이 늘어도 상자가 표를 밀어내지 않게 세 줄에서 끊는다
-     (24px 항목 셋 + 4px 간격 둘). 줄이 반쯤 잘리면 빈 자리처럼 보이므로
-     딱 떨어지게 두고, 더 있다는 것은 스크롤바가 알린다. */
-  max-height: 80px;
+     (24px 항목 셋 + 2px 간격 둘). 줄이 반쯤 잘리면 빈 자리처럼 보이므로
+     딱 떨어지게 두고, 더 있다는 것은 아래 안개가 알린다. */
+  max-height: 76px;
   overflow-y: auto;
-  /* 스크롤바가 생기며 칩이 밀리지 않게 자리를 미리 비운다. */
   scrollbar-gutter: stable;
   margin: 0;
   padding: 0;
@@ -180,26 +182,20 @@ textarea {
 .daily__item {
   display: flex;
   align-items: center;
-}
-
-/* 알약 없이 체크와 글자만 둔다. 세로로 서면 줄마다 테두리가 겹쳐 오히려 읽기를
-   방해하고, 목록은 왼쪽 끝만 맞으면 줄이 읽힌다. 수정 중인 항목은 입력칸이
-   스스로 알약이 되므로 이 클래스를 붙이지 않는다. */
-.daily__item--task {
   gap: var(--gap-4);
   min-height: var(--size-5);
 }
 
-/* 네모 칸과 체크 표시를 직접 그린다 — 네이티브 체크박스는 이 크기에서 브라우저마다
-   다르게 그려지고 색도 맞추기 어렵다. */
+/* 동그란 칸과 체크 표시를 직접 그린다 — 네이티브 체크박스는 이 크기에서
+   브라우저마다 다르게 그려지고 색도 맞추기 어렵다. */
 .daily__check {
   flex: none;
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   padding: 0;
-  border: 1px solid var(--color-border-basic);
-  border-radius: var(--radius-xxsmall);
-  background: var(--color-input-field);
+  border: 1.5px solid var(--color-border-basic);
+  border-radius: 50%;
+  background: none;
   cursor: pointer;
 }
 
@@ -222,67 +218,28 @@ textarea {
 
 .daily__check[aria-checked="true"]::after { opacity: 1; }
 
+/* 글자는 늘 입력칸이다. 눌러서 수정 모드로 들어가는 단계가 없으므로 평소에는
+   입력칸처럼 보이지 않아야 한다 — 테두리도 배경도 두지 않는다. */
 .daily__text {
+  flex: 1;
+  min-width: 0;
   padding: 0;
   border: 0;
   background: none;
+  font-family: inherit;
   font-size: var(--font-body5);
   color: var(--color-text-basic);
-  text-align: left;
-  white-space: nowrap;
-  cursor: pointer;
+  text-overflow: ellipsis;
 }
 
-/* 알약이 사라져 눌러서 고칠 수 있다는 것이 보이지 않는다. 밑줄로 알린다. */
-.daily__text:hover { text-decoration-line: underline; }
+.daily__text:focus { outline: none; }
+
+.daily__text::placeholder { color: var(--color-text-subtler); }
 
 /* 오늘 몫을 끝낸 항목 — 남은 것과 한눈에 갈리도록 긋고 흐리게 둔다. */
 .daily__text[data-done] {
   color: var(--color-text-subtle);
   text-decoration-line: line-through;
-}
-
-.daily__text[data-done]:hover { text-decoration-line: line-through underline; }
-
-.daily__input {
-  height: var(--size-6);
-  min-width: 180px;
-  padding-inline: var(--padding-5);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-max);
-  background: var(--color-input-field);
-  font-size: var(--font-body5);
-  color: var(--color-text-basic);
-  white-space: nowrap;
-}
-
-.daily__input:focus {
-  outline: none;
-  border-color: var(--color-input-border-focus);
-}
-
-/* 제목 줄 오른쪽 끝에 글자로만 선다. 목록 항목도 테두리가 없으므로 버튼만
-   알약으로 두면 그 하나가 튄다. */
-.daily__add {
-  flex: none;
-  padding: 0;
-  border: 0;
-  background: none;
-  font-size: var(--font-body5);
-  color: var(--color-text-subtle);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.daily__add:hover {
-  color: var(--color-text-basic);
-  text-decoration-line: underline;
-}
-
-.daily__empty {
-  margin: 0;
-  font-size: var(--font-body5);
-  color: var(--color-text-subtler);
 }
 
 /* ── 탭 ────────────────────────────────────────────────── */

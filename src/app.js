@@ -2988,8 +2988,8 @@
   const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
 
   let daily = loadDaily();
-  /** 수정 중인 항목 번호. 목록 길이와 같으면 새 항목이다. null 이면 수정 중이 아니다. */
-  let dailyEditing = null;
+  /* 다시 그린 뒤 커서를 어디에 둘지. { index, caret } 이며 null 이면 두지 않는다. */
+  let dailyFocus = null;
 
   function loadDaily() {
     try {
@@ -3031,24 +3031,37 @@
     }
   }
 
-  function dailyInput(value) {
-    const input = document.createElement("input");
-    input.className = "daily__input";
-    input.value = value;
-    input.maxLength = 60;
-    input.placeholder = "매일 하는 업무";
-    input.setAttribute("aria-label", "매일 하는 업무");
-    // 렌더 직후에는 아직 문서에 붙기 전이라 다음 프레임에 포커스한다.
-    requestAnimationFrame(() => {
-      input.focus();
-      input.select();
-    });
-    return input;
+  function dailyRow(item, index, done) {
+    const li = document.createElement("li");
+    li.className = "daily__item";
+
+    /* 네이티브 체크박스가 아니라 버튼이다. 체크박스는 click 에서 값이 바뀌는데,
+       글을 적다가 누르면 blur 가 먼저 일어나 목록을 다시 그리는 사이 눌린 요소가
+       사라져 click 이 아예 오지 않는다. */
+    const check = document.createElement("button");
+    check.type = "button";
+    check.className = "daily__check";
+    check.dataset.dailyCheck = index;
+    check.setAttribute("role", "checkbox");
+    check.setAttribute("aria-checked", String(done));
+    check.setAttribute("aria-label", item.text ? `${item.text} 완료` : "완료");
+
+    /* 글자는 늘 입력칸이다. 눌러서 '수정 모드' 로 들어가는 단계 없이 바로 고치고,
+       Enter 로 다음 줄을 잇는다 — 메모 앱의 체크리스트와 같은 손놀림이다. */
+    const field = document.createElement("input");
+    field.className = "daily__text";
+    field.dataset.daily = index;
+    field.value = item.text;
+    field.maxLength = 60;
+    field.placeholder = "할 일";
+    field.setAttribute("aria-label", "매일 하는 업무");
+    if (done) field.dataset.done = "";
+
+    li.append(check, field);
+    return li;
   }
 
   function renderDaily() {
-    /* 매일 하는 업무는 '오늘 무엇을 챙기나' 라서 업무 요청 탭에만 둔다.
-       파일 현황은 하루 단위로 보는 표가 아니다. */
     /* 매일 하는 업무와 대시보드는 한 줄에 나란히 서고 둘 다 업무 요청 탭에서만
        쓴다. 감쌌던 줄까지 같이 감춰야 파일 현황에서 빈 간격이 남지 않는다.
        index.html 은 주소에 버전이 붙지 않아 새 스크립트가 옛 문서와 만날 수 있다.
@@ -3062,133 +3075,172 @@
     $("daily-date").textContent =
       `${now.getMonth() + 1}월 ${now.getDate()}일 (${DAY_NAMES[now.getDay()]})`;
 
-    const items = dailyOrder().map(({ item, index }) => {
-      const li = document.createElement("li");
-      li.className = "daily__item";
-      if (index === dailyEditing) {
-        li.append(dailyInput(item.text));
-      } else {
-        // 체크와 글자가 알약 하나로 보이게 테두리는 항목이 맡는다.
-        li.classList.add("daily__item--task");
-        const done = dailyDone(item);
+    const rows = dailyOrder().map(({ item, index }) => dailyRow(item, index, dailyDone(item)));
+    /* 하나도 없으면 적을 자리마저 없다. 빈 줄을 하나 띄운다 — 아직 목록에 없는
+       줄이므로 번호가 목록 길이와 같다(0). */
+    if (!daily.length) rows.push(dailyRow({ text: "", doneOn: "" }, 0, false));
 
-        /* 네이티브 체크박스가 아니라 버튼이다. 체크박스는 click 에서 값이 바뀌는데,
-           다른 항목을 고치던 중에 누르면 blur → 저장 → 다시 그리기가 먼저 일어나
-           눌린 요소가 사라져 click 이 아예 오지 않는다. */
-        const check = document.createElement("button");
-        check.type = "button";
-        check.className = "daily__check";
-        check.dataset.dailyCheck = index;
-        check.setAttribute("role", "checkbox");
-        check.setAttribute("aria-checked", String(done));
-        check.setAttribute("aria-label", `${item.text} 완료`);
-
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "daily__text";
-        btn.dataset.daily = index;
-        btn.textContent = item.text;
-        btn.title = "클릭해서 수정 (비우고 저장하면 삭제)";
-        if (done) btn.dataset.done = "";
-
-        li.append(check, btn);
-      }
-      return li;
-    });
-
-    if (dailyEditing === daily.length) {
-      const li = document.createElement("li");
-      li.className = "daily__item";
-      li.append(dailyInput(""));
-      items.push(li);
-    }
-
-    $("daily-list").replaceChildren(...items);
-    $("daily-empty").hidden = items.length > 0;
-    $("daily-add").hidden = dailyEditing !== null;
+    $("daily-list").replaceChildren(...rows);
+    restoreDailyFocus();
+    paintDailyFog();
   }
 
-  function startDailyEdit(index) {
-    dailyEditing = index;
-    renderDaily();
+  function restoreDailyFocus() {
+    if (!dailyFocus) return;
+    const { index, caret } = dailyFocus;
+    dailyFocus = null;
+    const field = $("daily-list").querySelector(`.daily__text[data-daily="${index}"]`);
+    if (!field) return;
+    field.focus();
+    const at = caret ?? field.value.length;
+    field.setSelectionRange(at, at);
   }
 
-  /** save 가 false 면 입력을 버린다. 빈 값으로 저장하면 그 항목을 지운다. */
-  function commitDaily(save) {
-    const input = $("daily-list").querySelector(".daily__input");
-    const index = dailyEditing;
-    if (!input || index === null) return;
-    dailyEditing = null;
+  /** 지금 글을 적던 자리를 기억해 둔다. 다시 그려도 커서가 그대로 남게. */
+  function rememberDailyCaret() {
+    const field = document.activeElement;
+    if (!field?.classList?.contains("daily__text")) return;
+    dailyFocus = { index: Number(field.dataset.daily), caret: field.selectionStart };
+  }
 
-    if (save) {
-      const text = input.value.trim();
-      if (index === daily.length) {
-        if (text) daily.push({ text, doneOn: "" });
-      } else if (text) {
-        // 글자만 고친다 — 오늘 체크해 둔 것이 수정했다고 풀리면 곤란하다.
-        daily[index].text = text;
-      } else {
-        daily.splice(index, 1);
-      }
-      saveDaily();
+  /** 아래에 더 있으면 상자 밑을 옅게 덮어 굴릴 것이 남았다고 알린다. */
+  function paintDailyFog() {
+    const list = $("daily-list");
+    const more = list.scrollHeight - list.clientHeight - list.scrollTop > 1;
+    $("daily").toggleAttribute("data-fog", more);
+  }
+
+  /* 글자가 바뀔 때마다 저장하되 다시 그리지는 않는다 — 다시 그리면 커서가 날아간다.
+     빈 줄에 첫 글자가 들어온 순간 목록에 자리를 만든다. */
+  function writeDaily(field) {
+    const index = Number(field.dataset.daily);
+    if (daily[index]) {
+      // 글자만 고친다 — 오늘 체크해 둔 것이 수정했다고 풀리면 곤란하다.
+      daily[index].text = field.value;
+    } else if (index === daily.length && field.value.trim()) {
+      daily.push({ text: field.value, doneOn: "" });
+    } else {
+      return;
     }
-    renderDaily();
+    saveDaily();
+  }
+
+  function removeDailyAt(index) {
+    if (!daily[index]) return;
+    daily.splice(index, 1);
+    saveDaily();
   }
 
   /** 체크를 켜고 끈다. 오늘 날짜를 적어 두므로 날이 바뀌면 저절로 풀린다. */
   function toggleDaily(index) {
     const item = daily[index];
     if (!item) return;
+    rememberDailyCaret();
     item.doneOn = dailyDone(item) ? "" : today();
     saveDaily();
     renderDaily();
   }
 
-  /* mousedown 에서 기본 동작(포커스 이동)을 막아 blur 가 끼어들지 않게 한다.
-     그러지 않으면 blur 로 저장하며 목록을 다시 그리는 사이에 눌린 요소가
-     사라져 click 이 아예 오지 않는다. */
-  $("daily").addEventListener("mousedown", (event) => {
-    const chip = event.target.closest("[data-daily]");
-    const add = event.target.closest("#daily-add");
-    const check = event.target.closest("[data-daily-check]");
-    if (!chip && !add && !check) return;
-    event.preventDefault();
+  function dailyFieldKey(event) {
+    const field = event.target.closest(".daily__text");
+    if (!field) return;
+    // 한글 조합 중의 Enter 는 조합을 확정하는 키라 가로채면 마지막 글자가 날아간다.
+    if (event.isComposing || event.keyCode === 229) return;
 
-    const before = daily.length;
-    if (dailyEditing !== null) commitDaily(true);
-    // 저장하면서 항목이 늘거나 줄면 번호가 밀리므로, 그때는 저장만 하고 멈춘다.
-    if (daily.length !== before) return;
-    if (check) {
-      toggleDaily(Number(check.dataset.dailyCheck));
+    const index = Number(field.dataset.daily);
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation(); // 표 편집의 Enter 처리로 번지지 않게 한다
+      const text = field.value.trim();
+      if (!text) {
+        // 빈 줄에서 한 번 더 누르면 그 줄을 지우고 목록에서 빠져나온다.
+        removeDailyAt(index);
+        field.blur();
+        renderDaily();
+        return;
+      }
+      if (daily[index]) daily[index].text = text;
+      else daily.push({ text, doneOn: "" });
+      daily.splice(index + 1, 0, { text: "", doneOn: "" });
+      saveDaily();
+      dailyFocus = { index: index + 1, caret: 0 };
+      renderDaily();
       return;
     }
-    startDailyEdit(add ? daily.length : Number(chip.dataset.daily));
-  });
 
-  /* 마우스는 위 mousedown 이 처리하므로 체크 버튼은 키보드만 따로 받는다.
-     click 까지 들으면 마우스로 누를 때 두 번 뒤집힌다. */
-  $("daily").addEventListener("keydown", (event) => {
-    if (event.key !== " " && event.key !== "Enter") return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      field.blur();
+      return;
+    }
+
+    /* 빈 줄에서 지우기를 누르면 그 줄을 없애고 윗줄 끝으로 올라간다. */
+    if (event.key === "Backspace" && !field.value && index > 0) {
+      event.preventDefault();
+      const above = index - 1;
+      removeDailyAt(index);
+      dailyFocus = { index: above, caret: daily[above]?.text.length ?? 0 };
+      renderDaily();
+    }
+  }
+
+  /* 체크는 mousedown 에서 처리한다. 글을 적다가 누르면 blur 로 목록을 다시 그리는
+     사이 눌린 요소가 사라져 click 이 오지 않는다. preventDefault 로 포커스 이동
+     자체를 막아 그 틈을 없앤다. */
+  $("daily").addEventListener("mousedown", (event) => {
     const check = event.target.closest("[data-daily-check]");
     if (!check) return;
     event.preventDefault();
     toggleDaily(Number(check.dataset.dailyCheck));
   });
 
-  // 목록 밖을 누르면(포커스가 빠지면) 저장하고 닫는다.
-  $("daily").addEventListener("focusout", (event) => {
-    if (event.target.classList.contains("daily__input")) commitDaily(true);
+  $("daily").addEventListener("keydown", (event) => {
+    /* 마우스는 위 mousedown 이 처리하므로 체크 버튼은 키보드만 따로 받는다.
+       click 까지 들으면 마우스로 누를 때 두 번 뒤집힌다. */
+    const check = event.target.closest("[data-daily-check]");
+    if (check) {
+      if (event.key !== " " && event.key !== "Enter") return;
+      event.preventDefault();
+      toggleDaily(Number(check.dataset.dailyCheck));
+      return;
+    }
+    dailyFieldKey(event);
   });
 
-  $("daily").addEventListener("keydown", (event) => {
-    if (dailyEditing === null) return;
-    // 한글 조합 중의 Enter 는 조합을 확정하는 키라 가로채면 마지막 글자가 날아간다.
-    if (event.isComposing || event.keyCode === 229) return;
-    if (event.key !== "Enter" && event.key !== "Escape") return;
-    event.preventDefault();
-    event.stopPropagation(); // 표 편집의 Enter/Esc 처리로 번지지 않게 한다
-    commitDaily(event.key === "Enter");
+  $("daily").addEventListener("input", (event) => {
+    const field = event.target.closest(".daily__text");
+    if (field) writeDaily(field);
   });
+
+  /* 빈 줄을 남겨 두고 나가면 지운다 — 저장된 목록에 빈 항목이 남지 않게. */
+  $("daily").addEventListener("focusout", (event) => {
+    const field = event.target.closest?.(".daily__text");
+    if (!field) return;
+    const index = Number(field.dataset.daily);
+    if (!daily[index]) return;
+    const text = field.value.trim();
+    if (text) {
+      // 앞뒤 공백은 여기서 다듬는다. 적는 도중에 다듬으면 띄어쓰기를 못 한다.
+      daily[index].text = text;
+      saveDaily();
+      return;
+    }
+
+    /* 빈 줄에서 다른 줄을 바로 눌러 옮겨 가는 경우가 흔하다. 지우며 다시 그리면
+       방금 누른 줄까지 새로 만들어져 커서가 날아가므로, 갈 자리를 기억해 둔다.
+       지운 줄보다 뒤였다면 번호가 하나 당겨진다. */
+    const next = event.relatedTarget?.closest?.(".daily__text");
+    removeDailyAt(index);
+    if (next) {
+      const to = Number(next.dataset.daily);
+      dailyFocus = { index: to > index ? to - 1 : to, caret: next.selectionStart };
+    }
+    renderDaily();
+  });
+
+  $("daily-list").addEventListener("scroll", paintDailyFog);
 
   renderDaily();
 
