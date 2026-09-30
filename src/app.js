@@ -7,10 +7,6 @@
 (() => {
   "use strict";
 
-  /* 이 파일이 실린 주소. 문서가 가리키는 판과 지금 도는 판을 견주는 데 쓴다.
-     currentScript 는 실행 중에만 값이 있으므로 맨 위에서 받아 둔다. */
-  const SCRIPT_SRC = document.currentScript?.src ?? "";
-
   const THEME_KEY = "wehago-prj-manager/theme";
   const VIEW_KEY = "wehago-prj-manager/view";
   const COL_KEY = "wehago-prj-manager/cols/v2";
@@ -3278,13 +3274,28 @@
     }
   }
 
+  /* 문서가 걸어 둔 자원 주소를 버전까지 통째로 모아 한 줄로 만든다. 스크립트 하나만
+     보면 스타일시트만 바뀐 판을 놓친다 — 그런 판이 실제로 있었다. */
+  const ASSET_IN_HTML = /(?:src|href)="([^"]*\?v=[^"]*)"/g;
+
+  function servedMark(html) {
+    return [...html.matchAll(ASSET_IN_HTML)].map((m) => m[1]).sort().join("|");
+  }
+
+  function myMark() {
+    return [...document.querySelectorAll("script[src*='?v='], link[href*='?v=']")]
+      .map((el) => el.getAttribute("src") ?? el.getAttribute("href"))
+      .sort()
+      .join("|");
+  }
+
   async function catchUpDocument() {
-    const mine = new URL(SCRIPT_SRC, location.href).searchParams.get("v");
+    const mine = myMark();
     if (!mine || reloadMarked() === false) return;
     try {
       const res = await fetch(location.pathname, { cache: "reload" });
       if (!res.ok) return;
-      const served = /app\.js\?v=([\w.-]+)/.exec(await res.text())?.[1];
+      const served = servedMark(await res.text());
       if (!served) return;
       if (served === mine) {
         reloadMark(null);
