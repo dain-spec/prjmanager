@@ -187,7 +187,7 @@
        공간을 준다. 하한이 남는 공간보다 크면 표가 컨테이너를 넘어 가로 스크롤이
        생기므로, 남는 폭(1352px 컨테이너에서 262px)보다 낮게 잡는다. */
     { key: "content", header: "요청내용", width: "240px", type: "note", required: true,
-      grow: true, placeholder: "요청내용 (Shift+Enter 로 줄 추가)" },
+      sortable: true, grow: true, placeholder: "요청내용 (Shift+Enter 로 줄 추가)" },
     { key: "message", header: "쪽지", width: "52px", type: "link", align: "center",
       placeholder: "쪽지 링크" },
     // 파일 현황과 이름이 정확히 같아야 연결되므로 등록된 서비스명을 제안한다.
