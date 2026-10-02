@@ -179,6 +179,10 @@
       sortable: true, defaultToday: true },
     { key: "requester", header: "요청자", width: "72px", type: "text", sortable: true,
       placeholder: "요청자" },
+    /* 어느 서비스 일인지가 무엇을 하는 일인지보다 먼저 읽혀야 해서 요청내용 앞에
+       둔다. 파일 현황과 이름이 정확히 같아야 연결되므로 등록된 서비스명을 제안한다. */
+    { key: "service", header: "서비스명", width: "120px", type: "text", sortable: true,
+      placeholder: "서비스명", suggest: "service" },
     /* 비고와 마찬가지로 이 폭은 목표값이 아니라 하한이다. growToFill() 이 남는
        공간을 준다. 하한이 남는 공간보다 크면 표가 컨테이너를 넘어 가로 스크롤이
        생기므로, 남는 폭(1352px 컨테이너에서 262px)보다 낮게 잡는다. */
@@ -186,9 +190,6 @@
       sortable: true, grow: true, placeholder: "요청내용 (Shift+Enter 로 줄 추가)" },
     { key: "message", header: "쪽지", width: "52px", type: "link", align: "center",
       placeholder: "쪽지 링크" },
-    // 파일 현황과 이름이 정확히 같아야 연결되므로 등록된 서비스명을 제안한다.
-    { key: "service", header: "서비스명", width: "120px", type: "text", sortable: true,
-      placeholder: "서비스명", suggest: "service" },
     PLATFORM_COLUMN,
     TOOL_COLUMN,
     { key: "path", header: "파일 경로", width: "140px", type: "path",
