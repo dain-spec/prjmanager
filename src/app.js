@@ -187,7 +187,9 @@
        공간을 준다. 하한이 남는 공간보다 크면 표가 컨테이너를 넘어 가로 스크롤이
        생기므로, 남는 폭(1352px 컨테이너에서 262px)보다 낮게 잡는다. */
     { key: "content", header: "요청내용", width: "240px", type: "note", required: true,
-      sortable: true, grow: true, placeholder: "요청내용 (Shift+Enter 로 줄 추가)" },
+      sortable: true, grow: true, placeholder: "요청내용 (Shift+Enter 로 줄 추가)",
+      // 한 요청을 여러 번에 나눠 끝낼 때 쓰는 하위 항목이 이 칸에 붙는다.
+      items: true },
     { key: "message", header: "쪽지", width: "52px", type: "link", align: "center",
       placeholder: "쪽지 링크" },
     PLATFORM_COLUMN,
@@ -217,12 +219,18 @@
        started 예전 이름은 requested 였다. 상시업무까지 담게 되면서 '요청한 날' 이
                아니라 '시작한 날' 이 되어 이름을 바꿨다. */
   function migrateRequestRow({ requested, ...row }) {
-    return {
+    const next = {
       ...row,
       started: row.started ?? requested ?? "",
       kind: row.kind ?? "request",
       status: row.status ?? (String(row.done ?? "").trim() ? "done" : "progress"),
     };
+    /* 하위 항목은 있는 행에만 둔다. 빈 배열이 남으면 '항목으로 관리하는 행' 으로
+       읽혀 상태와 완료일이 항목에 묶인다. */
+    const items = Array.isArray(row.items) ? row.items.map(subItem).filter((it) => it.text) : [];
+    if (items.length) next.items = items;
+    else delete next.items;
+    return next;
   }
 
   /* 시드 데이터는 팀 현황표(프로젝트/유형/주소링크/공통 반영 버전/반영 상태/작업자/
@@ -815,6 +823,46 @@
     else delete row.memos;
   }
 
+  /* 하위 항목 — 한 요청을 여러 번에 나눠 끝내는 일이 있다. 행마다
+     { 항목 이름, 끝낸 날 } 목록을 두고, 전부 끝나야 그 요청이 끝난 것으로 본다.
+     1차만 마쳤는데 행이 완료로 적히면 남은 몫이 목록에서 사라진다. */
+
+  function subItem(value) {
+    if (typeof value === "string") return { text: value.trim(), doneOn: "" };
+    return { text: String(value?.text ?? "").trim(), doneOn: String(value?.doneOn ?? "") };
+  }
+
+  function itemsOf(row) {
+    return Array.isArray(row?.items) ? row.items : [];
+  }
+
+  /* 세는 자리에서는 이름이 빈 줄을 뺀다 — 다음 항목을 적으려고 띄워 둔 자리이지
+     아직 항목이 아니다. 적는 동안 '0/4' 처럼 하나 더 많게 보이면 곤란하다. */
+  function itemsFilled(row) {
+    return itemsOf(row).filter((it) => it.text.trim());
+  }
+
+  function itemsDone(list) {
+    return list.filter((it) => it.doneOn).length;
+  }
+
+  /* 항목이 있는 행의 상태 · 완료일은 항목이 정한다. 손으로 적은 값과 항목이
+     어긋나면 어느 쪽이 사실인지 알 수 없고, 완료율 집계도 믿을 수 없게 된다.
+     완료일은 마지막 항목을 끝낸 날이다. */
+  function syncItemStatus(row) {
+    const list = itemsFilled(row);
+    if (!list.length) return;
+    const dates = list.map((it) => it.doneOn).filter(Boolean);
+    if (dates.length === list.length) {
+      row.status = "done";
+      row.done = [...dates].sort().at(-1);
+      return;
+    }
+    // 아직 남았는데 완료로 적혀 있으면 되돌린다. 대기 · 보류는 그대로 둔다.
+    if (row.status === "done") row.status = "progress";
+    row.done = "";
+  }
+
   function rowLabel(row) {
     const raw = String(row?.[view.nameKey] ?? "").replace(/\s+/g, " ").trim();
     if (!raw) return "이름 없는 항목";
@@ -1298,7 +1346,31 @@
       td.dataset.memo = "true";
       addTip(td, `메모: ${memo}`);
     }
+
+    const list = itemsFilled(row);
+    if (col.items) td.append(itemsChip(row, list));
+    /* 항목이 정하는 값이라는 것을 그 칸에서 알려 준다 — 직접 고쳐도 항목에
+       맞춰 되돌아가므로, 왜 그런지 모르면 같은 수정을 되풀이하게 된다. */
+    else if (list.length && (col.key === "status" || col.key === "done")) {
+      addTip(td, `하위 항목 ${itemsDone(list)}/${list.length} 이 정하는 값입니다.`);
+    }
     return td;
+  }
+
+  /* 진행을 숫자로 보여 주고 누르면 항목 상자가 열린다. 항목이 없는 행에서는
+     평소 숨어 있다가 행에 마우스를 올리면 나타난다 — 모든 행에 늘 떠 있으면
+     표가 시끄럽고, 아예 없으면 어디서 항목을 만드는지 알 수 없다. */
+  function itemsChip(row, list) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip-items";
+    chip.dataset.items = row.id;
+    const done = itemsDone(list);
+    chip.textContent = list.length ? `${done}/${list.length}` : "항목";
+    if (!list.length) chip.dataset.empty = "";
+    else if (done === list.length) chip.dataset.full = "";
+    chip.title = list.length ? `하위 항목 ${done}/${list.length} 완료` : "하위 항목 나누기";
+    return chip;
   }
 
   /** 이미 붙어 있는 툴팁을 지우지 않고 한 단락 덧붙인다. */
@@ -1872,6 +1944,8 @@
       saved = rows[i];
       toast(`'${rowLabel(saved)}' 항목을 수정했습니다.`);
     }
+    // 상태 · 완료일을 직접 고쳤더라도 하위 항목이 있으면 항목이 이긴다.
+    syncItemStatus(saved);
     // 서비스명·요청일이 바뀌었으면 있어야 할 자리도 달라진다.
     arrange();
     // 기간 보기 중이면 방금 저장한 행이 보이는 기간으로 옮긴다.
@@ -2266,6 +2340,8 @@
   addEventListener("resize", placePicker);
   tableWrap.addEventListener("scroll", () => replaceMemo());
   addEventListener("resize", () => replaceMemo());
+  tableWrap.addEventListener("scroll", () => replaceItems());
+  addEventListener("resize", () => replaceItems());
 
   // ── 행 우클릭 메뉴 ────────────────────────────────────
   const rowMenu = $("row-menu");
@@ -2291,6 +2367,16 @@
     $("menu-memo").textContent = hasMemo ? "메모 수정" : "메모 추가";
     $("menu-memo-delete").hidden = !hasMemo;
     $("menu-memo-divider").hidden = !menuColKey;
+
+    /* 하위 항목은 요청내용이 있는 뷰(업무 요청)에서만 쓴다. 이미 나눠 둔
+       행이면 몇 개가 끝났는지까지 메뉴에서 알려 준다. */
+    const subs = itemsFilled(row);
+    const hasItems = view.columns.some((col) => col.items);
+    $("menu-items").hidden = !hasItems;
+    $("menu-items").textContent = subs.length
+      ? `하위 항목 (${itemsDone(subs)}/${subs.length})`
+      : "하위 항목 나누기";
+    $("menu-items-divider").hidden = !hasItems;
 
     // '아래에 행 추가' 는 표시 순서와 저장 순서가 같을 때만 의미가 있다.
     // 삭제는 순서와 무관하므로 정렬·검색 중에도 쓸 수 있게 둔다.
@@ -2323,6 +2409,8 @@
       openMemo(id, colKey, anchor);
     } else if (item.dataset.menu === "memo-delete") {
       saveMemo(id, colKey, "");
+    } else if (item.dataset.menu === "items") {
+      openItems(id, itemsAnchorOf(id));
     } else if (item.dataset.menu === "insert-below") {
       startCreate(id);
     } else if (item.dataset.menu === "delete") {
@@ -2511,6 +2599,304 @@
     }
   });
 
+  // ── 하위 항목 상자 ────────────────────────────────────
+  /* 손놀림은 '매일 하는 업무' 체크리스트와 같게 맞췄다 — 줄은 늘 입력칸이고,
+     Enter 로 다음 항목을 잇고, 동그라미를 눌러 그날로 끝냈다고 적는다. */
+  const itemsBox = $("items-editor");
+  let itemsTarget = null; // 행 id
+  let itemsFocus = null; // { index, caret }
+
+  /** 하위 항목이 붙는 컬럼키(요청내용). 상자를 그 칸 아래에 붙이는 데 쓴다. */
+  function itemsKey() {
+    return view.columns.find((col) => col.items)?.key ?? view.nameKey;
+  }
+
+  function itemsRow() {
+    return rows.find((r) => r.id === itemsTarget) ?? null;
+  }
+
+  function openItems(id, anchor) {
+    if (!rows.some((r) => r.id === id)) return;
+    itemsTarget = id;
+    hideTip();
+    closeMemo();
+    itemsBox.hidden = false;
+    renderItems();
+    placeItems(anchor);
+    // 비어 있으면 바로 적을 수 있게 첫 줄에 커서를 둔다.
+    itemsBox.querySelector(".items__text")?.focus();
+  }
+
+  function placeItems(anchor) {
+    const box = itemsBox.getBoundingClientRect();
+    const cell = anchor?.getBoundingClientRect();
+    const left = cell ? cell.left : (innerWidth - box.width) / 2;
+    const top = cell ? cell.bottom + 4 : (innerHeight - box.height) / 2;
+    itemsBox.style.left = `${Math.max(8, Math.min(left, innerWidth - box.width - 8))}px`;
+    itemsBox.style.top = `${Math.max(8, Math.min(top, innerHeight - box.height - 8))}px`;
+  }
+
+  function itemsAnchorOf(id) {
+    if (!id) return null;
+    return els.tbody.querySelector(`tr[data-id="${id}"] td[data-col="${itemsKey()}"]`);
+  }
+
+  function itemsAnchor() {
+    return itemsAnchorOf(itemsTarget);
+  }
+
+  function replaceItems() {
+    if (itemsBox.hidden) return;
+    placeItems(itemsAnchor());
+  }
+
+  /** 이름이 빈 줄은 저장하지 않는다 — 다음 항목을 적으려고 띄워 둔 자리다. */
+  function pruneItems(row) {
+    const list = itemsOf(row)
+      .map((it) => ({ text: it.text.trim(), doneOn: it.doneOn }))
+      .filter((it) => it.text);
+    if (list.length) row.items = list;
+    else delete row.items;
+  }
+
+  function closeItems() {
+    if (itemsBox.hidden) return;
+    const row = itemsRow();
+    itemsBox.hidden = true;
+    itemsTarget = null;
+    itemsFocus = null;
+    if (!row) return;
+    pruneItems(row);
+    syncItemStatus(row);
+    save();
+    render();
+  }
+
+  function itemLine(item, index) {
+    const li = document.createElement("li");
+    li.className = "items__item";
+
+    /* 네이티브 체크박스가 아니라 버튼이다 — 글을 적다가 누르면 blur 가 먼저
+       일어나 목록을 다시 그리는 사이 눌린 요소가 사라져 click 이 오지 않는다. */
+    const check = document.createElement("button");
+    check.type = "button";
+    check.className = "items__check";
+    check.dataset.itemCheck = index;
+    check.setAttribute("role", "checkbox");
+    check.setAttribute("aria-checked", String(Boolean(item.doneOn)));
+    check.setAttribute("aria-label", item.text ? `${item.text} 완료` : "완료");
+
+    const field = document.createElement("input");
+    field.className = "items__text";
+    field.dataset.item = index;
+    field.value = item.text;
+    field.maxLength = 60;
+    field.placeholder = "항목";
+    field.setAttribute("aria-label", "하위 항목");
+    if (item.doneOn) field.dataset.done = "";
+
+    li.append(check, field);
+    if (item.doneOn) {
+      /* 언제 끝냈는지가 항목마다 다르다. 보여 주기만 하면 모자란다 — 이미 끝낸
+         일을 뒤늦게 적어 넣는 경우가 많아 누른 날이 아닌 그날로 고칠 수 있어야
+         한다. 날짜를 비우면 아직 안 끝난 것으로 돌아간다. */
+      const when = document.createElement("input");
+      when.type = "date";
+      when.className = "items__date";
+      when.dataset.itemDate = index;
+      when.value = item.doneOn;
+      when.setAttribute("aria-label", item.text ? `${item.text} 완료일` : "완료일");
+      li.append(when);
+    }
+    return li;
+  }
+
+  function renderItems() {
+    const row = itemsRow();
+    if (!row) return;
+    const label = rowLabel(row);
+    $("items-head").textContent = label;
+    $("items-head").title = label;
+
+    const list = itemsOf(row);
+    const lines = list.map((item, index) => itemLine(item, index));
+    const filled = itemsFilled(row);
+    /* 하나도 없으면 적을 자리마저 없다. 빈 줄을 하나 띄운다 — 아직 목록에 없는
+       줄이므로 번호가 목록 길이와 같다(0). */
+    if (!list.length) lines.push(itemLine({ text: "", doneOn: "" }, 0));
+    $("items-list").replaceChildren(...lines);
+    $("items-count").textContent = filled.length ? `${itemsDone(filled)}/${filled.length} 완료` : "";
+    restoreItemFocus();
+  }
+
+  function restoreItemFocus() {
+    if (!itemsFocus) return;
+    const { index, caret } = itemsFocus;
+    itemsFocus = null;
+    const field = $("items-list").querySelector(`.items__text[data-item="${index}"]`);
+    if (!field) return;
+    field.focus();
+    const at = caret ?? field.value.length;
+    field.setSelectionRange(at, at);
+  }
+
+  function rememberItemCaret() {
+    const field = document.activeElement;
+    if (!field?.classList?.contains("items__text")) return;
+    itemsFocus = { index: Number(field.dataset.item), caret: field.selectionStart };
+  }
+
+  /** 끝냈다고 적고 지운다. 날짜는 누른 날로 남겨 언제 마쳤는지가 보이게 한다. */
+  function toggleItem(index) {
+    const row = itemsRow();
+    const item = itemsOf(row)[index];
+    if (!item) return;
+    rememberItemCaret();
+    snapshot();
+    item.doneOn = item.doneOn ? "" : today();
+    syncItemStatus(row);
+    save();
+    renderItems();
+    render();
+    replaceItems();
+  }
+
+  /* 글자가 바뀔 때마다 저장하되 상자는 다시 그리지 않는다 — 다시 그리면 커서가
+     날아간다. 빈 줄에 첫 글자가 들어온 순간 목록에 자리를 만든다. */
+  function writeItem(field) {
+    const row = itemsRow();
+    if (!row) return;
+    const index = Number(field.dataset.item);
+    const list = itemsOf(row);
+    if (list[index]) list[index].text = field.value;
+    else if (index === list.length && field.value.trim()) {
+      row.items = [...list, { text: field.value, doneOn: "" }];
+      // 첫 항목이 생기는 순간부터 상태는 항목이 정한다.
+      syncItemStatus(row);
+      render();
+      replaceItems();
+    } else {
+      return;
+    }
+    save();
+  }
+
+  function removeItemAt(row, index) {
+    const list = itemsOf(row);
+    if (!list[index]) return;
+    list.splice(index, 1);
+    if (!list.length) delete row.items;
+    syncItemStatus(row);
+    save();
+  }
+
+  function itemFieldKey(event) {
+    const field = event.target.closest(".items__text");
+    if (!field) return;
+    // 한글 조합 중의 Enter 는 조합을 확정하는 키라 가로채면 마지막 글자가 날아간다.
+    if (event.isComposing || event.keyCode === 229) return;
+
+    const row = itemsRow();
+    if (!row) return;
+    const index = Number(field.dataset.item);
+    const list = itemsOf(row);
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation(); // 표 편집의 Enter 처리로 번지지 않게 한다
+      const text = field.value.trim();
+      // 빈 줄에서 한 번 더 누르면 다 적었다는 뜻이다.
+      if (!text) return closeItems();
+      snapshot();
+      const next = [...list];
+      if (next[index]) next[index].text = text;
+      else next.push({ text, doneOn: "" });
+      next.splice(index + 1, 0, { text: "", doneOn: "" });
+      row.items = next;
+      syncItemStatus(row);
+      save();
+      itemsFocus = { index: index + 1, caret: 0 };
+      renderItems();
+      render();
+      replaceItems();
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeItems();
+      return;
+    }
+
+    /* 빈 줄에서 지우기를 누르면 그 줄을 없애고 윗줄 끝으로 올라간다. */
+    if (event.key === "Backspace" && !field.value && index > 0) {
+      event.preventDefault();
+      const above = index - 1;
+      const caret = list[above]?.text.length ?? 0;
+      removeItemAt(row, index);
+      itemsFocus = { index: above, caret };
+      renderItems();
+      render();
+      replaceItems();
+    }
+  }
+
+  /* 체크는 mousedown 에서 처리한다 — click 을 기다리면 그 사이 blur 로 줄이
+     다시 그려져 눌린 버튼이 사라진다. */
+  itemsBox.addEventListener("mousedown", (event) => {
+    const check = event.target.closest("[data-item-check]");
+    if (!check) return;
+    event.preventDefault();
+    toggleItem(Number(check.dataset.itemCheck));
+  });
+
+  itemsBox.addEventListener("keydown", (event) => {
+    const check = event.target.closest("[data-item-check]");
+    if (check) {
+      if (event.key !== " " && event.key !== "Enter") return;
+      event.preventDefault();
+      toggleItem(Number(check.dataset.itemCheck));
+      return;
+    }
+    itemFieldKey(event);
+  });
+
+  itemsBox.addEventListener("input", (event) => {
+    const field = event.target.closest(".items__text");
+    if (field) writeItem(field);
+  });
+
+  /* 완료일을 고친다. change 로 받는 것은 달력에서 날을 고르는 동안 input 이
+     매번 오기 때문이다 — 그때마다 다시 그리면 달력이 닫힌다. */
+  itemsBox.addEventListener("change", (event) => {
+    const picker = event.target.closest("[data-item-date]");
+    if (!picker) return;
+    const row = itemsRow();
+    const item = itemsOf(row)[Number(picker.dataset.itemDate)];
+    if (!item) return;
+    snapshot();
+    item.doneOn = picker.value;
+    syncItemStatus(row);
+    save();
+    renderItems();
+    render();
+    replaceItems();
+  });
+
+  /* 앞뒤 공백은 줄을 떠날 때 다듬는다. 적는 도중에 다듬으면 띄어쓰기를 못 한다.
+     빈 줄은 여기서 지우지 않는다 — 상자를 닫을 때 한 번에 걷어낸다. */
+  itemsBox.addEventListener("focusout", (event) => {
+    const field = event.target.closest?.(".items__text");
+    if (!field) return;
+    const item = itemsOf(itemsRow())[Number(field.dataset.item)];
+    if (!item) return;
+    const text = field.value.trim();
+    if (text === item.text) return;
+    item.text = text;
+    save();
+  });
+
   // 메뉴 밖 클릭 / Esc / 표 스크롤 시 닫는다.
   document.addEventListener("click", (event) => {
     if (!rowMenu.hidden && !event.target.closest("#row-menu")) closeRowMenu();
@@ -2519,12 +2905,16 @@
     if (!event.target.closest("#period-menu, #period-pick")) closePeriodMenu();
     // 메모는 적다가 밖을 누를 수 있어 닫기만 하고 글은 버린다(저장은 명시적으로).
     if (!memoBox.hidden && !event.target.closest("#memo-editor")) closeMemo();
+    /* 항목은 적는 즉시 저장되므로 밖을 누르면 그대로 닫는다. 칩을 다시 누른
+       경우는 아래 표 핸들러가 직접 닫으므로 지나친다. */
+    if (!itemsBox.hidden && !event.target.closest("#items-editor, [data-items]")) closeItems();
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeRowMenu();
       closePeriodMenu();
       closeMemo();
+      closeItems();
     }
   });
   tableWrap.addEventListener("scroll", closeRowMenu);
@@ -2628,6 +3018,17 @@
     // 링크는 원래 동작(Figma 열기)을 유지한다
     if (event.target.closest("a")) return;
 
+    /* 진행 칩은 편집 진입이 아니라 항목 상자를 여는 버튼이다. document 까지
+       올라가면 방금 연 상자를 '밖을 눌렀다' 로 보고 닫아 버린다. */
+    const chip = event.target.closest("[data-items]");
+    if (chip) {
+      event.stopPropagation();
+      const id = chip.dataset.items;
+      if (itemsTarget === id) return closeItems();
+      if (editingId !== null && !commit()) return;
+      return openItems(id, itemsAnchorOf(id));
+    }
+
     // No 칸은 순서 변경 핸들이므로 편집 진입에서 제외한다.
     if (event.target.closest(".cell--no")) return;
 
@@ -2655,7 +3056,7 @@
      표 안의 클릭은 tbody 핸들러가 이미 다룬다. */
   document.addEventListener("mousedown", (event) => {
     if (editingId === null && !picked) return;
-    if (event.target.closest("#tbody, #owner-picker, #memo-editor, #row-menu, #row-insert")) return;
+    if (event.target.closest("#tbody, #owner-picker, #memo-editor, #items-editor, #row-menu, #row-insert")) return;
     if (editingId !== null) commit();
     clearPick();
   });
