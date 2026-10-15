@@ -1227,6 +1227,16 @@ textarea.input--cell {
   text-decoration-line: line-through;
 }
 
+/* 그 항목이 어느 쪽지에서 왔는지. 이름 옆에 붙어 자리를 거의 쓰지 않는다. */
+.items__link {
+  flex: none;
+  color: var(--color-text-primary);
+  font-size: var(--font-body6);
+  text-decoration: none;
+}
+
+.items__link:hover { text-decoration: underline; }
+
 /* 언제 끝냈는지. 항목마다 다른 날이라 줄마다 붙여 둔다. 고칠 수 있는 칸이지만
    평소에는 글자처럼 보인다 — 줄마다 입력칸 테두리가 서면 목록이 아니라 서식이
    된다. */

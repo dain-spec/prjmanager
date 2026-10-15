@@ -829,7 +829,11 @@
 
   function subItem(value) {
     if (typeof value === "string") return { text: value.trim(), doneOn: "" };
-    return { text: String(value?.text ?? "").trim(), doneOn: String(value?.doneOn ?? "") };
+    const item = { text: String(value?.text ?? "").trim(), doneOn: String(value?.doneOn ?? "") };
+    // 항목마다 쪽지가 따로 온다. 빈 값은 키째로 두지 않는다.
+    const message = String(value?.message ?? "").trim();
+    if (message) item.message = message;
+    return item;
   }
 
   function itemsOf(row) {
@@ -2653,7 +2657,7 @@
   /** 이름이 빈 줄은 저장하지 않는다 — 다음 항목을 적으려고 띄워 둔 자리다. */
   function pruneItems(row) {
     const list = itemsOf(row)
-      .map((it) => ({ text: it.text.trim(), doneOn: it.doneOn }))
+      .map((it) => subItem({ ...it, text: it.text.trim() }))
       .filter((it) => it.text);
     if (list.length) row.items = list;
     else delete row.items;
@@ -2691,11 +2695,23 @@
     field.dataset.item = index;
     field.value = item.text;
     field.maxLength = 60;
-    field.placeholder = "항목";
+    field.placeholder = "항목 또는 쪽지 링크";
     field.setAttribute("aria-label", "하위 항목");
     if (item.doneOn) field.dataset.done = "";
 
     li.append(check, field);
+    if (item.message) {
+      /* 그 항목이 어느 쪽지에서 왔는지. 항목마다 쪽지가 다를 수 있어 행의
+         쪽지 칸 하나로는 모자란다. */
+      const link = document.createElement("a");
+      link.className = "items__link";
+      link.href = item.message;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "쪽지";
+      link.title = item.message;
+      li.append(link);
+    }
     if (item.doneOn) {
       /* 언제 끝냈는지가 항목마다 다르다. 보여 주기만 하면 모자란다 — 이미 끝낸
          일을 뒤늦게 적어 넣는 경우가 많아 누른 날이 아닌 그날로 고칠 수 있어야
@@ -2707,6 +2723,13 @@
       when.value = item.doneOn;
       when.setAttribute("aria-label", item.text ? `${item.text} 완료일` : "완료일");
       li.append(when);
+    } else {
+      /* 끝내지 않은 줄에도 날짜 자리는 비워 둔다 — 자리를 접으면 쪽지 링크가
+         줄마다 다른 곳에 서서 목록이 들쭉날쭉해진다. */
+      const gap = document.createElement("span");
+      gap.className = "items__date";
+      gap.setAttribute("aria-hidden", "true");
+      li.append(gap);
     }
     return li;
   }
@@ -2721,9 +2744,12 @@
     const list = itemsOf(row);
     const lines = list.map((item, index) => itemLine(item, index));
     const filled = itemsFilled(row);
-    /* 하나도 없으면 적을 자리마저 없다. 빈 줄을 하나 띄운다 — 아직 목록에 없는
-       줄이므로 번호가 목록 길이와 같다(0). */
-    if (!list.length) lines.push(itemLine({ text: "", doneOn: "" }, 0));
+    /* 끝에는 늘 빈 줄을 하나 둔다 — 적을 자리가 보여야 다음 항목을 잇거나
+       쪽지를 붙여넣을 곳을 찾지 않는다. 아직 목록에 없는 줄이므로 번호가 목록
+       길이와 같다. 닫을 때 걷어내므로 빈 항목으로 남지 않는다. */
+    if (!list.length || list.at(-1).text.trim()) {
+      lines.push(itemLine({ text: "", doneOn: "" }, list.length));
+    }
     $("items-list").replaceChildren(...lines);
     $("items-count").textContent = filled.length ? `${itemsDone(filled)}/${filled.length} 완료` : "";
     restoreItemFocus();
@@ -2841,6 +2867,60 @@
       replaceItems();
     }
   }
+
+  /* 사내 쪽지 주소인지. 주소마다 질의문자열의 차례가 달라 msgId 가 있는지로
+     가린다 — 쪽지를 가리키는 링크에는 반드시 들어 있다. */
+  function isMessageLink(url) {
+    return /^https?:\/\//.test(url) && /[?&#]msgId=/.test(url);
+  }
+
+  /* 붙여넣은 쪽지에서 항목 이름을 짓는다. 제목을 적어 보낸 쪽지면 그 제목을
+     쓰고, 제목을 비운 채 복사한 링크(보내는 이와 보낸 때가 제목 자리에 들어온다)
+     면 그 날짜로 적는다 — '10.02 요청' 처럼 언제 들어온 몫인지가 남는다. */
+  function messageItemName(url) {
+    const title = messageTitle(url).trim();
+    const sender = messageSender(url);
+    if (sender) {
+      const [, month, day] = sender.date.split("-");
+      return `${Number(month)}.${day} 요청`;
+    }
+    if (!title) return "쪽지 요청";
+    return title.length > 60 ? title.slice(0, 60) : title;
+  }
+
+  /* 쪽지 링크를 붙여넣으면 그 줄을 항목으로 만든다. 이름이 이미 적혀 있으면
+     건드리지 않고 링크만 단다 — 손으로 적은 이름이 날아가면 다시 적어야 한다. */
+  function pasteMessageItem(field, url) {
+    const row = itemsRow();
+    if (!row) return;
+    const index = Number(field.dataset.item);
+    snapshot();
+    const next = itemsOf(row).map((it) => ({ ...it }));
+    if (!next[index]) next[index] = { text: "", doneOn: "" };
+    next[index].message = url;
+    const named = Boolean(next[index].text.trim());
+    if (!named) next[index].text = messageItemName(url);
+    row.items = next;
+    syncItemStatus(row);
+    save();
+    itemsFocus = { index, caret: null };
+    renderItems();
+    render();
+    replaceItems();
+    toast(named ? "항목에 쪽지를 달았습니다." : "쪽지에서 항목을 채웠습니다.");
+  }
+
+  /* 쪽지 주소는 그 자체로는 읽을 수 없는 긴 글자열이다. 항목 이름 자리에 그대로
+     들어가면 목록을 못 읽으므로, 쪽지 링크일 때만 가로채 이름과 링크로 나눈다.
+     그 밖의 붙여넣기는 평소대로 둔다. */
+  itemsBox.addEventListener("paste", (event) => {
+    const field = event.target.closest(".items__text");
+    if (!field) return;
+    const url = (event.clipboardData?.getData("text") ?? "").trim();
+    if (!isMessageLink(url)) return;
+    event.preventDefault();
+    pasteMessageItem(field, url);
+  });
 
   /* 체크는 mousedown 에서 처리한다 — click 을 기다리면 그 사이 blur 로 줄이
      다시 그려져 눌린 버튼이 사라진다. */
