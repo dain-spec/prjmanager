@@ -2877,15 +2877,24 @@
   /* 붙여넣은 쪽지에서 항목 이름을 짓는다. 제목을 적어 보낸 쪽지면 그 제목을
      쓰고, 제목을 비운 채 복사한 링크(보내는 이와 보낸 때가 제목 자리에 들어온다)
      면 그 날짜로 적는다 — '10.02 요청' 처럼 언제 들어온 몫인지가 남는다. */
-  function messageItemName(url) {
+  function messageItemName(url, byOwner) {
     const title = messageTitle(url).trim();
     const sender = messageSender(url);
     if (sender) {
       const [, month, day] = sender.date.split("-");
-      return `${Number(month)}.${day} 요청`;
+      // 담당자가 보낸 쪽지는 요청이 아니라 끝냈다는 알림이다.
+      return `${Number(month)}.${day} ${byOwner ? "완료" : "요청"}`;
     }
-    if (!title) return "쪽지 요청";
+    if (!title) return byOwner ? "완료 알림" : "쪽지 요청";
     return title.length > 60 ? title.slice(0, 60) : title;
+  }
+
+  /* 보낸 사람이 우리 담당자인지. 제목 자리에 '이름 직위/직급' 이 오기도 하고
+     이름만 오기도 해서 앞 토큰으로 가린다. */
+  function sentByOwner(url) {
+    const name = messageSender(url)?.name ?? "";
+    if (!name) return false;
+    return OWNER_MEMBERS.some((member) => name === member || name.startsWith(`${member} `));
   }
 
   /* 쪽지 링크를 붙여넣으면 그 줄을 항목으로 만든다. 이름이 이미 적혀 있으면
@@ -2899,7 +2908,14 @@
     if (!next[index]) next[index] = { text: "", doneOn: "" };
     next[index].message = url;
     const named = Boolean(next[index].text.trim());
-    if (!named) next[index].text = messageItemName(url);
+    if (!named) next[index].text = messageItemName(url, sentByOwner(url));
+
+    /* 담당자가 보낸 쪽지는 끝냈다는 알림이다 — 그 쪽지가 나간 날이 그 몫을
+       마친 날이므로 완료로 적는다. 요청자가 보낸 쪽지는 아직 할 일이라
+       건드리지 않는다. 이미 적어 둔 완료일도 덮지 않는다. */
+    const reported = sentByOwner(url) && !next[index].doneOn;
+    if (reported) next[index].doneOn = messageSender(url).date;
+
     row.items = next;
     syncItemStatus(row);
     save();
@@ -2907,7 +2923,8 @@
     renderItems();
     render();
     replaceItems();
-    toast(named ? "항목에 쪽지를 달았습니다." : "쪽지에서 항목을 채웠습니다.");
+    if (reported) toast("담당자 쪽지라 완료로 적었습니다.");
+    else toast(named ? "항목에 쪽지를 달았습니다." : "쪽지에서 항목을 채웠습니다.");
   }
 
   /* 쪽지 주소는 그 자체로는 읽을 수 없는 긴 글자열이다. 항목 이름 자리에 그대로
