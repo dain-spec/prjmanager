@@ -1639,7 +1639,7 @@
         td.dataset.depth = String(depth);
         td.prepend(treeToggle(row));
       }
-      if (canNest(row)) td.append(itemsChip(row, list));
+      if (canNest(row) && list.length) td.append(itemsChip(row, list));
       /* 부작업은 적을 때만큼이나 자주 지운다 — 몫을 잘못 나눴거나 한 줄로
          합치는 경우다. 우클릭 → 삭제까지 가지 않고 이름 옆에서 바로 끝낸다.
          프로젝트 행에는 달지 않는다. 표의 한 덩어리가 통째로 사라지는 일이
@@ -1653,19 +1653,19 @@
     return td;
   }
 
-  /* 진행을 숫자로 보여 주고 누르면 항목 상자가 열린다. 항목이 없는 행에서는
-     평소 숨어 있다가 행에 마우스를 올리면 나타난다 — 모든 행에 늘 떠 있으면
-     표가 시끄럽고, 아예 없으면 어디서 항목을 만드는지 알 수 없다. */
+  /* 몇 개가 끝났는지 숫자로 보여 주고, 누르면 빠르게 적기 상자가 열린다.
+     부작업이 있는 행에만 붙는다 — 없는 행에도 마우스를 올릴 때마다 '부작업' 이
+     떠오르면 표를 훑는 동안 글자가 계속 나타났다 사라진다. 아직 나누지 않은
+     행은 우클릭 메뉴에서 시작한다. */
   function itemsChip(row, list) {
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "chip-items";
     chip.dataset.items = row.id;
     const done = itemsDone(list);
-    chip.textContent = list.length ? `${done}/${list.length}` : "부작업";
-    if (!list.length) chip.dataset.empty = "";
-    else if (done === list.length) chip.dataset.full = "";
-    chip.title = list.length ? `부작업 ${done}/${list.length} 완료` : "부작업 나누기";
+    chip.textContent = `${done}/${list.length}`;
+    if (done === list.length) chip.dataset.full = "";
+    chip.title = `부작업 ${done}/${list.length} 완료`;
     return chip;
   }
 
