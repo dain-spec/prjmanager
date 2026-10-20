@@ -1640,6 +1640,11 @@
         td.prepend(treeToggle(row));
       }
       if (canNest(row)) td.append(itemsChip(row, list));
+      /* 부작업은 적을 때만큼이나 자주 지운다 — 몫을 잘못 나눴거나 한 줄로
+         합치는 경우다. 우클릭 → 삭제까지 가지 않고 이름 옆에서 바로 끝낸다.
+         프로젝트 행에는 달지 않는다. 표의 한 덩어리가 통째로 사라지는 일이
+         지나가던 손에 일어나서는 안 된다. */
+      if (depth > 0) td.append(removeSubButton(row));
     } else if (list.length && (col.key === "status" || col.key === "done")) {
       /* 자식이 정하는 값이라는 것을 그 칸에서 알려 준다 — 직접 고쳐도 자식에
          맞춰 되돌아가므로, 왜 그런지 모르면 같은 수정을 되풀이하게 된다. */
@@ -1662,6 +1667,20 @@
     else if (done === list.length) chip.dataset.full = "";
     chip.title = list.length ? `부작업 ${done}/${list.length} 완료` : "부작업 나누기";
     return chip;
+  }
+
+  /* 평소에는 숨어 있다가 그 행에 마우스를 올리면 나타난다 — 모든 부작업에 늘
+     떠 있으면 표가 시끄럽고, 지우려다 옆 칸을 누르기도 쉽다. */
+  function removeSubButton(row) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "chip-remove";
+    btn.dataset.removeSub = row.id;
+    btn.textContent = "✕";
+    const kids = childrenOf(row.id).length;
+    btn.title = kids ? `부작업 삭제 (딸린 ${kids}건도 함께)` : "부작업 삭제";
+    btn.setAttribute("aria-label", `'${rowLabel(row)}' 부작업 삭제`);
+    return btn;
   }
 
   /** 이미 붙어 있는 툴팁을 지우지 않고 한 단락 덧붙인다. */
@@ -2409,7 +2428,10 @@
   }
 
   /** 주어진 id 들의 행을 삭제한다. 헤더 삭제와 우클릭 삭제가 함께 쓴다. */
-  function removeRows(ids) {
+  /* ask 를 끄는 자리는 하나뿐이다 — 요청내용 칸의 hover 삭제로 자식 없는 부작업
+     한 줄을 지울 때. 한 단어짜리 줄마다 확인창이 뜨면 정리하다 말게 되고,
+     ⌘Z 가 바로 되돌려 준다. 딸린 몫이 있으면 그때는 묻는다(doomed 가 는다). */
+  function removeRows(ids, { ask = true } = {}) {
     const targets = rows.filter((r) => ids.has(r.id));
     if (!targets.length) return;
 
@@ -2423,7 +2445,7 @@
     const label =
       targets.length === 1 ? `'${rowLabel(targets[0])}' 항목을` : `선택한 ${targets.length}건을`;
     const withSubs = extra > 0 ? ` 딸린 부작업 ${extra}건과 함께` : "";
-    if (!confirm(`${label}${withSubs} 삭제할까요?`)) return;
+    if ((ask || extra > 0) && !confirm(`${label}${withSubs} 삭제할까요?`)) return;
 
     // 부모가 사라지면 그 부모의 부모가 보던 '다 끝났는지' 도 달라진다.
     const above = [...new Set(targets.flatMap((row) => ancestorsOf(row)))].filter(
@@ -3732,6 +3754,17 @@
       save();
       render();
       return;
+    }
+
+    /* 이름 옆 ✕ 는 그 부작업을 지운다. 편집 진입보다 먼저 가로채야 한다 —
+       칸 안의 클릭이라 그냥 두면 이름을 고치는 상태로 들어간다. */
+    const remove = event.target.closest("[data-remove-sub]");
+    if (remove) {
+      event.stopPropagation();
+      const id = remove.dataset.removeSub;
+      if (editingId !== null && !commit()) return;
+      // 자식이 없는 한 줄은 묻지 않는다. removeRows 가 딸린 몫이 있으면 묻는다.
+      return removeRows(new Set([id]), { ask: false });
     }
 
     /* 진행 칩은 편집 진입이 아니라 항목 상자를 여는 버튼이다. document 까지

@@ -1371,6 +1371,37 @@ textarea.input--cell {
 
 tr:hover .chip-items[data-empty] { display: inline-flex; }
 
+/* 이름 옆 부작업 삭제 — 진행 칩과 같은 규칙으로 그 행에 마우스를 올렸을 때만
+   나온다. 되돌릴 수 없는 일이라 색은 우클릭 메뉴의 삭제와 맞춘다. */
+.chip-remove {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: var(--gap-2);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xxsmall);
+  background: none;
+  color: var(--color-text-subtler);
+  font-family: inherit;
+  font-size: var(--font-body6);
+  line-height: 1;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+tr:hover .chip-remove { display: inline-flex; }
+
+/* 키보드로 옮겨 왔을 때도 보여야 누를 수 있다. */
+.chip-remove:focus-visible { display: inline-flex; }
+
+.chip-remove:hover {
+  background: var(--color-surface-error-subtler);
+  color: var(--color-text-point);
+}
+
 .menu {
   position: fixed;
   z-index: 40;
