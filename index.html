@@ -7,7 +7,7 @@
 <meta name="description" content="서비스별 Figma·XD 파일 현황과 부서 업무 요청 진행 현황을 한 화면에서 관리하는 팀 내부용 사이트" />
 <link rel="icon" type="image/svg+xml" href="src/favicon.svg?v=f18387f6" />
 <link rel="stylesheet" href="src/tokens.css?v=cc6bd91d" />
-<link rel="stylesheet" href="src/styles.css?v=7414aecf" />
+<link rel="stylesheet" href="src/styles.css?v=0fc1a880" />
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
@@ -223,6 +223,14 @@
 <!-- 담당자 복수 선택 팝업. 항목은 조직도(OWNER_GROUPS)에서 JS 가 만든다. -->
 <div class="menu menu--picker" id="owner-picker" role="dialog" aria-label="담당자 선택" hidden></div>
 
+<!-- 어느 업무의 부작업으로 넣을지 고르는 목록. 표 밖이라 body 레벨에 둔다. -->
+<div class="menu menu--picker menu--parent" id="parent-picker" role="dialog" aria-label="상위 업무 선택" hidden>
+  <p class="picker__label" id="parent-head"></p>
+  <input class="picker__search" id="parent-search" type="search"
+         placeholder="업무 이름으로 찾기" aria-label="상위 업무 찾기" autocomplete="off">
+  <div id="parent-list"></div>
+</div>
+
 <!-- 행 우클릭 메뉴. .panel 은 overflow: hidden 이라 잘리므로 body 레벨에 둔다. -->
 <!-- 기간 단위 목록 — 헤더의 드롭다운이 연다. 헤더 안에 두면 열릴 때 옆
      컨트롤을 밀어내므로 다른 팝업처럼 body 에 두고 위치를 계산한다. -->
@@ -240,6 +248,8 @@
   <!-- 한 업무를 여러 몫으로 나눠 맡길 때 쓴다. -->
   <button type="button" class="menu__item" role="menuitem" data-menu="sub" id="menu-sub">부작업 추가</button>
   <button type="button" class="menu__item" role="menuitem" data-menu="items" id="menu-items">부작업 빠르게 적기</button>
+  <!-- 이미 있는 행을 다른 업무 밑으로 옮긴다. 드래그는 형제끼리만 되므로 이 길이 따로 필요하다. -->
+  <button type="button" class="menu__item" role="menuitem" data-menu="move" id="menu-move">상위 업무 바꾸기</button>
   <div class="menu__divider" id="menu-items-divider"></div>
   <button type="button" class="menu__item" role="menuitem" data-menu="insert-below" id="menu-insert">아래에 행 추가</button>
   <div class="menu__divider" id="menu-divider"></div>
@@ -274,6 +284,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="src/app.js?v=e27a529e"></script>
+<script src="src/app.js?v=906b4eb8"></script>
 </body>
 </html>

@@ -1464,6 +1464,56 @@ tr:hover .chip-items[data-empty] { display: inline-flex; }
   background: var(--color-action-hover);
 }
 
+/* ── 상위 업무 고르기 팝업 ─────────────────────────────── */
+
+/* 담당자 팝업보다 넓다 — 업무 이름은 'DJ Bank 자금예측' 처럼 길고, 번호까지
+   한 줄에 들어가야 표에서 본 자리 그대로 찾을 수 있다. */
+.menu--parent {
+  min-width: 260px;
+}
+
+.picker__search {
+  width: 100%;
+  height: var(--size-7);
+  margin-bottom: var(--padding-2);
+  padding: 0 var(--padding-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xxsmall);
+  background: var(--color-surface-basic);
+  color: var(--color-text-basic);
+  font: inherit;
+  font-size: var(--font-body4);
+}
+
+.picker__search:focus-visible {
+  outline: 1px solid var(--color-element-primary);
+  outline-offset: -1px;
+}
+
+/* 목록 항목은 버튼이다 — 담당자 팝업의 label(체크박스)과 달리 누르면 바로 옮긴다. */
+.menu--parent .picker__item {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--font-body4);
+  text-align: left;
+  cursor: pointer;
+}
+
+/* 번호는 폭을 고정해 이름의 시작 자리를 맞춘다. 들쭉날쭉하면 훑어 읽기 어렵다. */
+.picker__no {
+  flex: none;
+  width: 36px;
+  color: var(--color-text-subtler);
+  font-variant-numeric: tabular-nums;
+}
+
+.picker__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* 편집 행의 담당자 칸 — 셀 전체가 팝업을 여는 버튼이 된다. */
 .owner-pick {
   width: 100%;

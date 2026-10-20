@@ -1840,6 +1840,54 @@
     toast(`'${rowLabel(moved)}' 순서를 옮겼습니다.`);
   }
 
+  /* 이미 있는 행을 다른 업무 밑으로 옮긴다. 끌어 놓기는 형제끼리만 되므로
+     (moveBranch) 멀리 떨어진 행을 거두어들일 길이 따로 있어야 한다. 표가 길면
+     옮길 행과 받을 행이 한 화면에 같이 보이지도 않는다. */
+
+  /** 이 덩어리가 아래에 들어갈 수 있는 행들. 단계 한도를 넘는 곳은 뺀다. */
+  function parentCandidates(row) {
+    const block = subtreeOf(row.id);
+    const inside = new Set(block.map((r) => r.id));
+    /* 옮기는 것은 행 하나가 아니라 덩어리다. 손자까지 달렸으면 그 높이만큼
+       아래로 더 내려가므로, 새 부모의 단계에 그 높이를 더해 따져야 한다. */
+    const base = depthOf(row);
+    const height = Math.max(...block.map((r) => depthOf(r) - base));
+    return rows.filter(
+      (r) =>
+        !inside.has(r.id) &&
+        r.id !== row.parent &&
+        depthOf(r) + 1 + height <= view.tree.maxDepth,
+    );
+  }
+
+  /** row 덩어리를 parentId 의 막내로 옮긴다. parentId 가 빈 값이면 맨 위 단계로. */
+  function reparent(row, parentId) {
+    const parent = rowById(parentId);
+    if (!row || (parentId && !parent)) return;
+
+    snapshot();
+    // 떠난 자리의 윗단계는 '다 끝났는지' 가 달라진다. 옮기기 전에 집어 둔다.
+    const leaving = ancestorsOf(row);
+    const block = subtreeOf(row.id);
+    const ids = new Set(block.map((r) => r.id));
+    setRows(rows.filter((r) => !ids.has(r.id)));
+    row.parent = parentId;
+    placeAfter(block, parentId || null);
+    // 받는 쪽이 접혀 있으면 방금 넣은 몫이 보이지 않는다.
+    if (parent?.collapsed) delete parent.collapsed;
+
+    arrange();
+    for (const up of leaving) rollupSelf(up);
+    syncRollup(row);
+    save();
+    render();
+    toast(
+      parent
+        ? `'${rowLabel(row)}' 을(를) '${rowLabel(parent)}' 의 부작업으로 옮겼습니다.`
+        : `'${rowLabel(row)}' 을(를) 맨 위 단계로 꺼냈습니다.`,
+    );
+  }
+
   /** dragged 행을 target 행의 앞/뒤로 옮긴다. */
   function moveRow(draggedId, targetId, after) {
     if (draggedId === targetId) return;
@@ -2763,6 +2811,8 @@
   // ── 행 우클릭 메뉴 ────────────────────────────────────
   const rowMenu = $("row-menu");
   let menuRowId = null;
+  /** 우클릭한 자리. 메뉴에서 이어 여는 팝업을 같은 곳에 세우는 데 쓴다. */
+  let menuPoint = { x: 0, y: 0 };
   /** 우클릭한 칸의 컬럼키. 선택·No·여백 칸이면 null 이라 메모를 붙일 수 없다. */
   let menuColKey = null;
 
@@ -2775,6 +2825,8 @@
     hideTip();
     menuRowId = id;
     menuColKey = event.target.closest("td")?.dataset.col ?? null;
+    // 메뉴에서 이어 여는 팝업(상위 업무 고르기)도 같은 자리에 세운다.
+    menuPoint = { x: event.clientX, y: event.clientY };
 
     /* 메모는 값을 담는 칸에만 붙는다. 이미 있으면 '수정' 으로 바꿔 지금 무엇이
        일어날지 알려 주고, 삭제 항목도 그때만 낸다. */
@@ -2795,6 +2847,12 @@
       ? `부작업 빠르게 적기 (${itemsDone(subs)}/${subs.length})`
       : "부작업 빠르게 적기";
     $("menu-items-divider").hidden = !nestable;
+
+    /* 상위를 바꿀 수 있는 것은 단계를 쓰는 표에서, 받아 줄 자리가 하나라도
+       있을 때뿐이다. 이미 맨 위 단계인 행에 갈 곳이 없으면 메뉴를 내지 않는다. */
+    const canMove = treeOn() && (Boolean(row?.parent) || parentCandidates(row).length > 0);
+    $("menu-move").hidden = !canMove;
+    if (!nestable) $("menu-items-divider").hidden = !canMove;
 
     // '아래에 행 추가' 는 표시 순서와 저장 순서가 같을 때만 의미가 있다.
     // 삭제는 순서와 무관하므로 정렬·검색 중에도 쓸 수 있게 둔다.
@@ -2829,6 +2887,8 @@
       saveMemo(id, colKey, "");
     } else if (item.dataset.menu === "items") {
       openItems(id, itemsAnchorOf(id));
+    } else if (item.dataset.menu === "move") {
+      openParentPicker(id);
     } else if (item.dataset.menu === "sub") {
       // 부모 덩어리 끝에 붙으므로 기준 행이 곧 부모다. 접혀 있으면 펼쳐 준다.
       const parent = rowById(id);
@@ -2847,6 +2907,108 @@
     menuRowId = null;
     menuColKey = null;
   }
+
+  // ── 상위 업무 고르기 ──────────────────────────────────
+  /* 받을 업무를 목록에서 고른다. 표가 길면 옮길 행과 받을 행이 한 화면에
+     같이 보이지 않아 끌어 놓기로는 닿지 않는다. 목록은 표와 같은 단계 순서로
+     세우고 번호를 함께 적어, 표에서 본 자리 그대로 찾게 한다. */
+  const parentPicker = $("parent-picker");
+  const parentSearch = $("parent-search");
+  let parentTarget = null;
+
+  function openParentPicker(id) {
+    const row = rowById(id);
+    if (!row) return;
+    parentTarget = id;
+    hideTip();
+    closeMemo();
+    closeItems();
+    parentSearch.value = "";
+    $("parent-head").textContent = `'${rowLabel(row)}' 을(를) 어디 밑으로`;
+    renderParentList();
+    parentPicker.hidden = false;
+    placeParentPicker();
+    parentSearch.focus();
+  }
+
+  function placeParentPicker() {
+    const box = parentPicker.getBoundingClientRect();
+    parentPicker.style.left = `${Math.min(menuPoint.x, innerWidth - box.width - 8)}px`;
+    parentPicker.style.top = `${Math.max(8, Math.min(menuPoint.y, innerHeight - box.height - 8))}px`;
+  }
+
+  function closeParentPicker() {
+    parentPicker.hidden = true;
+    parentTarget = null;
+  }
+
+  function parentOption(label, id, hint) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "picker__item";
+    btn.dataset.parentPick = id;
+    const name = document.createElement("span");
+    name.className = "picker__name";
+    name.textContent = label;
+    if (hint) {
+      const no = document.createElement("span");
+      no.className = "picker__no";
+      no.textContent = hint;
+      btn.append(no);
+    }
+    btn.append(name);
+    return btn;
+  }
+
+  function renderParentList() {
+    const row = rowById(parentTarget);
+    if (!row) return;
+    const q = parentSearch.value.trim().toLowerCase();
+    const options = [];
+
+    /* 꺼내기는 '어디 밑으로' 의 반대이지만 같은 자리에서 고르는 편이 낫다 —
+       메뉴를 하나 더 늘리면 쓰지 않는 행에서도 늘 보인다. */
+    if (row.parent && !q) options.push(parentOption("맨 위 단계로 꺼내기", "", ""));
+
+    const allowed = new Set(parentCandidates(row).map((r) => r.id));
+    const counters = [];
+    // 접힌 가지도 후보다 — 접어 두었다고 넣을 수 없는 것은 아니다.
+    for (const candidate of treeOrder(rows, true)) {
+      const depth = depthOf(candidate);
+      counters.length = depth + 1;
+      counters[depth] = (counters[depth] ?? 0) + 1;
+      if (!allowed.has(candidate.id)) continue;
+      const label = rowLabel(candidate);
+      if (q && !label.toLowerCase().includes(q)) continue;
+      options.push(parentOption(label, candidate.id, counters.join(".")));
+    }
+
+    if (!options.length) {
+      const empty = document.createElement("p");
+      empty.className = "picker__label";
+      empty.textContent = q ? "찾는 업무가 없습니다." : "넣을 수 있는 업무가 없습니다.";
+      options.push(empty);
+    }
+    $("parent-list").replaceChildren(...options);
+  }
+
+  parentSearch.addEventListener("input", renderParentList);
+
+  parentPicker.addEventListener("click", (event) => {
+    const pick = event.target.closest("[data-parent-pick]");
+    if (!pick) return;
+    event.stopPropagation();
+    const row = rowById(parentTarget);
+    const parentId = pick.dataset.parentPick;
+    closeParentPicker();
+    reparent(row, parentId);
+  });
+
+  parentPicker.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.stopPropagation();
+    closeParentPicker();
+  });
 
   // ── 칸 툴팁 ───────────────────────────────────────────
   const tip = $("memo-tip");
@@ -3446,6 +3608,7 @@
     /* 항목은 적는 즉시 저장되므로 밖을 누르면 그대로 닫는다. 칩을 다시 누른
        경우는 아래 표 핸들러가 직접 닫으므로 지나친다. */
     if (!itemsBox.hidden && !event.target.closest("#items-editor, [data-items]")) closeItems();
+    if (!parentPicker.hidden && !event.target.closest("#parent-picker")) closeParentPicker();
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -3453,6 +3616,7 @@
       closePeriodMenu();
       closeMemo();
       closeItems();
+      closeParentPicker();
     }
   });
   tableWrap.addEventListener("scroll", closeRowMenu);
@@ -3608,7 +3772,7 @@
      표 안의 클릭은 tbody 핸들러가 이미 다룬다. */
   document.addEventListener("mousedown", (event) => {
     if (editingId === null && !picked) return;
-    if (event.target.closest("#tbody, #owner-picker, #memo-editor, #items-editor, #row-menu, #row-insert")) return;
+    if (event.target.closest("#tbody, #owner-picker, #memo-editor, #items-editor, #row-menu, #row-insert, #parent-picker")) return;
     if (editingId !== null) commit();
     clearPick();
   });
