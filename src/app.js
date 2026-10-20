@@ -219,18 +219,48 @@
        started 예전 이름은 requested 였다. 상시업무까지 담게 되면서 '요청한 날' 이
                아니라 '시작한 날' 이 되어 이름을 바꿨다. */
   function migrateRequestRow({ requested, ...row }) {
-    const next = {
+    return {
       ...row,
+      id: row.id ?? uid(),
       started: row.started ?? requested ?? "",
       kind: row.kind ?? "request",
+      parent: row.parent ?? "",
       status: row.status ?? (String(row.done ?? "").trim() ? "done" : "progress"),
     };
-    /* 하위 항목은 있는 행에만 둔다. 빈 배열이 남으면 '항목으로 관리하는 행' 으로
-       읽혀 상태와 완료일이 항목에 묶인다. */
-    const items = Array.isArray(row.items) ? row.items.map(subItem).filter((it) => it.text) : [];
-    if (items.length) next.items = items;
-    else delete next.items;
-    return next;
+  }
+
+  /* 예전 '하위 항목'({이름, 끝낸 날, 쪽지} 목록)을 부작업 행으로 옮긴다. 같은
+     일을 두 군데서 관리하면 어느 쪽이 사실인지 알 수 없다 — 표가 단계를 갖게
+     된 이상 하위 항목도 표의 행이어야 한다. 이름 · 완료일 · 쪽지는 부작업이 제
+     값으로 갖는 칸이므로 그대로 옮기고, 나머지는 비워 상위 행에서 물려받는다. */
+  function migrateRequestRows(list) {
+    const out = [];
+    for (const row of list) {
+      const items = Array.isArray(row.items) ? row.items.map(subItem) : [];
+      delete row.items;
+      out.push(row);
+      for (const item of items) {
+        if (!item.text) continue;
+        out.push({
+          id: uid(),
+          parent: row.id,
+          kind: row.kind,
+          started: "",
+          requester: "",
+          service: "",
+          content: item.text,
+          message: item.message ?? "",
+          platform: "",
+          tool: "",
+          path: "",
+          zeplin: "",
+          owners: [],
+          status: item.doneOn ? "done" : "progress",
+          done: item.doneOn ?? "",
+        });
+      }
+    }
+    return out;
   }
 
   /* 시드 데이터는 팀 현황표(프로젝트/유형/주소링크/공통 반영 버전/반영 상태/작업자/
@@ -381,7 +411,17 @@
       /* 저장 순서를 요청일 늦은 것부터로 맞춘다. 최근 요청이 지금 손볼
          일이므로 위에 둔다. 같은 날짜끼리는 넣은 순서를 지킨다. */
       order: { key: "started", dir: "desc" },
+      /* Jira 처럼 프로젝트 → 부작업 → 부작업 세 단계로 나눠 관리한다. 행마다
+         parent 에 상위 행 id 를 담고, 저장 순서를 '부모 바로 뒤에 그 자손' 으로
+         지킨다(arrange). 표시 순서와 저장 순서가 어긋나면 드래그도 '아래에 행
+         추가' 도 엉뚱한 자리를 가리키기 때문이다.
+
+         own 은 부작업이 제 값으로 갖는 칸이다. 그 밖의 칸을 비워 두면 상위
+         행에서 물려받아 흐리게 보여 준다 — 같은 서비스 · 파일 경로를 단계마다
+         다시 적게 할 이유가 없다. 적으면 그 값이 이긴다. */
+      tree: { maxDepth: 2, own: ["content", "message", "owners", "status", "done"] },
       migrate: migrateRequestRow,
+      migrateAll: migrateRequestRows,
       // 매일 하는 업무 줄은 이 탭에서만 쓴다.
       daily: true,
       // 요청일 기준으로 한 주 / 한 달만 보는 기간 보기를 쓴다.
@@ -465,6 +505,8 @@
   /** 컬럼 기술에 맞춰 빠진 필드를 채운다(저장값이 예전 스키마여도 깨지지 않게). */
   function normalize(row) {
     const out = { id: row.id ?? uid() };
+    // 어느 단계의 행인지는 컬럼이 아니라 행의 성질이라 따로 옮긴다.
+    if (view.tree) out.parent = row.parent ?? "";
     for (const col of view.columns) {
       out[col.key] = col.type === "owners" ? expandOwners(row[col.key]) : row[col.key] ?? "";
     }
@@ -478,7 +520,9 @@
         const parsed = JSON.parse(raw);
         // 스키마가 바뀔 때 저장 키를 올려 데이터를 버리는 대신 옛 필드를 옮긴다.
         if (Array.isArray(parsed) && parsed.length) {
-          return parsed.map((row) => (target.migrate ? target.migrate(row) : row));
+          const list = parsed.map((row) => (target.migrate ? target.migrate(row) : row));
+          // 행 수가 달라지는 이사(하위 항목 → 부작업 행)는 목록 전체를 봐야 한다.
+          return target.migrateAll ? target.migrateAll(list) : list;
         }
       }
     } catch {
@@ -497,9 +541,9 @@
      않는다. 서비스명 + OS 로 파일 현황 행을 찾아 비어 있는 칸을 채운다.
      OS 까지 봐야 행 하나가 정해진다 — ONE AI(W/M) 처럼 OS 만 다른 서비스가 있다. */
   function linkedRow(row) {
-    const service = String(row?.service ?? "").trim();
+    const service = String(inherited(row, "service").value ?? "").trim();
     if (!service) return null;
-    const platform = String(row?.platform ?? "").trim();
+    const platform = String(inherited(row, "platform").value ?? "").trim();
     const matches = rowsOf("works").filter(
       (r) => String(r.service ?? "").trim() === service && (!platform || r.platform === platform),
     );
@@ -507,12 +551,26 @@
     return matches.find((r) => !r.menu) ?? matches[0] ?? null;
   }
 
-  /** 화면 · 검색 · 내보내기에 쓰는 실제 값. 이 행이 비어 있으면 파일 현황에서 가져온다. */
+  /* 비어 있으면 상위 행에서 물려받은 값. 부작업은 제 칸(이름 · 쪽지 · 담당자 ·
+     상태 · 완료일)만 갖고, 서비스명 · 파일 경로처럼 프로젝트가 정하는 값은
+     위에서 그대로 내려온다. 단계를 쓰지 않는 표에서는 늘 제 값 그대로다. */
+  function inherited(row, key) {
+    const own = row?.[key];
+    if (hasValue(own) || !treeOn() || ownKey(key)) return { value: own, derived: false };
+    for (const up of ancestorsOf(row)) {
+      if (hasValue(up[key])) return { value: up[key], derived: true };
+    }
+    return { value: own, derived: false };
+  }
+
+  /** 화면 · 검색 · 내보내기에 쓰는 실제 값. 상위 행 → 파일 현황 순으로 채운다. */
   function effective(row, col) {
-    const own = row?.[col.key];
-    if (own || !view.linked?.includes(col.key)) return { value: own, derived: false };
+    const up = inherited(row, col.key);
+    if (hasValue(up.value) || !view.linked?.includes(col.key)) {
+      return { value: up.value, derived: up.derived, from: up.derived ? "parent" : null };
+    }
     const value = linkedRow(row)?.[col.key];
-    return value ? { value, derived: true } : { value: own, derived: false };
+    return value ? { value, derived: true, from: "link" } : { value: up.value, derived: false };
   }
 
   function save() {
@@ -625,8 +683,51 @@
      화면에서만 정리하지 않고 저장 순서를 직접 바꾸는 이유: 표시 순서와 저장
      순서가 어긋나면 No 칸 드래그도 '아래에 행 추가' 도 잠긴다(reorderable).
      그러면 첫 행을 넣은 뒤로는 행을 추가할 방법이 없어진다. */
+  /* 단계가 있는 표의 저장 순서 — 프로젝트를 뷰 규칙(요청일 늦은 순)대로 세우고,
+     그 바로 뒤에 자손을 깊이 우선으로 붙인다. 형제 사이 순서는 지금 저장된
+     순서 그대로라 끌어 옮긴 결과가 남는다.
+
+     부모를 잃은 행(저장값이 상했거나 부모만 지워진 경우)은 프로젝트로 올린다 —
+     걸러 내면 화면에서 사라져 되찾을 길이 없다. */
+  function nested(list) {
+    const byId = new Map(list.map((row) => [row.id, row]));
+    const kids = new Map();
+    for (const row of list) {
+      const parent = row.parent && row.parent !== row.id && byId.has(row.parent) ? row.parent : "";
+      row.parent = parent;
+      if (!kids.has(parent)) kids.set(parent, []);
+      kids.get(parent).push(row);
+    }
+    kids.set("", view.order ? ordered(kids.get("") ?? []) : kids.get("") ?? []);
+
+    const out = [];
+    const seen = new Set();
+    const walk = (parentId) => {
+      for (const row of kids.get(parentId) ?? []) {
+        if (seen.has(row.id)) continue;
+        seen.add(row.id);
+        out.push(row);
+        walk(row.id);
+      }
+    };
+    walk("");
+    // 서로를 부모로 가리키는 고리에 묶여 빠진 행. 끊어서 뒤에 붙인다.
+    for (const row of list) {
+      if (seen.has(row.id)) continue;
+      row.parent = "";
+      out.push(row);
+    }
+    return out;
+  }
+
   function arrange() {
-    const next = view.group ? grouped(rows) : view.order ? ordered(rows) : rows;
+    const next = view.tree
+      ? nested(rows)
+      : view.group
+        ? grouped(rows)
+        : view.order
+          ? ordered(rows)
+          : rows;
     if (next === rows || next.every((row, i) => row === rows[i])) return false;
     setRows(next);
     return true;
@@ -654,7 +755,12 @@
 
     view = next;
     rows = rowsOf(view.id);
-    if (arrange()) save();
+    arrange();
+    syncAllRollups();
+    /* 불러오면서 손본 것(옛 하위 항목 → 부작업 행, 단계 순서, 자식이 정하는
+       상태)을 바로 적어 둔다. 적지 않으면 새로 고칠 때마다 부작업 행이 다시
+       만들어져 id 가 매번 달라지고, 접어 둔 가지도 잃는다. */
+    save();
 
     localStorage.setItem(VIEW_KEY, view.id);
     for (const tab of els.tabs.querySelectorAll("[data-view]")) {
@@ -680,7 +786,10 @@
      가로로 스크롤된다. */
   function layout() {
     return [
-      { key: "__no", width: "44px", header: "No", align: "center", structural: "no" },
+      /* 단계가 있는 표의 번호는 '2.1.1' 까지 늘어난다. 44px 로는 잘려 ellipsis
+         만 남아 어느 몫인지 읽을 수 없다. */
+      { key: "__no", width: treeOn() ? "60px" : "44px", header: "No", align: "center",
+        structural: "no" },
       ...view.columns,
       { key: "__fill", structural: "fill" },
     ];
@@ -823,9 +932,7 @@
     else delete row.memos;
   }
 
-  /* 하위 항목 — 한 요청을 여러 번에 나눠 끝내는 일이 있다. 행마다
-     { 항목 이름, 끝낸 날 } 목록을 두고, 전부 끝나야 그 요청이 끝난 것으로 본다.
-     1차만 마쳤는데 행이 완료로 적히면 남은 몫이 목록에서 사라진다. */
+  /* 예전 '하위 항목' 한 줄의 꼴. 지금은 저장값을 부작업 행으로 옮길 때만 쓴다. */
 
   function subItem(value) {
     if (typeof value === "string") return { text: value.trim(), doneOn: "" };
@@ -836,28 +943,91 @@
     return item;
   }
 
-  function itemsOf(row) {
-    return Array.isArray(row?.items) ? row.items : [];
+  /* ── 단계(프로젝트 → 부작업 → 부작업) ──────────────────
+     행은 여전히 한 줄짜리 배열이다. 부모 id 를 행에 담고 저장 순서를 '부모 바로
+     뒤에 그 자손' 으로 지키는 쪽을 골랐다 — 중첩 배열로 바꾸면 저장 · 되돌리기 ·
+     드래그 · 검색이 모두 다시 쓰여야 하는데, 다루는 줄 수가 수백 줄이라 평평한
+     배열로도 충분하다. */
+
+  /** 이 표가 단계를 쓰는가. 파일 현황은 쓰지 않는다. */
+  function treeOn() {
+    return Boolean(view.tree);
   }
 
-  /* 세는 자리에서는 이름이 빈 줄을 뺀다 — 다음 항목을 적으려고 띄워 둔 자리이지
-     아직 항목이 아니다. 적는 동안 '0/4' 처럼 하나 더 많게 보이면 곤란하다. */
-  function itemsFilled(row) {
-    return itemsOf(row).filter((it) => it.text.trim());
+  function rowById(id) {
+    return id ? rows.find((r) => r.id === id) ?? null : null;
   }
 
-  function itemsDone(list) {
-    return list.filter((it) => it.doneOn).length;
+  function parentOf(row) {
+    return treeOn() ? rowById(row?.parent) : null;
   }
 
-  /* 항목이 있는 행의 상태 · 완료일은 항목이 정한다. 손으로 적은 값과 항목이
+  /** parent 가 서로를 가리키는 저장값이 들어와도 멈추도록 걸음 수를 막는다. */
+  const MAX_WALK = 8;
+
+  /** 0 = 프로젝트, 1 · 2 = 부작업. */
+  function depthOf(row) {
+    let depth = 0;
+    let current = parentOf(row);
+    while (current && depth <= MAX_WALK) {
+      depth += 1;
+      current = parentOf(current);
+    }
+    return depth;
+  }
+
+  function childrenOf(id) {
+    return treeOn() && id ? rows.filter((r) => r.parent === id) : [];
+  }
+
+  /** 자기 자신과 모든 자손. 삭제 · 이동은 덩어리째 움직여야 한다. */
+  function subtreeOf(id) {
+    const out = [];
+    const walk = (parentId) => {
+      for (const child of childrenOf(parentId)) {
+        out.push(child);
+        walk(child.id);
+      }
+    };
+    const root = rowById(id);
+    if (root) out.push(root);
+    walk(id);
+    return out;
+  }
+
+  function ancestorsOf(row) {
+    const out = [];
+    let current = parentOf(row);
+    while (current && out.length <= MAX_WALK) {
+      out.push(current);
+      current = parentOf(current);
+    }
+    return out;
+  }
+
+  /** 단계를 더 내릴 수 있는가. 세 단계까지만 둔다. */
+  function canNest(row) {
+    return treeOn() && depthOf(row) < view.tree.maxDepth;
+  }
+
+  /** 부작업이 제 값으로 갖는 칸인가. 나머지는 상위 행에서 물려받는다. */
+  function ownKey(key) {
+    return !treeOn() || view.tree.own.includes(key);
+  }
+
+  function hasValue(value) {
+    return Array.isArray(value) ? value.length > 0 : Boolean(String(value ?? "").trim());
+  }
+
+  /* 자식이 있는 행의 상태 · 완료일은 자식이 정한다. 손으로 적은 값과 자식이
      어긋나면 어느 쪽이 사실인지 알 수 없고, 완료율 집계도 믿을 수 없게 된다.
-     완료일은 마지막 항목을 끝낸 날이다. */
-  function syncItemStatus(row) {
-    const list = itemsFilled(row);
-    if (!list.length) return;
-    const dates = list.map((it) => it.doneOn).filter(Boolean);
-    if (dates.length === list.length) {
+     완료일은 마지막 자식을 끝낸 날이다. 한 단계만 맞춰서는 모자라 — 손자가
+     끝나면 부작업이 끝나고 그래야 프로젝트가 끝난다 — 위로 거슬러 올라간다. */
+  function rollupSelf(row) {
+    const kids = childrenOf(row?.id);
+    if (!kids.length) return;
+    const dates = kids.map((k) => String(k.done ?? "").trim()).filter(Boolean);
+    if (dates.length === kids.length) {
       row.status = "done";
       row.done = [...dates].sort().at(-1);
       return;
@@ -865,6 +1035,59 @@
     // 아직 남았는데 완료로 적혀 있으면 되돌린다. 대기 · 보류는 그대로 둔다.
     if (row.status === "done") row.status = "progress";
     row.done = "";
+  }
+
+  function syncRollup(row) {
+    let current = row;
+    let steps = 0;
+    while (current && steps <= MAX_WALK) {
+      rollupSelf(current);
+      current = parentOf(current);
+      steps += 1;
+    }
+  }
+
+  /* 빠른 입력 상자(아래 '부작업 상자')가 다루는 것은 바로 아래 자식들이다.
+     이름이 빈 줄은 세지 않는다 — 다음 줄을 적으려고 띄워 둔 자리이지 아직
+     부작업이 아니다. 적는 동안 '0/4' 처럼 하나 더 많게 보이면 곤란하다. */
+
+  function itemsOf(row) {
+    return childrenOf(row?.id);
+  }
+
+  function itemsFilled(row) {
+    return itemsOf(row).filter((r) => String(r.content ?? "").trim());
+  }
+
+  function itemsDone(list) {
+    return list.filter((r) => String(r.done ?? "").trim()).length;
+  }
+
+  /** 새 부작업 행. 제 값이 아닌 칸은 비워 둔다 — 상위 행에서 물려받는다. */
+  function newChild(parentId, fields) {
+    const row = { id: uid(), parent: parentId };
+    // 제 값이 아닌 칸은 비워 둔다. 채워 두면 상위 값이 바뀌어도 따라가지 않는다.
+    for (const col of view.columns) row[col.key] = col.type === "owners" ? [] : "";
+    row.kind = rowById(parentId)?.kind ?? "request";
+    row.status = "progress";
+    return Object.assign(row, fields);
+  }
+
+  /* 새 행을 저장 배열의 어느 자리에 끼울지. 기준 행의 '자손까지 포함한 덩어리'
+     바로 뒤다 — 자식 사이에 끼워 넣으면 그 자식의 손자들과 뒤섞인다.
+     기준이 부모면 마지막 자식 뒤가 되어 막내로 붙는다. */
+  function placeAfter(list, anchorId) {
+    const block = anchorId ? subtreeOf(anchorId) : [];
+    const last = block.at(-1);
+    const at = last ? rows.indexOf(last) + 1 : rows.length;
+    rows.splice(at, 0, ...list);
+  }
+
+  /** 목록 전체를 아래 단계부터 맞춘다. 불러온 직후 · 되돌린 직후에 쓴다. */
+  function syncAllRollups() {
+    if (!treeOn()) return;
+    const byDepth = rows.map((row) => [depthOf(row), row]).sort((a, b) => b[0] - a[0]);
+    for (const [, row] of byDepth) rollupSelf(row);
   }
 
   function rowLabel(row) {
@@ -1025,11 +1248,12 @@
   function visibleRows() {
     const q = search.trim().toLowerCase();
     const range = periodRange();
-    let list = rows.filter((row) => {
+    const list = rows.filter((row) => {
       // 편집 중인 행은 필터/검색으로 사라지지 않게 항상 남긴다.
       if (row.id === editingId) return true;
       if (range) {
-        const value = String(row.started ?? "").slice(0, 10);
+        // 부작업에는 제 시작일이 없다. 그 프로젝트가 시작한 날로 본다.
+        const value = String(inherited(row, "started").value ?? "").slice(0, 10);
         if (!value || value < iso(range.start) || value > iso(range.end)) return false;
       }
       for (const [key, value] of Object.entries(filters)) {
@@ -1039,23 +1263,55 @@
       return searchText(row).includes(q);
     });
 
-    if (sort.key) {
-      const dir = sort.dir === "asc" ? 1 : -1;
-      const col = view.columns.find((c) => c.key === sort.key);
-      const menuCol = view.columns.find((c) => c.key === "menu");
-      list = [...list].sort((a, b) => {
-        const cmp = col.rank
-          ? col.rank[a[col.key]] - col.rank[b[col.key]]
-          : sortValue(a, col).localeCompare(sortValue(b, col), "ko");
-        if (cmp !== 0) return cmp * dir;
-        // 같은 서비스 안에서는 메뉴명 순으로 묶어 보이게 한다.
-        if (sort.key === "service" && menuCol) {
-          return String(a.menu ?? "").localeCompare(String(b.menu ?? ""), "ko") * dir;
-        }
-        return 0;
-      });
+    if (!treeOn()) return sortRows(list);
+
+    /* 걸린 행의 윗단계도 남긴다 — 부작업만 덩그러니 뜨면 어느 프로젝트의
+       몫인지 알 수 없다. 남길 행을 정한 뒤 단계 순서로 다시 세운다. */
+    const keep = new Set(list.map((r) => r.id));
+    for (const row of list) for (const up of ancestorsOf(row)) keep.add(up.id);
+    return treeOrder(rows.filter((r) => keep.has(r.id)), Boolean(q));
+  }
+
+  function sortRows(list) {
+    if (!sort.key) return list;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    const col = view.columns.find((c) => c.key === sort.key);
+    const menuCol = view.columns.find((c) => c.key === "menu");
+    return [...list].sort((a, b) => {
+      const cmp = col.rank
+        ? col.rank[a[col.key]] - col.rank[b[col.key]]
+        : sortValue(a, col).localeCompare(sortValue(b, col), "ko");
+      if (cmp !== 0) return cmp * dir;
+      // 같은 서비스 안에서는 메뉴명 순으로 묶어 보이게 한다.
+      if (sort.key === "service" && menuCol) {
+        return String(a.menu ?? "").localeCompare(String(b.menu ?? ""), "ko") * dir;
+      }
+      return 0;
+    });
+  }
+
+  /* 화면에 세울 순서. 저장 순서가 이미 깊이 우선이므로 접힌 가지만 걷어 내면
+     된다. 정렬이 걸리면 형제끼리만 정렬한다 — 전체를 한 줄로 늘어놓으면 자식이
+     제 부모에게서 떨어져 나가 단계가 보이지 않는다.
+
+     검색 중에는 접어 둔 가지도 펼친다. 찾은 행이 접힌 채 숨으면 '없다' 로 보인다. */
+  function treeOrder(list, searching) {
+    const kept = new Set(list.map((r) => r.id));
+    const kids = new Map();
+    for (const row of list) {
+      const parent = kept.has(row.parent) ? row.parent : "";
+      if (!kids.has(parent)) kids.set(parent, []);
+      kids.get(parent).push(row);
     }
-    return list;
+    const out = [];
+    const walk = (parentId) => {
+      for (const row of sortRows(kids.get(parentId) ?? [])) {
+        out.push(row);
+        if (searching || !row.collapsed) walk(row.id);
+      }
+    };
+    walk("");
+    return out;
   }
 
   // ── 렌더링 ──────────────────────────────────────────────
@@ -1114,12 +1370,17 @@
     }
 
     /* 담당자별 건수. 한 요청에 여러 명이 붙으면 각자 한 건으로 센다 — 합계가
-       요청 수와 달라지지만, 여기서 보려는 것은 '누가 얼마나 맡고 있나' 다. */
+       요청 수와 달라지지만, 여기서 보려는 것은 '누가 얼마나 맡고 있나' 다.
+
+       부작업에만 담당자를 적은 프로젝트가 많다(프로젝트는 묶음 이름이고 실제로
+       맡는 것은 그 아래 몫이다). 그래서 덩어리 전체에서 이름을 모으되 한
+       프로젝트에서 같은 사람은 한 번만 센다 — 세 몫을 맡았다고 세 건이 되면
+       건수 합계가 프로젝트 수를 훌쩍 넘는다. */
     const byOwner = new Map();
     let ownerless = 0;
     for (const row of list) {
-      const owners = row.owners ?? [];
-      if (!owners.length) ownerless += 1;
+      const owners = new Set(subtreeOf(row.id).flatMap((r) => r.owners ?? []));
+      if (!owners.size) ownerless += 1;
       for (const name of owners) byOwner.set(name, (byOwner.get(name) ?? 0) + 1);
     }
 
@@ -1226,7 +1487,10 @@
   function renderRequestStats() {
     els.requestStats.hidden = !view.dashboard;
     if (!view.dashboard) return;
-    const s = requestSummary(rows);
+    /* 집계는 프로젝트(맨 위 단계)만 센다. 부작업은 한 프로젝트를 나눠 맡은
+       몫이라 따로 한 건이 아니다 — 함께 세면 잘게 쪼갠 업무일수록 많이 한
+       것처럼 보이고, 건수가 표에 보이는 프로젝트 수와도 어긋난다. */
+    const s = requestSummary(treeOn() ? rows.filter((row) => !row.parent) : rows);
 
     renderCountTile(s);
 
@@ -1292,9 +1556,15 @@
     // 신규 행은 아직 rows 에 없으므로 화면에서만 끼워 넣는다.
     let display = list;
     if (editingId === NEW_ID) {
-      const anchor = insertAfterId ? list.findIndex((r) => r.id === insertAfterId) : -1;
-      const at = anchor >= 0 ? anchor + 1 : list.length;
-      display = [...list.slice(0, at), { id: NEW_ID }, ...list.slice(at)];
+      /* 기준 행의 '자손까지 포함한 덩어리' 끝에 끼운다. 기준 행 바로 아래에
+         두면 이미 있는 자식들보다 위에 서서 저장될 자리와 어긋난다. */
+      const block = new Set(subtreeOf(insertAfterId).map((r) => r.id));
+      const last = block.size
+        ? list.reduce((found, row, i) => (block.has(row.id) ? i : found), -1)
+        : -1;
+      const at = last >= 0 ? last + 1 : list.length;
+      const blank = { id: NEW_ID, parent: treeOn() ? draft?.parent ?? "" : "" };
+      display = [...list.slice(0, at), blank, ...list.slice(at)];
     }
 
     els.tbody.replaceChildren();
@@ -1306,8 +1576,19 @@
     // 편집 중인 행은 아직 저장 전이라 입력 중인 값으로 판단한다.
     const keyOf = (row) => (row?.id === editingId ? groupKey(draft) : groupKey(row));
 
+    /* 단계가 있는 표의 번호는 1 · 1.1 · 1.1.2 처럼 자리를 드러낸다 — 통짜
+       일련번호는 들여쓰기만 보고 몇 번째 몫인지 세게 만든다. */
+    const counters = [];
+    const numberOf = (depth) => {
+      counters.length = depth + 1;
+      counters[depth] = (counters[depth] ?? 0) + 1;
+      return counters.join(".");
+    };
+
     display.forEach((row, index) => {
-      const tr = row.id === editingId ? editRow(index + 1) : displayRow(row, index + 1);
+      const depth = treeOn() ? depthOf(row) : 0;
+      const no = treeOn() ? numberOf(depth) : String(index + 1);
+      const tr = row.id === editingId ? editRow(no, depth) : displayRow(row, no, depth);
       if (showGroups && index < display.length - 1 && keyOf(row) !== keyOf(display[index + 1])) {
         tr.dataset.groupEnd = "true";
       }
@@ -1335,15 +1616,15 @@
   }
 
   /** 보기 모드 셀 — 컬럼 type 에 따라 다르게 그린다. */
-  function displayCell(row, col) {
-    const { value, derived } = effective(row, col);
+  function displayCell(row, col, depth = 0) {
+    const { value, derived, from } = effective(row, col);
     const td = buildDisplayCell(value, col);
     // 우클릭 메뉴가 어느 컬럼인지 알아야 메모를 붙일 자리를 정할 수 있다.
     td.dataset.col = col.key;
     if (derived) {
-      // 이 행에 적힌 값이 아니라 파일 현황에서 가져온 값이라는 표시.
+      // 이 행에 적힌 값이 아니라 다른 곳에서 가져온 값이라는 표시.
       td.dataset.derived = "true";
-      addTip(td, "파일 현황에서 가져온 값입니다.");
+      addTip(td, from === "parent" ? "상위 업무에서 내려온 값입니다." : "파일 현황에서 가져온 값입니다.");
     }
     const memo = memoOf(row, col.key);
     if (memo) {
@@ -1352,11 +1633,17 @@
     }
 
     const list = itemsFilled(row);
-    if (col.items) td.append(itemsChip(row, list));
-    /* 항목이 정하는 값이라는 것을 그 칸에서 알려 준다 — 직접 고쳐도 항목에
-       맞춰 되돌아가므로, 왜 그런지 모르면 같은 수정을 되풀이하게 된다. */
-    else if (list.length && (col.key === "status" || col.key === "done")) {
-      addTip(td, `하위 항목 ${itemsDone(list)}/${list.length} 이 정하는 값입니다.`);
+    if (col.items) {
+      /* 이름 칸이 단계를 드러내는 자리다 — 들여쓰기와 펼침 단추를 여기 둔다. */
+      if (treeOn()) {
+        td.dataset.depth = String(depth);
+        td.prepend(treeToggle(row));
+      }
+      if (canNest(row)) td.append(itemsChip(row, list));
+    } else if (list.length && (col.key === "status" || col.key === "done")) {
+      /* 자식이 정하는 값이라는 것을 그 칸에서 알려 준다 — 직접 고쳐도 자식에
+         맞춰 되돌아가므로, 왜 그런지 모르면 같은 수정을 되풀이하게 된다. */
+      addTip(td, `부작업 ${itemsDone(list)}/${list.length} 이 정하는 값입니다.`);
     }
     return td;
   }
@@ -1370,10 +1657,10 @@
     chip.className = "chip-items";
     chip.dataset.items = row.id;
     const done = itemsDone(list);
-    chip.textContent = list.length ? `${done}/${list.length}` : "항목";
+    chip.textContent = list.length ? `${done}/${list.length}` : "부작업";
     if (!list.length) chip.dataset.empty = "";
     else if (done === list.length) chip.dataset.full = "";
-    chip.title = list.length ? `하위 항목 ${done}/${list.length} 완료` : "하위 항목 나누기";
+    chip.title = list.length ? `부작업 ${done}/${list.length} 완료` : "부작업 나누기";
     return chip;
   }
 
@@ -1413,17 +1700,38 @@
     }
   }
 
-  function displayRow(row, no) {
+  function displayRow(row, no, depth = 0) {
     const tr = document.createElement("tr");
     /* 우클릭 메뉴 · hover 행 추가 · 메모 상자가 이 행이 어느 행인지 알아야 한다.
        예전에는 체크박스의 data-check 에서 읽었고, 지금은 행 자체에 심는다. */
     tr.dataset.id = row.id;
+    if (treeOn()) tr.dataset.depth = String(depth);
     tr.append(
       handleCell(no),
-      ...view.columns.map((col) => displayCell(row, col)),
+      ...view.columns.map((col) => displayCell(row, col, depth)),
       fillCell(),
     );
     return tr;
+  }
+
+  /* 펼침 단추 — 자식이 있는 행에만 둔다. 없는 행에도 자리는 남겨 두어야 이름이
+     단계마다 같은 자리에서 시작한다. */
+  function treeToggle(row) {
+    const kids = childrenOf(row.id);
+    if (!kids.length) {
+      const gap = document.createElement("span");
+      gap.className = "tree__gap";
+      gap.setAttribute("aria-hidden", "true");
+      return gap;
+    }
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tree__toggle";
+    btn.dataset.fold = row.id;
+    btn.setAttribute("aria-expanded", String(!row.collapsed));
+    btn.title = row.collapsed ? `부작업 ${kids.length}개 펼치기` : "접기";
+    btn.setAttribute("aria-label", btn.title);
+    return btn;
   }
 
   /** 편집 모드 셀 */
@@ -1448,12 +1756,22 @@
   }
 
   /** 편집 행 — 각 칸을 입력 컨트롤로 바꾼다. */
-  function editRow(no) {
+  function editRow(no, depth = 0) {
     const tr = document.createElement("tr");
     tr.dataset.editing = "true";
+    if (treeOn()) tr.dataset.depth = String(depth);
+    /* 부작업도 모든 칸을 적을 수 있게 둔다. 상위에서 내려오는 값은 입력칸의
+       힌트로 보이고(syncInheritedPlaceholders), 비워 두면 그 값을 그대로 쓴다.
+       적으면 그 행만 다른 값을 갖는다 — 프로젝트 안에서 한 부작업만 다른
+       화면을 가리키는 일이 드물지 않다. */
+    const cells = view.columns.map((col) => {
+      const td = editCell(col);
+      if (treeOn() && depth > 0 && !ownKey(col.key)) td.dataset.inherited = "true";
+      return td;
+    });
     tr.append(
       cell(editingId === NEW_ID ? "신규" : String(no), "cell--no cell--center"),
-      ...view.columns.map(editCell),
+      ...cells,
       fillCell(),
     );
     return tr;
@@ -1485,9 +1803,53 @@
     );
   }
 
+  /** block 을 target 덩어리의 바로 앞/뒤에 끼운다. 둘은 형제다. */
+  function spliceBlock(block, target, after) {
+    const anchor = after ? subtreeOf(target.id).at(-1) ?? target : target;
+    const at = rows.indexOf(anchor) + (after ? 1 : 0);
+    rows.splice(at, 0, ...block);
+  }
+
+  /* 단계가 있는 표에서는 덩어리째 옮긴다 — 자식을 두고 부모만 움직이면 자식이
+     남의 밑으로 들어간다. 그리고 형제끼리만 자리를 바꾼다. 단계를 가로지르는
+     이동은 순서가 아니라 '어느 업무의 몫인가' 를 바꾸는 일이라, 끌어 놓기로
+     얼결에 일어나서는 안 된다. */
+  function moveBranch(moved, target, after) {
+    if (String(moved.parent ?? "") !== String(target.parent ?? "")) {
+      toast("같은 상위 업무 안에서만 순서를 바꿀 수 있습니다.");
+      return;
+    }
+    const lock = lockedBy();
+    if (!moved.parent && lock) {
+      const valueOf = (row) => String(row?.[lock] ?? "").trim();
+      if (valueOf(moved) !== valueOf(target)) {
+        const header = view.columns.find((c) => c.key === lock)?.header ?? "값";
+        toast(`${header}이 같은 행끼리만 순서를 바꿀 수 있습니다.`);
+        return;
+      }
+    }
+
+    snapshot();
+    const block = subtreeOf(moved.id);
+    const ids = new Set(block.map((r) => r.id));
+    // 끌어온 덩어리를 먼저 들어낸 뒤라야 끼울 자리가 어긋나지 않는다.
+    setRows(rows.filter((r) => !ids.has(r.id)));
+    spliceBlock(block, target, after);
+    save();
+    render();
+    toast(`'${rowLabel(moved)}' 순서를 옮겼습니다.`);
+  }
+
   /** dragged 행을 target 행의 앞/뒤로 옮긴다. */
   function moveRow(draggedId, targetId, after) {
     if (draggedId === targetId) return;
+    if (treeOn()) {
+      const moved = rowById(draggedId);
+      const target = rowById(targetId);
+      // 제 자손 위로는 옮길 수 없다 — 자기 밑으로 들어가 목록에서 사라진다.
+      if (moved && target && !subtreeOf(moved.id).includes(target)) moveBranch(moved, target, after);
+      return;
+    }
     const from = rows.findIndex((r) => r.id === draggedId);
     if (from < 0) return;
 
@@ -1719,8 +2081,19 @@
       .sort((a, b) => a.localeCompare(b, "ko"));
   }
 
-  /** 연결된 칸에서 지금 비워 두면 들어올 값. 연결 대상이 아니면 null. */
+  /** 이 칸을 비워 두는 것이 '값이 없다' 가 아니라 '물려받는다' 인가. */
+  function autoBlank(col) {
+    if (view.linked?.includes(col.key)) return true;
+    return treeOn() && Boolean(draft?.parent) && !ownKey(col.key);
+  }
+
+  /** 지금 비워 두면 들어올 값. 상위 행 → 파일 현황 순으로 본다. 없으면 null. */
   function linkedPlaceholder(col) {
+    if (treeOn() && draft?.parent && !ownKey(col.key)) {
+      const parent = rowById(draft.parent);
+      const { value } = parent ? effective(parent, col) : {};
+      if (hasValue(value)) return Array.isArray(value) ? value.join(", ") : String(value);
+    }
     if (!view.linked?.includes(col.key)) return null;
     const value = linkedRow(draft)?.[col.key];
     return value || null;
@@ -1729,8 +2102,12 @@
   /** 서비스명·OS 를 고치면 가져올 값도 달라진다. 편집 중인 행만 손본다. */
   function syncLinkedPlaceholders() {
     const tr = els.tbody.querySelector("tr[data-editing]");
-    if (!tr || !view.linked) return;
-    for (const key of view.linked) {
+    if (!tr) return;
+    const keys = new Set(view.linked ?? []);
+    if (treeOn() && draft?.parent) {
+      for (const col of view.columns) if (!ownKey(col.key)) keys.add(col.key);
+    }
+    for (const key of keys) {
       const field = tr.querySelector(`[name="${key}"]`);
       const col = view.columns.find((c) => c.key === key);
       if (!field || !col || field.tagName === "SELECT") continue;
@@ -1742,18 +2119,20 @@
       표준 옵션에 없으면 그 값도 옵션에 넣는다. 그러지 않으면 편집만 해도
       값이 조용히 첫 옵션으로 바뀌어 버린다. */
   function optionsFor(col) {
-    /* 연결된 컬럼은 '비워 둠' 이 곧 '파일 현황 값을 쓴다' 는 뜻이다.
-       select 는 항상 값이 하나 선택되므로 빈 값을 고를 수 있게 넣어 준다. */
-    const base = view.linked?.includes(col.key) ? [["", "자동"], ...col.options] : col.options;
+    /* 연결된 컬럼 · 부작업이 물려받는 컬럼은 '비워 둠' 이 곧 '위에서 가져온
+       값을 쓴다' 는 뜻이다. select 는 항상 값이 하나 선택되므로 빈 값을 고를 수
+       있게 넣어 준다. */
+    const blank = treeOn() && draft?.parent && !ownKey(col.key) ? "상위와 같음" : "자동";
+    const base = autoBlank(col) ? [["", blank], ...col.options] : col.options;
     const current = draft?.[col.key];
     if (!col.freeValue || !current) return base;
     if (base.some(([value]) => value === current)) return base;
     return [...base, [current, current]];
   }
 
-  /** select 의 기본값. 연결된 컬럼은 비워 두어 파일 현황을 따르게 한다. */
+  /** select 의 기본값. 위에서 값이 내려오는 컬럼은 비워 두어 그 값을 따르게 한다. */
   function selectFallback(col) {
-    return view.linked?.includes(col.key) ? "" : col.options[0][0];
+    return autoBlank(col) ? "" : col.options[0][0];
   }
 
   function selectCell(col) {
@@ -1863,12 +2242,16 @@
     focusCell(columnIndex, options);
   }
 
-  function startCreate(afterId) {
+  /* afterId 는 '이 행의 덩어리 뒤에 넣는다' 는 기준 행이다. 부작업을 만들 때는
+     그 기준이 부모 자신이라 막내로 붙는다(placeAfter). */
+  function startCreate(afterId, parentId) {
     editingId = NEW_ID;
     insertAfterId = afterId ?? null;
-    draft = {};
+    draft = { parent: treeOn() ? parentId ?? "" : "" };
     for (const col of view.columns) {
-      if (col.type === "owners") draft[col.key] = [];
+      // 부작업이 제 값으로 갖지 않는 칸은 비워 둔다 — 상위 행에서 내려온다.
+      if (draft.parent && !ownKey(col.key)) draft[col.key] = col.type === "owners" ? [] : "";
+      else if (col.type === "owners") draft[col.key] = [];
       else if (col.type === "select") draft[col.key] = selectFallback(col);
       else if (col.defaultToday) draft[col.key] = today();
       else draft[col.key] = "";
@@ -1939,8 +2322,13 @@
     let saved;
     if (editingId === NEW_ID) {
       saved = { id: uid(), ...next };
-      const anchor = insertAfterId ? rows.findIndex((r) => r.id === insertAfterId) : -1;
-      rows.splice(anchor >= 0 ? anchor + 1 : rows.length, 0, saved);
+      if (treeOn()) {
+        saved.parent = draft.parent ?? "";
+        placeAfter([saved], insertAfterId);
+      } else {
+        const anchor = insertAfterId ? rows.findIndex((r) => r.id === insertAfterId) : -1;
+        rows.splice(anchor >= 0 ? anchor + 1 : rows.length, 0, saved);
+      }
       toast(`'${rowLabel(saved)}' 항목을 추가했습니다.`);
     } else {
       const i = rows.findIndex((r) => r.id === editingId);
@@ -1948,8 +2336,8 @@
       saved = rows[i];
       toast(`'${rowLabel(saved)}' 항목을 수정했습니다.`);
     }
-    // 상태 · 완료일을 직접 고쳤더라도 하위 항목이 있으면 항목이 이긴다.
-    syncItemStatus(saved);
+    // 상태 · 완료일을 직접 고쳤더라도 자식이 있으면 자식이 이긴다. 위로도 번진다.
+    syncRollup(saved);
     // 서비스명·요청일이 바뀌었으면 있어야 할 자리도 달라진다.
     arrange();
     // 기간 보기 중이면 방금 저장한 행이 보이는 기간으로 옮긴다.
@@ -1977,17 +2365,31 @@
     const targets = rows.filter((r) => ids.has(r.id));
     if (!targets.length) return;
 
+    /* 지우는 행의 부작업도 함께 지운다. 남겨 두면 부모를 잃고 프로젝트 자리로
+       올라와, 지운 줄 알았던 몫이 맨 위 단계에 나타난다. */
+    const doomed = new Set();
+    for (const row of targets) for (const r of subtreeOf(row.id)) doomed.add(r.id);
+    for (const id of ids) doomed.add(id);
+    const extra = doomed.size - targets.length;
+
     const label =
       targets.length === 1 ? `'${rowLabel(targets[0])}' 항목을` : `선택한 ${targets.length}건을`;
-    if (!confirm(`${label} 삭제할까요?`)) return;
+    const withSubs = extra > 0 ? ` 딸린 부작업 ${extra}건과 함께` : "";
+    if (!confirm(`${label}${withSubs} 삭제할까요?`)) return;
+
+    // 부모가 사라지면 그 부모의 부모가 보던 '다 끝났는지' 도 달라진다.
+    const above = [...new Set(targets.flatMap((row) => ancestorsOf(row)))].filter(
+      (row) => !doomed.has(row.id),
+    );
 
     snapshot();
-    setRows(rows.filter((r) => !ids.has(r.id)));
-    if (editingId && ids.has(editingId)) {
+    setRows(rows.filter((r) => !doomed.has(r.id)));
+    if (editingId && doomed.has(editingId)) {
       editingId = null;
       draft = null;
     }
-    const count = targets.length;
+    for (const row of above) syncRollup(row);
+    const count = doomed.size;
     save();
     render();
     toast(`${count}건을 삭제했습니다.`);
@@ -1999,18 +2401,28 @@
     const head = ["No", ...view.columns.map((col) => col.header)];
     const escape = (value) => `"${String(value).replaceAll('"', '""')}"`;
     const list = visibleRows();
-    const body = list.map((row, i) =>
-      [
-        i + 1,
+    /* 엑셀에는 펼침 단추도 들여쓰기도 없다. 번호를 1 · 1.1 로 적고 이름 앞에
+       '└' 를 붙여, 파일만 받아 본 사람도 어느 업무의 몫인지 알게 한다. */
+    const counters = [];
+    const numberOf = (depth) => {
+      counters.length = depth + 1;
+      counters[depth] = (counters[depth] ?? 0) + 1;
+      return counters.join(".");
+    };
+    const body = list.map((row, i) => {
+      const depth = treeOn() ? depthOf(row) : 0;
+      return [
+        treeOn() ? numberOf(depth) : i + 1,
         ...view.columns.map((col) => {
-          if (col.type === "owners") return (row[col.key] ?? []).join(", ");
           const { value } = effective(row, col);
-          return col.labels?.[value] ?? value ?? "";
+          if (col.type === "owners") return (value ?? []).join(", ");
+          const text = col.labels?.[value] ?? value ?? "";
+          return col.items && depth ? `${"　".repeat(depth)}└ ${text}` : text;
         }),
       ]
         .map(escape)
-        .join(","),
-    );
+        .join(",");
+    });
     // Excel 에서 한글이 깨지지 않도록 BOM 을 붙인다.
     const blob = new Blob(["﻿" + [head.map(escape).join(","), ...body].join("\r\n")], {
       type: "text/csv;charset=utf-8",
@@ -2206,7 +2618,8 @@
   insertBtn.addEventListener("click", () => {
     const id = insertAnchorId;
     hideInsert();
-    if (id) startCreate(id);
+    // 가리킨 행과 같은 단계에 넣는다 — 버튼은 '이 줄 아래' 를 뜻한다.
+    if (id) startCreate(id, rowById(id)?.parent ?? "");
   });
 
   /* 스크롤·리사이즈 후에는 좌표가 어긋나므로 바로 숨긴다. 버튼이 position: fixed
@@ -2372,15 +2785,16 @@
     $("menu-memo-delete").hidden = !hasMemo;
     $("menu-memo-divider").hidden = !menuColKey;
 
-    /* 하위 항목은 요청내용이 있는 뷰(업무 요청)에서만 쓴다. 이미 나눠 둔
-       행이면 몇 개가 끝났는지까지 메뉴에서 알려 준다. */
+    /* 부작업은 단계를 쓰는 뷰(업무 요청)에서만, 그것도 더 내려갈 자리가 남은
+       행에서만 만들 수 있다. 이미 나눠 둔 행이면 몇 개가 끝났는지도 알려 준다. */
     const subs = itemsFilled(row);
-    const hasItems = view.columns.some((col) => col.items);
-    $("menu-items").hidden = !hasItems;
+    const nestable = canNest(row);
+    $("menu-sub").hidden = !nestable;
+    $("menu-items").hidden = !nestable;
     $("menu-items").textContent = subs.length
-      ? `하위 항목 (${itemsDone(subs)}/${subs.length})`
-      : "하위 항목 나누기";
-    $("menu-items-divider").hidden = !hasItems;
+      ? `부작업 빠르게 적기 (${itemsDone(subs)}/${subs.length})`
+      : "부작업 빠르게 적기";
+    $("menu-items-divider").hidden = !nestable;
 
     // '아래에 행 추가' 는 표시 순서와 저장 순서가 같을 때만 의미가 있다.
     // 삭제는 순서와 무관하므로 정렬·검색 중에도 쓸 수 있게 둔다.
@@ -2415,8 +2829,14 @@
       saveMemo(id, colKey, "");
     } else if (item.dataset.menu === "items") {
       openItems(id, itemsAnchorOf(id));
+    } else if (item.dataset.menu === "sub") {
+      // 부모 덩어리 끝에 붙으므로 기준 행이 곧 부모다. 접혀 있으면 펼쳐 준다.
+      const parent = rowById(id);
+      if (parent?.collapsed) delete parent.collapsed;
+      startCreate(id, id);
     } else if (item.dataset.menu === "insert-below") {
-      startCreate(id);
+      // 같은 단계의 다음 행. 형제이므로 부모도 같다.
+      startCreate(id, rowById(id)?.parent ?? "");
     } else if (item.dataset.menu === "delete") {
       removeRows(new Set([id]));
     }
@@ -2603,9 +3023,15 @@
     }
   });
 
-  // ── 하위 항목 상자 ────────────────────────────────────
-  /* 손놀림은 '매일 하는 업무' 체크리스트와 같게 맞췄다 — 줄은 늘 입력칸이고,
-     Enter 로 다음 항목을 잇고, 동그라미를 눌러 그날로 끝냈다고 적는다. */
+  // ── 부작업 빠르게 적기 상자 ───────────────────────────
+  /* 부작업은 표에서도 만들 수 있지만, 한 업무를 대여섯 몫으로 한 번에 쪼갤 때
+     행을 하나씩 여는 것은 느리다. 이 상자는 그 자리에서 이름만 줄줄이 적게
+     한다. 적은 줄은 그대로 표의 부작업 행이 된다 — 같은 일을 두 군데에
+     적어 두면 어느 쪽이 사실인지 알 수 없다.
+
+     손놀림은 '매일 하는 업무' 체크리스트와 같게 맞췄다 — 줄은 늘 입력칸이고,
+     Enter 로 다음 줄을 잇고, 동그라미를 눌러 그날로 끝냈다고 적는다.
+     담당자가 보낸 쪽지 링크를 붙여넣으면 이름과 완료일이 저절로 채워진다. */
   const itemsBox = $("items-editor");
   let itemsTarget = null; // 행 id
   let itemsFocus = null; // { index, caret }
@@ -2620,7 +3046,8 @@
   }
 
   function openItems(id, anchor) {
-    if (!rows.some((r) => r.id === id)) return;
+    // 맨 아래 단계에는 더 붙일 수 없다.
+    if (!canNest(rowById(id))) return;
     itemsTarget = id;
     hideTip();
     closeMemo();
@@ -2654,13 +3081,16 @@
     placeItems(itemsAnchor());
   }
 
-  /** 이름이 빈 줄은 저장하지 않는다 — 다음 항목을 적으려고 띄워 둔 자리다. */
+  /* 이름이 빈 줄은 남기지 않는다 — 다음 줄을 적으려고 띄워 둔 자리이지 아직
+     부작업이 아니다. 제 밑에 다시 부작업이 달린 줄은 이름이 비었어도 지우지
+     않는다. 그 아래 몫까지 함께 사라지기 때문이다. */
   function pruneItems(row) {
-    const list = itemsOf(row)
-      .map((it) => subItem({ ...it, text: it.text.trim() }))
-      .filter((it) => it.text);
-    if (list.length) row.items = list;
-    else delete row.items;
+    const empty = itemsOf(row).filter(
+      (child) => !String(child.content ?? "").trim() && !childrenOf(child.id).length,
+    );
+    if (!empty.length) return;
+    const ids = new Set(empty.map((r) => r.id));
+    setRows(rows.filter((r) => !ids.has(r.id)));
   }
 
   function closeItems() {
@@ -2671,7 +3101,7 @@
     itemsFocus = null;
     if (!row) return;
     pruneItems(row);
-    syncItemStatus(row);
+    syncRollup(row);
     save();
     render();
   }
@@ -2687,17 +3117,17 @@
     check.className = "items__check";
     check.dataset.itemCheck = index;
     check.setAttribute("role", "checkbox");
-    check.setAttribute("aria-checked", String(Boolean(item.doneOn)));
-    check.setAttribute("aria-label", item.text ? `${item.text} 완료` : "완료");
+    check.setAttribute("aria-checked", String(Boolean(item.done)));
+    check.setAttribute("aria-label", item.content ? `${item.content} 완료` : "완료");
 
     const field = document.createElement("input");
     field.className = "items__text";
     field.dataset.item = index;
-    field.value = item.text;
+    field.value = item.content ?? "";
     field.maxLength = 60;
-    field.placeholder = "항목 또는 쪽지 링크";
-    field.setAttribute("aria-label", "하위 항목");
-    if (item.doneOn) field.dataset.done = "";
+    field.placeholder = "부작업 또는 쪽지 링크";
+    field.setAttribute("aria-label", "부작업");
+    if (item.done) field.dataset.done = "";
 
     li.append(check, field);
     if (item.message) {
@@ -2712,16 +3142,16 @@
       link.title = item.message;
       li.append(link);
     }
-    if (item.doneOn) {
-      /* 언제 끝냈는지가 항목마다 다르다. 보여 주기만 하면 모자란다 — 이미 끝낸
+    if (item.done) {
+      /* 언제 끝냈는지가 줄마다 다르다. 보여 주기만 하면 모자란다 — 이미 끝낸
          일을 뒤늦게 적어 넣는 경우가 많아 누른 날이 아닌 그날로 고칠 수 있어야
          한다. 날짜를 비우면 아직 안 끝난 것으로 돌아간다. */
       const when = document.createElement("input");
       when.type = "date";
       when.className = "items__date";
       when.dataset.itemDate = index;
-      when.value = item.doneOn;
-      when.setAttribute("aria-label", item.text ? `${item.text} 완료일` : "완료일");
+      when.value = item.done;
+      when.setAttribute("aria-label", item.content ? `${item.content} 완료일` : "완료일");
       li.append(when);
     } else {
       /* 끝내지 않은 줄에도 날짜 자리는 비워 둔다 — 자리를 접으면 쪽지 링크가
@@ -2747,8 +3177,8 @@
     /* 끝에는 늘 빈 줄을 하나 둔다 — 적을 자리가 보여야 다음 항목을 잇거나
        쪽지를 붙여넣을 곳을 찾지 않는다. 아직 목록에 없는 줄이므로 번호가 목록
        길이와 같다. 닫을 때 걷어내므로 빈 항목으로 남지 않는다. */
-    if (!list.length || list.at(-1).text.trim()) {
-      lines.push(itemLine({ text: "", doneOn: "" }, list.length));
+    if (!list.length || String(list.at(-1).content ?? "").trim()) {
+      lines.push(itemLine({ content: "", done: "" }, list.length));
     }
     $("items-list").replaceChildren(...lines);
     $("items-count").textContent = filled.length ? `${itemsDone(filled)}/${filled.length} 완료` : "";
@@ -2779,26 +3209,33 @@
     if (!item) return;
     rememberItemCaret();
     snapshot();
-    item.doneOn = item.doneOn ? "" : today();
-    syncItemStatus(row);
+    markDone(item, item.done ? "" : today());
     save();
     renderItems();
     render();
     replaceItems();
   }
 
+  /** 완료일을 적고 그 줄의 상태도 함께 맞춘다. 위 단계까지 다시 센다. */
+  function markDone(child, date) {
+    child.done = date;
+    child.status = date ? "done" : "progress";
+    syncRollup(child);
+  }
+
   /* 글자가 바뀔 때마다 저장하되 상자는 다시 그리지 않는다 — 다시 그리면 커서가
-     날아간다. 빈 줄에 첫 글자가 들어온 순간 목록에 자리를 만든다. */
+     날아간다. 빈 줄에 첫 글자가 들어온 순간 표에 행을 만든다. */
   function writeItem(field) {
     const row = itemsRow();
     if (!row) return;
     const index = Number(field.dataset.item);
     const list = itemsOf(row);
-    if (list[index]) list[index].text = field.value;
+    if (list[index]) list[index].content = field.value;
     else if (index === list.length && field.value.trim()) {
-      row.items = [...list, { text: field.value, doneOn: "" }];
-      // 첫 항목이 생기는 순간부터 상태는 항목이 정한다.
-      syncItemStatus(row);
+      const child = newChild(row.id, { content: field.value });
+      placeAfter([child], row.id);
+      // 첫 부작업이 생기는 순간부터 상태는 부작업이 정한다.
+      syncRollup(child);
       render();
       replaceItems();
     } else {
@@ -2808,11 +3245,11 @@
   }
 
   function removeItemAt(row, index) {
-    const list = itemsOf(row);
-    if (!list[index]) return;
-    list.splice(index, 1);
-    if (!list.length) delete row.items;
-    syncItemStatus(row);
+    const child = itemsOf(row)[index];
+    if (!child) return;
+    const ids = new Set(subtreeOf(child.id).map((r) => r.id));
+    setRows(rows.filter((r) => !ids.has(r.id)));
+    syncRollup(row);
     save();
   }
 
@@ -2834,12 +3271,15 @@
       // 빈 줄에서 한 번 더 누르면 다 적었다는 뜻이다.
       if (!text) return closeItems();
       snapshot();
-      const next = [...list];
-      if (next[index]) next[index].text = text;
-      else next.push({ text, doneOn: "" });
-      next.splice(index + 1, 0, { text: "", doneOn: "" });
-      row.items = next;
-      syncItemStatus(row);
+      let current = list[index];
+      if (current) current.content = text;
+      else {
+        current = newChild(row.id, { content: text });
+        placeAfter([current], row.id);
+      }
+      // 다음 줄은 방금 적은 줄 바로 뒤에 띄운다.
+      placeAfter([newChild(row.id, {})], current.id);
+      syncRollup(current);
       save();
       itemsFocus = { index: index + 1, caret: 0 };
       renderItems();
@@ -2859,7 +3299,7 @@
     if (event.key === "Backspace" && !field.value && index > 0) {
       event.preventDefault();
       const above = index - 1;
-      const caret = list[above]?.text.length ?? 0;
+      const caret = String(list[above]?.content ?? "").length;
       removeItemAt(row, index);
       itemsFocus = { index: above, caret };
       renderItems();
@@ -2897,34 +3337,36 @@
     return OWNER_MEMBERS.some((member) => name === member || name.startsWith(`${member} `));
   }
 
-  /* 쪽지 링크를 붙여넣으면 그 줄을 항목으로 만든다. 이름이 이미 적혀 있으면
+  /* 쪽지 링크를 붙여넣으면 그 줄을 부작업으로 만든다. 이름이 이미 적혀 있으면
      건드리지 않고 링크만 단다 — 손으로 적은 이름이 날아가면 다시 적어야 한다. */
   function pasteMessageItem(field, url) {
     const row = itemsRow();
     if (!row) return;
     const index = Number(field.dataset.item);
     snapshot();
-    const next = itemsOf(row).map((it) => ({ ...it }));
-    if (!next[index]) next[index] = { text: "", doneOn: "" };
-    next[index].message = url;
-    const named = Boolean(next[index].text.trim());
-    if (!named) next[index].text = messageItemName(url, sentByOwner(url));
+    let child = itemsOf(row)[index];
+    if (!child) {
+      child = newChild(row.id, {});
+      placeAfter([child], row.id);
+    }
+    child.message = url;
+    const named = Boolean(String(child.content ?? "").trim());
+    if (!named) child.content = messageItemName(url, sentByOwner(url));
 
     /* 담당자가 보낸 쪽지는 끝냈다는 알림이다 — 그 쪽지가 나간 날이 그 몫을
        마친 날이므로 완료로 적는다. 요청자가 보낸 쪽지는 아직 할 일이라
        건드리지 않는다. 이미 적어 둔 완료일도 덮지 않는다. */
-    const reported = sentByOwner(url) && !next[index].doneOn;
-    if (reported) next[index].doneOn = messageSender(url).date;
+    const reported = sentByOwner(url) && !String(child.done ?? "").trim();
+    if (reported) markDone(child, messageSender(url).date);
+    else syncRollup(child);
 
-    row.items = next;
-    syncItemStatus(row);
     save();
     itemsFocus = { index, caret: null };
     renderItems();
     render();
     replaceItems();
     if (reported) toast("담당자 쪽지라 완료로 적었습니다.");
-    else toast(named ? "항목에 쪽지를 달았습니다." : "쪽지에서 항목을 채웠습니다.");
+    else toast(named ? "부작업에 쪽지를 달았습니다." : "쪽지에서 부작업을 채웠습니다.");
   }
 
   /* 쪽지 주소는 그 자체로는 읽을 수 없는 긴 글자열이다. 항목 이름 자리에 그대로
@@ -2973,8 +3415,7 @@
     const item = itemsOf(row)[Number(picker.dataset.itemDate)];
     if (!item) return;
     snapshot();
-    item.doneOn = picker.value;
-    syncItemStatus(row);
+    markDone(item, picker.value);
     save();
     renderItems();
     render();
@@ -2989,8 +3430,8 @@
     const item = itemsOf(itemsRow())[Number(field.dataset.item)];
     if (!item) return;
     const text = field.value.trim();
-    if (text === item.text) return;
-    item.text = text;
+    if (text === item.content) return;
+    item.content = text;
     save();
   });
 
@@ -3114,6 +3555,20 @@
   els.tbody.addEventListener("click", (event) => {
     // 링크는 원래 동작(Figma 열기)을 유지한다
     if (event.target.closest("a")) return;
+
+    /* 펼침 단추는 값을 고치는 곳이 아니다. 접힘은 행에 적어 두어 새로 고쳐도
+       남게 한다 — 스무 줄짜리 프로젝트를 열 때마다 다시 접게 할 수는 없다. */
+    const fold = event.target.closest("[data-fold]");
+    if (fold) {
+      event.stopPropagation();
+      const row = rowById(fold.dataset.fold);
+      if (!row) return;
+      if (row.collapsed) delete row.collapsed;
+      else row.collapsed = true;
+      save();
+      render();
+      return;
+    }
 
     /* 진행 칩은 편집 진입이 아니라 항목 상자를 여는 버튼이다. document 까지
        올라가면 방금 연 상자를 '밖을 눌렀다' 로 보고 닫아 버린다. */

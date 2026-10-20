@@ -751,6 +751,71 @@ body[data-reordering] {
   border-bottom-color: var(--color-border-basic);
 }
 
+/* ── 단계(프로젝트 → 부작업 → 부작업) ───────────────────
+   들여쓰기는 이름 칸 하나에만 준다. 행 전체를 밀면 상태 · 담당자 · 완료일이
+   단계마다 다른 자리에 서서 한 열을 세로로 훑어 읽을 수 없다.
+
+   칸의 padding 이 아니라 앞머리 표식의 margin 으로 민다. padding 을 주면
+   말줄임(text-overflow)이 계산하는 폭까지 줄어 글자가 더 일찍 잘린다. */
+.table tbody td[data-depth="1"] > .tree__toggle,
+.table tbody td[data-depth="1"] > .tree__gap { margin-left: var(--gap-7); }
+.table tbody td[data-depth="2"] > .tree__toggle,
+.table tbody td[data-depth="2"] > .tree__gap { margin-left: calc(var(--gap-7) * 2); }
+
+/* 자식이 없는 행에도 자리는 남긴다 — 접었다 펴면서 이름이 좌우로 흔들리면
+   어느 줄을 보고 있었는지 놓친다. */
+.tree__toggle,
+.tree__gap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-right: var(--gap-2);
+  vertical-align: middle;
+}
+
+.tree__gap { visibility: hidden; }
+
+.tree__toggle {
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: none;
+  color: var(--color-text-subtler);
+  cursor: pointer;
+}
+
+/* 삼각형. 아이콘 폰트나 SVG 를 쓰지 않는 표라 보더로 그린다. */
+.tree__toggle::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transform: rotate(90deg);
+}
+
+.tree__toggle[aria-expanded="false"]::before { transform: none; }
+
+.tree__toggle:hover {
+  background: var(--color-action-hover);
+  color: var(--color-text-basic);
+}
+
+/* 부작업의 이름은 프로젝트보다 한 톤 낮춘다. 들여쓰기만으로는 한 화면에
+   수십 줄이 깔릴 때 어디가 묶음의 머리인지 눈에 들어오지 않는다. */
+.table tbody tr[data-depth="0"] .cell--note { color: var(--color-text-basic); }
+.table tbody tr[data-depth="1"] .cell--note,
+.table tbody tr[data-depth="2"] .cell--note { color: var(--color-text-subtle); }
+
+/* 편집 중인 부작업에서 '비워 두면 위 값을 쓴다' 는 칸. 힌트로 뜬 글자가
+   보통 placeholder(빈 칸 안내)가 아니라 실제로 들어갈 값임을 알린다. */
+.table tbody tr[data-editing] td[data-inherited] .input--cell::placeholder {
+  font-style: italic;
+}
+
 /* 파일 경로 — Figma URL 은 매우 길어 한 줄로 자르고 title 로 전체를 보여준다.
    URL 인 경우 클릭해 바로 열 수 있도록 링크로 렌더한다. */
 
