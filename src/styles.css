@@ -301,46 +301,51 @@ textarea {
 
    높이는 28px 로 옆의 36px 컨트롤보다 낮게 둔다. 칩이 헤더 버튼만큼 커지면
    누르는 버튼처럼 보이고, 노션의 필터 칩도 툴바보다 한 단 작다. */
-.period__pick {
+/* 디자인 시스템의 TabSegment. 회색 바탕에 고른 칸만 흰 알약으로 떠오른다 —
+   값 세 개가 늘 보이므로 펼치는 단계 없이 한 번에 옮겨 간다.
+   바탕 32 / 칸 24 / 사이 패딩 4 는 컴포넌트 치수 그대로다. */
+.segment {
   display: inline-flex;
   align-items: center;
-  gap: var(--gap-1);
-  height: var(--size-6);
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-max);
-  background: none;
-  color: var(--color-text-subtle);
-  font-size: var(--font-body3);
-  letter-spacing: -0.5px;
-  line-height: 21px;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color 120ms ease, background-color 120ms ease;
+  height: var(--size-7);
+  padding: var(--gap-2);
+  border-radius: var(--radius-xsmall);
+  background: var(--color-surface-subtle);
 }
 
-.period__pick:hover { color: var(--color-text-basic); }
-
-/* 걸린 필터. 색은 진행 상태 배지(.badge--progress)와 같은 짝을 쓴다 — 이 화면의
-   색 있는 칩은 다크 모드에서도 밝은 칩 그대로여서, 필터 칩만 뒤집히면 겉돈다.
-   :hover 와 같은 무게라 뒤에 두어야 덮어쓴다 — 걸어 둔 필터가 마우스를 올렸다고
-   회색으로 돌아가면 안 된다. */
-.period__pick[data-active] {
+.segment__item {
+  /* 한 글자('주')와 두 글자('전체')가 섞여 있다. 하한을 두어야 고른 칸이
+     옮겨 갈 때 알약 폭이 들쭉날쭉하지 않는다. */
+  min-width: 52px;
+  height: var(--size-5);
   padding-inline: var(--padding-4);
-  background: var(--color-primary-50);
-  color: var(--color-blue-700);
+  border: 0;
+  border-radius: var(--radius-xxsmall);
+  background: none;
+  color: var(--color-text-subtle);
+  font-family: inherit;
+  font-size: var(--font-body5);
+  letter-spacing: -0.5px;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* 고른 칸. 굵기까지 바꿔야 흰 알약이 겹치지 않는 자리에서도 읽힌다. */
+.segment__item[aria-checked="true"] {
+  background: var(--color-surface-basic);
+  color: var(--color-text-basic);
   font-weight: var(--font-weight-medium);
 }
 
-.period__pick .icon {
-  width: var(--size-2);
-  height: var(--size-2);
-  transition: transform 120ms ease;
+.segment__item:not([aria-checked="true"]):hover {
+  color: var(--color-text-basic);
 }
 
-/* 펼친 동안 화살표를 뒤집는다 — 목록이 열려 있는 것을 버튼에서도 알 수 있다. */
-.period__pick[aria-expanded="true"] .icon {
-  transform: rotate(180deg);
+/* 기본 포커스 링은 2px 바깥으로 그려져 회색 바탕을 넘는다. 안쪽으로 접는다. */
+.segment__item:focus-visible {
+  outline: 2px solid var(--color-element-primary);
+  outline-offset: -2px;
 }
 
 /* ── 기간 보기 ─────────────────────────────────────────── */
@@ -348,20 +353,28 @@ textarea {
 .period {
   display: inline-flex;
   align-items: center;
-  gap: var(--gap-4);
+  gap: var(--gap-2);
 }
 
+/* 지금 보고 있는 기간. 디자인 시스템의 DateInput 과 같은 상자를 쓴다 —
+   세그먼트가 '무엇으로 끊어 보는지' 를 정하고, 이 상자가 '지금 어디를 보고
+   있는지' 를 담는다. 둘이 나란히 서면 날짜 컨트롤 하나로 읽힌다. */
 .period__nav {
   display: inline-flex;
   align-items: center;
   gap: var(--gap-2);
+  height: var(--size-7);
+  padding-inline: var(--gap-2);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-xsmall);
+  background: var(--color-surface-basic);
 }
 
-/* 기간 이동은 테두리 없이 화살표만 보이게 둔다. 기간 칩과 라벨 사이에 서는데
-   상자가 둘 끼면 어느 것이 값이고 어느 것이 누르는 것인지 흐려진다.
-   누르는 자리는 36px 그대로 남기고 테두리만 지운다 — 마우스를 올리면
-   .btn--ghost:hover 의 배경이 눌리는 자리를 알려 준다. */
+/* 상자 안에 들어가므로 36px 버튼을 칸 높이(24)에 맞춰 줄이고 테두리를 지운다.
+   마우스를 올리면 .btn--ghost:hover 의 배경이 눌리는 자리를 알려 준다. */
 .period__nav .btn--icon {
+  width: var(--size-5);
+  height: var(--size-5);
   border-color: transparent;
 }
 
@@ -372,7 +385,9 @@ textarea {
 .period__label {
   min-width: 76px;
   text-align: center;
-  font-size: var(--font-body4);
+  /* DateInput 의 글자 크기(14/21)를 따른다. */
+  font-size: var(--font-body3);
+  line-height: 21px;
   color: var(--color-text-basic);
   white-space: nowrap;
 }
@@ -1448,10 +1463,6 @@ tr:hover .chip-remove { display: inline-flex; }
 
 /* 기간 단위 목록 — 항목이 '전체 · 주 · 월' 뿐이라 우클릭 메뉴의 148px 는
    너무 넓다. 여는 버튼(약 40px)보다는 넉넉하되 그만큼만 쓴다. */
-.menu--units {
-  min-width: 88px;
-}
-
 /* ── 담당자 복수 선택 팝업 ─────────────────────────────── */
 
 /* 40px 셀에는 select multiple 이 들어가지 않아 체크박스 팝업으로 고른다. */

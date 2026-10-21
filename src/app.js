@@ -481,9 +481,7 @@
     stats: $("stats"),
     requestStats: $("request-stats"),
     period: $("period"),
-    periodPick: $("period-pick"),
-    periodUnit: $("period-unit"),
-    periodMenu: $("period-menu"),
+    periodUnits: $("period-units"),
     periodNav: $("period-nav"),
     periodLabel: $("period-label"),
     colgroup: document.querySelector(".table colgroup"),
@@ -2234,16 +2232,8 @@
   /** 기간 컨트롤 — 단위 선택 상태와 지금 보고 있는 기간을 화면에 맞춘다. */
   function renderPeriod() {
     els.period.hidden = !view.period;
-    // 기간 보기가 없는 탭으로 옮기면 열려 있던 목록도 함께 닫는다.
-    if (!view.period) return closePeriodMenu();
-    /* 노션의 필터처럼, 걸린 게 없으면 값 대신 무엇을 고르는 자리인지를 적는다.
-       '전체' 는 고른 값이 아니라 안 걸린 상태이므로 굳이 값으로 내보이지 않는다. */
-    const filtered = period.unit !== "all";
-    els.periodUnit.textContent = filtered ? `기간: ${UNIT_LABELS[period.unit]}` : "기간";
-    els.periodPick.toggleAttribute("data-active", filtered);
-    // 버튼 이름에는 고른 값을 그대로 넣는다. aria-label 은 안의 글자를 덮어쓴다.
-    els.periodPick.setAttribute("aria-label", `기간 단위: ${UNIT_LABELS[period.unit]}`);
-    for (const item of els.periodMenu.querySelectorAll("[data-unit]")) {
+    if (!view.period) return;
+    for (const item of els.periodUnits.querySelectorAll("[data-unit]")) {
       item.setAttribute("aria-checked", String(item.dataset.unit === period.unit));
     }
     const range = periodRange();
@@ -2527,36 +2517,12 @@
     if (step) setPeriod(period.unit, period.offset + Number(step.dataset.step));
   });
 
-  /* 단위 목록은 다른 팝업과 같이 body 에 두고 버튼 아래에 붙인다. 화면 밖으로
-     나가지 않게 오른쪽 끝을 8px 남긴다 — 버튼이 헤더 오른쪽에 있어 목록이 더
-     넓으면 그냥 붙였을 때 잘린다. */
-  els.periodPick.addEventListener("click", () => {
-    if (!els.periodMenu.hidden) return closePeriodMenu();
-    els.periodMenu.hidden = false;
-    els.periodPick.setAttribute("aria-expanded", "true");
-    const anchor = els.periodPick.getBoundingClientRect();
-    const box = els.periodMenu.getBoundingClientRect();
-    els.periodMenu.style.left = `${Math.min(anchor.left, innerWidth - box.width - 8)}px`;
-    els.periodMenu.style.top = `${anchor.bottom + 4}px`;
-  });
-
-  els.periodMenu.addEventListener("click", (event) => {
+  els.periodUnits.addEventListener("click", (event) => {
     const item = event.target.closest("[data-unit]");
-    if (!item) return;
-    closePeriodMenu();
-    // 방금 누른 항목이 사라지므로 포커스를 버튼으로 돌려 놓는다.
-    els.periodPick.focus();
+    if (!item || item.dataset.unit === period.unit) return;
     // 단위를 바꾸면 기준이 달라지므로 항상 이번 주 / 이번 달부터 다시 시작한다.
     setPeriod(item.dataset.unit, 0);
   });
-
-  function closePeriodMenu() {
-    els.periodMenu.hidden = true;
-    els.periodPick.setAttribute("aria-expanded", "false");
-  }
-
-  // 창 크기가 바뀌면 버튼이 움직이므로 붙여 둔 자리가 어긋난다.
-  addEventListener("resize", closePeriodMenu);
 
   // ── 탭 ────────────────────────────────────────────────
   els.tabs.addEventListener("click", (event) => {
@@ -3623,9 +3589,6 @@
   // 메뉴 밖 클릭 / Esc / 표 스크롤 시 닫는다.
   document.addEventListener("click", (event) => {
     if (!rowMenu.hidden && !event.target.closest("#row-menu")) closeRowMenu();
-    /* 여는 버튼을 다시 누른 경우는 그 핸들러가 이미 닫았다. 여기서 또 닫으면
-       열자마자 닫히므로 버튼 위 클릭은 지나친다. */
-    if (!event.target.closest("#period-menu, #period-pick")) closePeriodMenu();
     // 메모는 적다가 밖을 누를 수 있어 닫기만 하고 글은 버린다(저장은 명시적으로).
     if (!memoBox.hidden && !event.target.closest("#memo-editor")) closeMemo();
     /* 항목은 적는 즉시 저장되므로 밖을 누르면 그대로 닫는다. 칩을 다시 누른
@@ -3636,7 +3599,6 @@
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeRowMenu();
-      closePeriodMenu();
       closeMemo();
       closeItems();
       closeParentPicker();
