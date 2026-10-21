@@ -7,7 +7,6 @@
 (() => {
   "use strict";
 
-  const THEME_KEY = "wehago-prj-manager/theme";
   const VIEW_KEY = "wehago-prj-manager/view";
   const COL_KEY = "wehago-prj-manager/cols/v2";
 
@@ -4115,20 +4114,9 @@
 
   $("btn-export").addEventListener("click", exportCsv);
 
-  // 테마 — 저장된 선택이 없으면 OS 설정을 따른다.
-  $("btn-theme").addEventListener("click", () => {
-    const isDark =
-      document.documentElement.dataset.theme === "dark" ||
-      (!document.documentElement.dataset.theme &&
-        matchMedia("(prefers-color-scheme: dark)").matches);
-    const next = isDark ? "light" : "dark";
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem(THEME_KEY, next);
-  });
-
-  const savedTheme = localStorage.getItem(THEME_KEY);
-  if (savedTheme) document.documentElement.dataset.theme = savedTheme;
-  else document.documentElement.removeAttribute("data-theme");
+  /* 테마는 늘 라이트다. index.html 의 data-theme="light" 를 건드리지 않으므로
+     tokens.css 의 다크 세트는 적용되지 않는다 — OS 가 다크여도 마찬가지다.
+     색 정의는 그대로 두어 전환을 다시 들이려면 이 자리만 되살리면 된다. */
 
   // ── 매일 하는 업무 ────────────────────────────────────
   /* 두 탭이 함께 보는 목록이라 탭 데이터와 따로 저장한다. 체크는 두지 않는다
