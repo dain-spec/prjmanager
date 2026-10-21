@@ -192,7 +192,9 @@
       items: true },
     { key: "message", header: "쪽지", width: "52px", type: "link", align: "center",
       placeholder: "쪽지 링크" },
-    PLATFORM_COLUMN,
+    /* OS 칸은 두지 않는다 — 요청은 어느 화면 일인지가 서비스명과 요청내용에
+       이미 드러나고, 한 글자 칸이 요청내용의 폭을 줄였다. 행에 적혀 있던 값은
+       지우지 않으므로 파일 현황 연결(서비스명 + OS)은 그대로 간다. */
     TOOL_COLUMN,
     { key: "path", header: "파일 경로", width: "140px", type: "path",
       placeholder: "피그마 주소 또는 XD 경로" },
@@ -401,7 +403,7 @@
       noun: "업무",
       nameKey: "content",
       storageKey: "wehago-prj-manager/requests/v1",
-      searchHint: "시작일, 요청자, 요청내용, 서비스명, OS, 유형, 담당자 검색",
+      searchHint: "시작일, 요청자, 요청내용, 서비스명, 유형, 담당자 검색",
       csvName: "wehago-일일-업무.csv",
       /* 이 컬럼들은 비어 있으면 파일 현황(서비스명 + OS)에서 가져와 보여 준다.
          직접 적은 값이 있으면 그 값이 이긴다 — 요청은 서비스 대표 파일이 아니라
